@@ -657,7 +657,7 @@ function AppContent() {
         />
 
         {/* Main Content Workspace */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
+        <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-clip">
           {/* Top Header */}
           <TopHeader
             userProfile={userProfile}
@@ -666,6 +666,7 @@ function AppContent() {
             onOpenProfile={() => navigateRoute('profile')}
             onOpenPricing={() => navigateRoute('pricing')}
             onOpenSubscription={() => navigateRoute('settings/subscription')}
+            onLogout={handleLogout}
             activeTabTitle={tabTitles[activeTab] || 'Overview'}
           />
 
@@ -727,6 +728,7 @@ function AppContent() {
                     onOpenCookieSettings={() => setShowCookieModal(true)}
                     onNavigateLegal={navigateRoute}
                     onNavigatePricing={() => navigateRoute('pricing')}
+                    onLogout={handleLogout}
                     showToast={addToast}
                   />
                 )}

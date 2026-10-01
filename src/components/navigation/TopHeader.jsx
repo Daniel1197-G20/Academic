@@ -16,7 +16,7 @@ export function TopHeader({
   const { subscription, isPremium } = useBilling();
 
   return (
-    <header className="h-16 bg-white border-b border-border px-3 sm:px-6 flex items-center justify-between sticky top-0 z-20 safe-area-pt">
+    <header className="min-h-16 bg-white/95 backdrop-blur-md border-b border-border px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 safe-area-pt transition-colors">
       {/* Left: Mobile Brand & Context / Desktop Active Page Title */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Studora Brand */}
@@ -42,7 +42,7 @@ export function TopHeader({
       </div>
 
       {/* Right: Academic Status Badges & Quick Stats */}
-      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Subscription Plan Badge */}
         <button
           type="button"
@@ -83,18 +83,32 @@ export function TopHeader({
         {/* Notification Bell */}
         <button
           type="button"
-          className="relative min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-btn text-muted hover:text-ink hover:bg-canvas border border-transparent hover:border-border hover:shadow-tactile-surface transition-all active:translate-y-[1px]"
+          className="relative min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center rounded-btn text-muted hover:text-ink hover:bg-canvas border border-transparent hover:border-border hover:shadow-tactile-surface transition-all active:translate-y-[1px]"
           title="Notifications"
           aria-label="Notifications"
         >
           <Bell className="w-4 h-4" />
         </button>
 
+        {/* Sign Out Trigger (Mobile & Universal) */}
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] px-2 sm:px-2.5 flex items-center justify-center gap-1.5 rounded-btn text-muted hover:text-danger hover:bg-danger-50 border border-transparent hover:border-danger-100 transition-all active:translate-y-[1px] cursor-pointer"
+            title="Sign out of Studora"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-4 h-4 text-muted hover:text-danger transition-colors shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">Logout</span>
+          </button>
+        )}
+
         {/* Avatar Trigger on Mobile */}
         <button
           type="button"
           onClick={onOpenProfile}
-          className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 -mr-1"
+          className="md:hidden min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0"
           title="Open Profile & Settings"
           aria-label="Open Profile & Settings"
         >

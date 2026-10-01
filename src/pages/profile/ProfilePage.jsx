@@ -172,24 +172,39 @@ export function ProfilePage({
 
       {/* 2. Profile Identity Banner */}
       <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
-          <Avatar
-            name={fullName || 'Student'}
-            src={avatarUrl}
-            size="xl"
-          />
-          <div className="space-y-1 flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-ink truncate">{fullName}</h2>
-              <Badge variant="academic">Verified Student</Badge>
+        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 flex-1 min-w-0">
+            <Avatar
+              name={fullName || 'Student'}
+              src={avatarUrl}
+              size="xl"
+            />
+            <div className="space-y-1 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-ink truncate">{fullName}</h2>
+                <Badge variant="academic">Verified Student</Badge>
+              </div>
+              <p className="text-xs sm:text-sm text-muted">
+                {institution || 'University Member'} • {department || 'Department Member'}
+              </p>
+              <p className="text-xs text-muted">
+                ID / Matric: <strong className="text-ink font-mono font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
+              </p>
             </div>
-            <p className="text-xs sm:text-sm text-muted">
-              {institution || 'University Member'} • {department || 'Department Member'}
-            </p>
-            <p className="text-xs text-muted">
-              ID / Matric: <strong className="text-ink font-mono font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
-            </p>
           </div>
+          {onLogout && (
+            <div className="pt-2 sm:pt-0 shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowLogoutModal(true)}
+                icon={LogOut}
+                className="text-danger hover:text-danger hover:bg-danger-50 hover:border-danger-200"
+              >
+                Sign Out
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -402,6 +417,30 @@ export function ProfilePage({
             </div>
           </div>
 
+          {/* Active Session Management */}
+          <div className="bg-white border border-border rounded-card p-5 shadow-subtle space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                  <LogOut className="w-4 h-4 text-academic" />
+                  Active Student Session
+                </h4>
+                <p className="text-xs text-muted leading-relaxed mt-0.5">
+                  Sign out of your active student session on this mobile device or browser.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowLogoutModal(true)}
+                icon={LogOut}
+                className="text-danger hover:text-danger hover:bg-danger-50 hover:border-danger-200 shrink-0"
+              >
+                Sign Out
+              </Button>
+            </div>
+          </div>
+
           {/* Danger Zone: Permanent Account Deletion */}
           <div className="bg-white border border-danger-100 rounded-card p-6 shadow-subtle space-y-4">
             <div className="flex items-center gap-2 text-danger">
@@ -505,6 +544,43 @@ export function ProfilePage({
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Confirmation Modal for Sign Out */}
+      <Modal
+        isOpen={showLogoutModal}
+        onClose={() => !loggingOut && setShowLogoutModal(false)}
+        title="Sign Out of Studora"
+        description="Are you sure you want to end your current student session?"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4 text-xs text-ink pt-2">
+          <p className="text-muted leading-relaxed">
+            You will be signed out of your account on this device and returned to the home screen. Your academic records, CGPA metrics, and study plans will remain safely preserved.
+          </p>
+
+          <div className="pt-3 border-t border-border flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={loggingOut}
+              onClick={() => setShowLogoutModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              loading={loggingOut}
+              onClick={handleConfirmLogout}
+              icon={LogOut}
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

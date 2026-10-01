@@ -44,7 +44,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={`hidden md:flex flex-col justify-between bg-white border-r border-border transition-all duration-200 ease-in-out z-30 select-none
+      className={`hidden md:flex flex-col justify-between bg-white border-r border-border transition-all duration-200 ease-in-out z-30 select-none sticky top-0 h-screen shrink-0 overflow-y-auto
         ${collapsed ? 'w-16' : 'w-60'} ${className}`}
     >
       {/* Brand Header */}
