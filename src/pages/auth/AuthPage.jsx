@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { Footer } from '../../components/common/Footer';
 import { api } from '../../services/api/client';
+import { supabase } from '../../lib/supabase/client';
+import { StudoraMark } from '../../components/ui';
 
 /**
  * Dedicated Neumorphic Input Component
@@ -203,19 +205,19 @@ export function AuthPage({
           {/* Top Brand Crest Lockup */}
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl neu-surface flex items-center justify-center text-academic p-3.5 shadow-[6px_6px_14px_#b8c5d6,-6px_-6px_14px_#ffffff]">
-              <GraduationCap className="w-7 h-7 text-academic" />
+              <StudoraMark className="w-7 h-7 text-academic" strokeWidth={2.4} />
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-                  Academic Platform
+                <span className="font-extrabold text-2xl tracking-tight text-slate-900 font-sans">
+                  Studora
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold neu-inset-sm text-academic">
-                  STU-OS
+                  STUDY OS
                 </span>
               </div>
               <p className="text-xs font-medium text-slate-500 mt-0.5">
-                University Academic Productivity System
+                Study smarter. Go further.
               </p>
             </div>
           </div>
@@ -224,15 +226,15 @@ export function AuthPage({
           <div className="space-y-6 py-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full neu-inset-sm text-[11px] font-semibold text-academic">
               <Sparkles className="w-3.5 h-3.5 text-academic" />
-              <span>Disciplined University Workspace</span>
+              <span>All-In-One Academic Platform</span>
             </div>
 
             <h1 className="font-serif text-3xl xl:text-4xl text-slate-900 leading-[1.25] tracking-tight">
-              A disciplined platform for serious university students.
+              Your academic life, organized.
             </h1>
 
             <p className="text-sm text-slate-600 leading-relaxed">
-              Unify your multi-year CGPA calculations, weekly study scheduling, and academic performance tracking in a single, focused environment.
+              Studora helps you plan your semester, track your academic progress, prepare for tests, learn with AI, and connect with tutors — all in one academic platform.
             </p>
 
             {/* Academic Value Pillars with Sculpted Surfaces */}
@@ -287,13 +289,13 @@ export function AuthPage({
           {/* Mobile Brand Lockup */}
           <div className="lg:hidden text-center mb-6">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl neu-surface text-academic mb-2 p-3.5 shadow-[6px_6px_14px_#b8c5d6,-6px_-6px_14px_#ffffff]">
-              <GraduationCap className="w-7 h-7 text-academic" />
+              <StudoraMark className="w-7 h-7 text-academic" strokeWidth={2.4} />
             </div>
-            <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
-              Academic Platform
+            <h1 className="text-xl font-extrabold tracking-tight text-slate-900 font-sans">
+              Studora
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              University Academic Productivity System
+              Study smarter. Go further.
             </p>
           </div>
 
@@ -307,7 +309,7 @@ export function AuthPage({
                 className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 neu-btn px-3 py-1.5 transition-all"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Platform Overview</span>
+                <span>Back to Studora</span>
               </button>
             )}
 
@@ -359,12 +361,12 @@ export function AuthPage({
             {/* Form Header */}
             <div>
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
-                {isRegistering ? 'Create Student Account' : 'Welcome Back'}
+                {isRegistering ? 'Create Student Account' : 'Welcome to Studora'}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
                 {isRegistering 
-                  ? 'Set up your student profile to manage courses, CGPA, and study schedules.'
-                  : 'Enter your academic credentials to access your workspace.'}
+                  ? 'Begin with the free plan. Plan your semester and track your CGPA.'
+                  : 'Your academic journey starts here.'}
               </p>
             </div>
 
@@ -374,7 +376,7 @@ export function AuthPage({
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-academic" />
-                    Sample Student Account
+                    Development Demo Account (Sandbox)
                   </p>
                   <p className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
                     alexander.vance@tech-academy.edu

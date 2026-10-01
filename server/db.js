@@ -3,9 +3,16 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+const DATA_DIR = process.env.VERCEL
+  ? path.join('/tmp', 'academic-data')
+  : path.resolve(process.cwd(), 'data');
+
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Warning: Could not create DATA_DIR:', e.message);
 }
 
 const DB_PATH = process.env.DB_PATH || (process.env.NODE_ENV === 'test' ? undefined : path.join(DATA_DIR, 'academic-platform.db'));
@@ -30,9 +37,11 @@ export async function initializeDatabase() {
       id TEXT PRIMARY KEY,
       firebase_uid TEXT UNIQUE,
       email TEXT UNIQUE NOT NULL,
+      display_name TEXT,
       password_hash TEXT,
       salt TEXT,
-      role TEXT NOT NULL DEFAULT 'STUDENT',
+      role TEXT NOT NULL DEFAULT 'student',
+      status TEXT NOT NULL DEFAULT 'active',
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -41,6 +50,12 @@ export async function initializeDatabase() {
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='firebase_uid') THEN
         ALTER TABLE users ADD COLUMN firebase_uid TEXT UNIQUE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='display_name') THEN
+        ALTER TABLE users ADD COLUMN display_name TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='status') THEN
+        ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
       END IF;
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updated_at') THEN
         ALTER TABLE users ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
@@ -519,8 +534,8 @@ export async function initializeDatabase() {
     const { hash, salt } = hashPassword('Password123!');
     
     await db.query(`
-      INSERT INTO users (id, firebase_uid, email, password_hash, salt, role)
-      VALUES ($1, $2, $3, $4, $5, 'STUDENT');
+      INSERT INTO users (id, firebase_uid, email, display_name, password_hash, salt, role, status)
+      VALUES ($1, $2, $3, 'Alexander Vance', $4, $5, 'student', 'active');
     `, [userId, firebaseUid, 'alexander.vance@tech-academy.edu', hash, salt]);
 
     await db.query(`
@@ -720,8 +735,11 @@ export async function initializeDatabase() {
     }
   } else {
     await db.query(`
-      UPDATE users SET firebase_uid = 'fb_uid_alexander_vance'
-      WHERE email = 'alexander.vance@tech-academy.edu' AND firebase_uid IS NULL;
+      UPDATE users SET 
+        firebase_uid = COALESCE(firebase_uid, 'fb_uid_alexander_vance'),
+        display_name = COALESCE(display_name, 'Alexander Vance'),
+        status = COALESCE(status, 'active')
+      WHERE email = 'alexander.vance@tech-academy.edu';
     `);
   }
 
@@ -736,6 +754,40 @@ export async function initializeDatabase() {
         VALUES ($1, $2, 'plan_basic', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '365 days', false);
       `, ['sub_alexander_vance', dUserId]);
     }
+  }
+
+  // Ensure second demo user (Student B - Maya Lin) exists for multi-user group call testing
+  const mayaCheck = await db.query(`SELECT id FROM users WHERE email = 'maya.lin@tech-academy.edu';`);
+  if (mayaCheck.rows.length === 0) {
+    const mayaId = 'usr_maya_lin';
+    const mayaFbUid = 'fb_uid_maya_lin';
+    const { hash: mHash, salt: mSalt } = hashPassword('Password123!');
+    await db.query(`
+      INSERT INTO users (id, firebase_uid, email, display_name, password_hash, salt, role, status)
+      VALUES ($1, $2, $3, 'Maya Lin', $4, $5, 'student', 'active');
+    `, [mayaId, mayaFbUid, 'maya.lin@tech-academy.edu', mHash, mSalt]);
+
+    await db.query(`
+      INSERT INTO profiles (user_id, full_name, avatar_url, institution, department, academic_level, matric_number, bio, academic_interests, study_preferences, is_public)
+      VALUES ($1, $2, null, 'Apex Institute of Technology', 'Data Science & Applied Statistics', 'Year 3 (Junior)', 'AIT/2023/DS/042', 'Statistics and Machine Learning scholar.', '["Statistics", "Machine Learning"]', '["Morning Focused"]', true);
+    `, [mayaId, 'Maya Lin']);
+
+    await db.query(`
+      INSERT INTO user_settings (user_id, selected_scale)
+      VALUES ($1, '5.0');
+    `, [mayaId]);
+
+    await db.query(`
+      INSERT INTO user_subscriptions (id, user_id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end)
+      VALUES ($1, $2, 'plan_basic', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '365 days', false);
+    `, ['sub_maya_lin', mayaId]);
+  } else {
+    await db.query(`
+      UPDATE users SET 
+        firebase_uid = COALESCE(firebase_uid, 'fb_uid_maya_lin'),
+        display_name = COALESCE(display_name, 'Maya Lin')
+      WHERE email = 'maya.lin@tech-academy.edu';
+    `);
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { 
   Sidebar, 
   BottomNav, 
@@ -10,7 +10,7 @@ import {
   LoadingSpinner, 
   Card, 
   Badge,
-  Button,
+  Button, 
   AppSplashScreen 
 } from './components/ui';
 import { AuthPage } from './pages/auth/AuthPage';
@@ -25,7 +25,11 @@ import { PrivacySettingsPage } from './pages/legal/PrivacySettingsPage';
 import { CookieSettingsModal } from './components/legal/CookieSettingsModal';
 import { ConsentBanner } from './components/legal/ConsentBanner';
 import { Footer } from './components/common/Footer';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { NotFoundPage } from './components/common/NotFoundPage';
+import { PageLoader } from './components/common/PageLoader';
 import { api } from './services/api/client';
+import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
 import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, Video, BookOpen } from 'lucide-react';
 import { BillingProvider } from './context/BillingContext';
 import { PricingPage } from './pages/billing/PricingPage';
@@ -33,6 +37,72 @@ import { BillingCallbackPage } from './pages/billing/BillingCallbackPage';
 import { SubscriptionPage } from './pages/billing/SubscriptionPage';
 import { LandingPage } from './pages/landing/LandingPage';
 import { FeatureGate } from './components/billing/FeatureGate';
+
+// Canonical route sets
+const PUBLIC_ROUTES = new Set([
+  'landing',
+  'pricing',
+  'privacy',
+  'terms',
+  'cookie-settings',
+  'privacy-settings'
+]);
+
+const AUTH_ROUTES = new Set([
+  'login',
+  'register',
+  'auth'
+]);
+
+const PROTECTED_ROUTES = new Set([
+  'dashboard',
+  'overview',
+  'cgpa',
+  'study',
+  'test-prep',
+  'prep',
+  'tutors',
+  'messages',
+  'community',
+  'profile',
+  'settings',
+  'settings/subscription',
+  'settings-subscription',
+  'billing-callback',
+  'billing/callback',
+  'ai'
+]);
+
+export function normalizeRoute(path) {
+  const clean = (path || '').replace(/^\/+|\/+$/g, '').trim();
+  if (!clean || clean === 'landing') return 'landing';
+  if (clean === 'dashboard' || clean === 'overview') return 'dashboard';
+  if (clean === 'test-prep' || clean === 'prep') return 'test-prep';
+  if (clean === 'messages' || clean === 'community') return 'messages';
+  if (clean === 'settings' || clean === 'settings/subscription' || clean === 'settings-subscription') return 'settings/subscription';
+  if (clean === 'billing-callback' || clean === 'billing/callback' || clean === 'billing/success' || clean === 'billing/failed') return 'billing-callback';
+  if (clean === 'login') return 'login';
+  if (clean === 'register') return 'register';
+  if (clean === 'auth') return 'login';
+  if (clean === 'pricing') return 'pricing';
+  if (clean === 'cgpa') return 'cgpa';
+  if (clean === 'study') return 'study';
+  if (clean === 'tutors') return 'tutors';
+  if (clean === 'profile') return 'profile';
+  if (clean === 'ai') return 'ai';
+  if (clean === 'privacy') return 'privacy';
+  if (clean === 'terms') return 'terms';
+  if (clean === 'cookie-settings') return 'cookie-settings';
+  if (clean === 'privacy-settings') return 'privacy-settings';
+  return '404';
+}
+
+export function routeToUrl(route) {
+  if (route === 'landing') return '/';
+  if (route === 'settings/subscription') return '/settings/subscription';
+  if (route === 'billing-callback') return '/billing/callback';
+  return `/${route}`;
+}
 
 function AppContent() {
   const { addToast } = useToast();
@@ -54,15 +124,9 @@ function AppContent() {
 
   // Helper to determine initial tab from URL pathname or hash
   const resolveInitialRoute = () => {
-    const p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
-    const h = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
-    const route = p || h;
-    if (!route) return 'landing'; // Default for public visitor is the landing page
-    if (route === 'billing/callback' || route === 'billing-callback' || route === 'billing/success' || route === 'billing/failed') {
-      return 'billing-callback';
-    }
-    if (route === 'settings/subscription') return 'settings/subscription';
-    return route;
+    const p = window.location.pathname;
+    const h = window.location.hash.replace(/^#\/?/, '');
+    return normalizeRoute(p || h);
   };
 
   // Shell State & Modals
@@ -71,46 +135,30 @@ function AppContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showCookieModal, setShowCookieModal] = useState(false);
 
-  // Handle URL Path / Hash routing
+  // Handle URL Path / Hash routing via popstate (browser back/forward buttons)
   useEffect(() => {
     const handlePopState = () => {
-      const p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
-      const h = window.location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
-      const r = p || h;
-      if (!r) {
-        setActiveTab('landing');
-      } else if (r === 'billing/callback' || r === 'billing/success' || r === 'billing/failed' || r === 'billing-callback') {
-        setActiveTab('billing-callback');
-      } else if (r === 'settings/subscription') {
-        setActiveTab('settings/subscription');
-      } else {
-        setActiveTab(r);
-      }
+      const p = window.location.pathname;
+      const h = window.location.hash.replace(/^#\/?/, '');
+      setActiveTab(normalizeRoute(p || h));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const navigateRoute = (target) => {
-    setActiveTab(target);
-    if (target === 'landing') {
-      window.history.pushState({}, '', '/');
-    } else if (target === 'billing-callback') {
-      window.history.pushState({}, '', '/billing/callback');
-    } else if (target === 'settings/subscription' || target === 'settings-subscription') {
-      window.history.pushState({}, '', '/settings/subscription');
-    } else if (target === 'dashboard' || target === 'overview') {
-      window.history.pushState({}, '', '/dashboard');
-    } else if (target === 'pricing') {
-      window.history.pushState({}, '', '/pricing');
-    } else if (target === 'login') {
-      window.history.pushState({}, '', '/login');
-    } else if (target === 'register') {
-      window.history.pushState({}, '', '/register');
-    } else {
-      window.history.pushState({}, '', `/${target}`);
+  const navigateRoute = useCallback((target, replace = false) => {
+    const normalized = normalizeRoute(target);
+    setActiveTab(normalized);
+
+    const url = routeToUrl(normalized);
+    if (window.location.pathname !== url) {
+      if (replace) {
+        window.history.replaceState({}, '', url);
+      } else {
+        window.history.pushState({}, '', url);
+      }
     }
-  };
+  }, []);
 
   const handleLandingSelectPlan = (planCode) => {
     setSelectedPlanForAuth(planCode);
@@ -121,51 +169,98 @@ function AppContent() {
     }
   };
 
-  // Check initial session & display app icon splash animation on visitor entry
+  // Stable Firebase / API Session Verification with Safety Timeout
   useEffect(() => {
-    const splashStartTime = Date.now();
-    const minSplashDuration = 800; // minimum duration so visitor experiences the branded icon animation
+    let isMounted = true;
 
-    const finishSplash = (onDone) => {
-      const elapsed = Date.now() - splashStartTime;
-      const remaining = Math.max(0, minSplashDuration - elapsed);
+    // Safety timeout: loading state MUST resolve and never hang indefinitely
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted) {
+        setAuthChecking(false);
+        setShowSplash(false);
+      }
+    }, 4000);
 
-      setTimeout(() => {
-        setSplashFading(true);
-        setTimeout(() => {
-          setAuthChecking(false);
-          setShowSplash(false);
-          onDone && onDone();
-        }, 300); // 300ms smooth fade-out
-      }, remaining);
-    };
+    // Single source of auth listener
+    const unsubscribe = onAuthStateChangedListener(({ user, profile }) => {
+      if (!isMounted) return;
+      setCurrentUser(user);
+      setUserProfile(profile);
+      setAuthChecking(false);
+      setShowSplash(false);
+    });
 
     async function checkAuth() {
       try {
         const token = api.getToken();
         if (!token) {
-          finishSplash();
+          if (isMounted) {
+            setCurrentUser(null);
+            setUserProfile(null);
+            setAuthChecking(false);
+            setShowSplash(false);
+          }
           return;
         }
         const me = await api.getMe();
-        setCurrentUser(me.user);
-        setUserProfile(me.profile);
-        setSelectedScale(me.selectedScale || '5.0');
-        // If logged in and on landing page or root without intent, route to dashboard
-        const currentPath = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
-        if (!currentPath && activeTab === 'landing') {
-          setActiveTab('dashboard');
+        if (isMounted) {
+          setCurrentUser(me.user);
+          setUserProfile(me.profile);
+          if (me.selectedScale) setSelectedScale(me.selectedScale);
+          setAuthChecking(false);
+          setShowSplash(false);
         }
-        finishSplash();
       } catch (err) {
         console.warn('Session expired or invalid, logging out', err);
         api.logout();
-        setCurrentUser(null);
-        finishSplash();
+        if (isMounted) {
+          setCurrentUser(null);
+          setUserProfile(null);
+          setAuthChecking(false);
+          setShowSplash(false);
+        }
       }
     }
+
     checkAuth();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
   }, []);
+
+  // Route guard effect: redirects unauthenticated users from protected routes,
+  // and authenticated users from login/register routes
+  useEffect(() => {
+    if (authChecking) return; // Wait until authentication state is resolved
+
+    const normalized = normalizeRoute(activeTab);
+
+    // Scenario 1: Protected route accessed by unauthenticated visitor -> redirect to /login
+    if (PROTECTED_ROUTES.has(normalized) && !currentUser) {
+      setActiveTab('login');
+      if (window.location.pathname !== '/login') {
+        window.history.replaceState({}, '', '/login');
+      }
+      return;
+    }
+
+    // Scenario 2: Auth route accessed while already authenticated -> redirect to /dashboard
+    if (AUTH_ROUTES.has(normalized) && currentUser) {
+      setActiveTab('dashboard');
+      if (window.location.pathname !== '/dashboard') {
+        window.history.replaceState({}, '', '/dashboard');
+      }
+      return;
+    }
+
+    // Scenario 3: Unknown route
+    if (normalized === '404' && activeTab !== '404') {
+      setActiveTab('404');
+    }
+  }, [activeTab, currentUser, authChecking]);
 
   // Fetch student data when logged in
   const fetchAllData = useCallback(async () => {
@@ -199,12 +294,16 @@ function AppContent() {
 
   // Handle Login Success
   const handleLoginSuccess = (authData) => {
+    if (authData.token) {
+      api.setToken(authData.token);
+    }
     setCurrentUser(authData.user);
     setUserProfile(authData.profile);
     if (authData.selectedScale) setSelectedScale(authData.selectedScale);
+    notifyAuthStateChange(authData.user, authData.profile);
     addToast({
       type: 'success',
-      title: 'Welcome to Academic Platform',
+      title: 'Welcome to Studora',
       message: `Signed in as ${authData.profile?.full_name || authData.user.email}`
     });
 
@@ -223,6 +322,7 @@ function AppContent() {
     setSemesters([]);
     setStudyPlans([]);
     setSelectedPlanForAuth(null);
+    notifyAuthStateChange(null, null);
     navigateRoute('landing');
     addToast({ type: 'info', title: 'Signed Out', message: 'You have safely signed out of your workspace.' });
   };
@@ -235,6 +335,7 @@ function AppContent() {
     setSemesters([]);
     setStudyPlans([]);
     setSelectedPlanForAuth(null);
+    notifyAuthStateChange(null, null);
     navigateRoute('landing');
     addToast({
       type: 'info',
@@ -257,12 +358,13 @@ function AppContent() {
     return (
       <AppSplashScreen 
         isFading={splashFading} 
-        message={authChecking ? "Initializing Academic Workspace..." : "Preparing Academic Workspace..."} 
+        message="Loading Studora..." 
+        subMessage="Study smarter. Go further." 
       />
     );
   }
 
-  // --- Logged-Out Views (Public Landing Page, Pricing, Auth & Public Legal Pages) ---
+  // --- Logged-Out Views (Public Landing Page, Pricing, Auth, Legal & 404 Pages) ---
   if (!currentUser) {
     if (activeTab === 'privacy') {
       return (
@@ -357,6 +459,16 @@ function AppContent() {
       );
     }
 
+    if (activeTab === '404') {
+      return (
+        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+          <NotFoundPage onBackToStudora={() => navigateRoute('landing')} />
+          <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
+          <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
+        </div>
+      );
+    }
+
     // Default for unauthenticated visitors is the Public Landing Page!
     return (
       <BillingProvider currentUser={null} showToast={addToast}>
@@ -383,17 +495,22 @@ function AppContent() {
     overview: 'Overview',
     cgpa: 'CGPA & Academic Records',
     study: 'Study Planner',
+    'test-prep': 'Test Preparation & Drills',
     prep: 'Test Preparation & Drills',
-    community: 'Messages & Peer Groups',
     tutors: 'Tutor Marketplace & Sessions',
+    messages: 'Messages & Peer Groups',
+    community: 'Messages & Peer Groups',
     ai: 'AI Academic Assistant',
     profile: 'Student Profile & Settings',
     pricing: 'Plans & Feature Entitlements',
+    'settings/subscription': 'Subscription & Entitlements',
     'billing-callback': 'Payment Confirmation',
     privacy: 'Privacy Policy',
     terms: 'Terms of Service',
     'cookie-settings': 'Cookie Settings',
-    'privacy-settings': 'Privacy & Data Rights Settings'
+    'privacy-settings': 'Privacy & Data Rights Settings',
+    landing: 'Home',
+    404: 'Page Not Found'
   };
 
   return (
@@ -418,95 +535,120 @@ function AppContent() {
             streakDays={streakData.streak}
             onOpenProfile={() => navigateRoute('profile')}
             onOpenPricing={() => navigateRoute('pricing')}
+            onOpenSubscription={() => navigateRoute('settings/subscription')}
             activeTabTitle={tabTitles[activeTab] || 'Overview'}
           />
 
           {/* Page Container */}
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-            {(activeTab === 'dashboard' || activeTab === 'overview') && (
-              <DashboardPage
-                userProfile={userProfile}
-                semesters={semesters}
-                studyPlans={studyPlans}
-                streakData={streakData}
-                selectedScale={selectedScale}
-                onNavigateTab={navigateRoute}
-                onToggleTopic={handleToggleTopic}
-                showToast={addToast}
-              />
-            )}
+            <ErrorBoundary onGoHome={() => navigateRoute('dashboard')}>
+              <Suspense fallback={<PageLoader message="Loading Studora..." />}>
+                {(activeTab === 'dashboard' || activeTab === 'overview') && (
+                  <DashboardPage
+                    userProfile={userProfile}
+                    semesters={semesters}
+                    studyPlans={studyPlans}
+                    streakData={streakData}
+                    selectedScale={selectedScale}
+                    onNavigateTab={navigateRoute}
+                    onToggleTopic={handleToggleTopic}
+                    showToast={addToast}
+                  />
+                )}
 
-            {activeTab === 'cgpa' && (
-              <CgpaPage
-                semesters={semesters}
-                selectedScale={selectedScale}
-                availableScales={availableScales}
-                onRefreshData={fetchAllData}
-                showToast={addToast}
-              />
-            )}
+                {activeTab === 'landing' && (
+                  <LandingPage
+                    onNavigate={navigateRoute}
+                    onSelectPlan={handleLandingSelectPlan}
+                    onOpenCookieSettings={() => setShowCookieModal(true)}
+                  />
+                )}
 
-            {activeTab === 'study' && (
-              <StudyPlannerPage
-                studyPlans={studyPlans}
-                streakData={streakData}
-                onRefreshData={fetchAllData}
-                showToast={addToast}
-              />
-            )}
+                {activeTab === '404' && (
+                  <NotFoundPage
+                    onBackToStudora={() => navigateRoute('dashboard')}
+                  />
+                )}
 
-            {activeTab === 'profile' && (
-              <ProfilePage
-                userProfile={userProfile}
-                onProfileUpdated={(updated) => setUserProfile(updated)}
-                onAccountDeleted={handleAccountDeleted}
-                onOpenCookieSettings={() => setShowCookieModal(true)}
-                onNavigateLegal={navigateRoute}
-                onNavigatePricing={() => navigateRoute('pricing')}
-                showToast={addToast}
-              />
-            )}
+                {activeTab === 'cgpa' && (
+                  <CgpaPage
+                    semesters={semesters}
+                    selectedScale={selectedScale}
+                    availableScales={availableScales}
+                    onRefreshData={fetchAllData}
+                    showToast={addToast}
+                  />
+                )}
 
-            {activeTab === 'pricing' && (
-              <PricingPage
-                onBack={() => navigateRoute('dashboard')}
-                showToast={addToast}
-              />
-            )}
+                {activeTab === 'study' && (
+                  <StudyPlannerPage
+                    studyPlans={studyPlans}
+                    streakData={streakData}
+                    onRefreshData={fetchAllData}
+                    showToast={addToast}
+                  />
+                )}
 
-            {(activeTab === 'billing-callback' || activeTab === 'billing/callback') && (
-              <BillingCallbackPage
-                onNavigateDashboard={() => navigateRoute('dashboard')}
-                onNavigatePricing={() => navigateRoute('pricing')}
-                showToast={addToast}
-              />
-            )}
+                {activeTab === 'profile' && (
+                  <ProfilePage
+                    userProfile={userProfile}
+                    onProfileUpdated={(updated) => setUserProfile(updated)}
+                    onAccountDeleted={handleAccountDeleted}
+                    onOpenCookieSettings={() => setShowCookieModal(true)}
+                    onNavigateLegal={navigateRoute}
+                    onNavigatePricing={() => navigateRoute('pricing')}
+                    showToast={addToast}
+                  />
+                )}
 
-            {activeTab === 'privacy' && (
-              <PrivacyPolicyPage onBack={() => navigateRoute('profile')} />
-            )}
+                {activeTab === 'pricing' && (
+                  <PricingPage
+                    onBack={() => navigateRoute('dashboard')}
+                    showToast={addToast}
+                  />
+                )}
 
-            {activeTab === 'terms' && (
-              <TermsPage onBack={() => navigateRoute('profile')} />
-            )}
+                {(activeTab === 'settings/subscription' || activeTab === 'settings' || activeTab === 'settings-subscription') && (
+                  <SubscriptionPage
+                    onNavigateDashboard={() => navigateRoute('dashboard')}
+                    onNavigatePricing={() => navigateRoute('pricing')}
+                    showToast={addToast}
+                  />
+                )}
 
-            {activeTab === 'cookie-settings' && (
-              <CookieSettingsPage onBack={() => navigateRoute('profile')} showToast={addToast} />
-            )}
+                {(activeTab === 'billing-callback' || activeTab === 'billing/callback') && (
+                  <BillingCallbackPage
+                    onNavigateDashboard={() => navigateRoute('dashboard')}
+                    onNavigatePricing={() => navigateRoute('pricing')}
+                    showToast={addToast}
+                  />
+                )}
 
-            {activeTab === 'privacy-settings' && (
-              <PrivacySettingsPage
-                currentUser={currentUser}
-                onBack={() => navigateRoute('profile')}
-                onOpenCookieSettings={() => setShowCookieModal(true)}
-                onNavigate={navigateRoute}
-                onAccountDeleted={handleAccountDeleted}
-                showToast={addToast}
-              />
-            )}
+                {activeTab === 'privacy' && (
+                  <PrivacyPolicyPage onBack={() => navigateRoute('profile')} />
+                )}
+
+                {activeTab === 'terms' && (
+                  <TermsPage onBack={() => navigateRoute('profile')} />
+                )}
+
+                {activeTab === 'cookie-settings' && (
+                  <CookieSettingsPage onBack={() => navigateRoute('profile')} showToast={addToast} />
+                )}
+
+                {activeTab === 'privacy-settings' && (
+                  <PrivacySettingsPage
+                    currentUser={currentUser}
+                    onBack={() => navigateRoute('profile')}
+                    onOpenCookieSettings={() => setShowCookieModal(true)}
+                    onNavigate={navigateRoute}
+                    onAccountDeleted={handleAccountDeleted}
+                    showToast={addToast}
+                  />
+                )}
 
             {/* Test Prep Drills */}
-            {activeTab === 'prep' && (
+            {(activeTab === 'test-prep' || activeTab === 'prep') && (
               <div className="max-w-4xl mx-auto space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
@@ -670,7 +812,7 @@ function AppContent() {
             )}
 
             {/* Community & ZEGOCLOUD Video Tutoring */}
-            {activeTab === 'community' && (
+            {(activeTab === 'messages' || activeTab === 'community') && (
               <div className="max-w-4xl mx-auto space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
@@ -827,6 +969,8 @@ function AppContent() {
                 </FeatureGate>
               </div>
             )}
+              </Suspense>
+            </ErrorBoundary>
           </main>
 
           {/* Universal Footer */}
@@ -860,8 +1004,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
+    <ErrorBoundary onGoHome={() => { window.location.href = '/'; }}>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
+

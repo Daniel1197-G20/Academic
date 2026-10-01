@@ -1,4 +1,4 @@
-// Unified API client for Academic Platform with session token persistence
+// Unified API client for Studora with session token persistence
 const TOKEN_KEY = 'academic_platform_token';
 
 class ApiClient {
@@ -26,14 +26,39 @@ class ApiClient {
       ...(options.headers || {})
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || 12000);
+
     const config = {
       ...options,
-      headers
+      headers,
+      signal: options.signal || controller.signal
     };
 
     try {
       const response = await fetch(endpoint, config);
-      const data = await response.json().catch(() => ({}));
+      clearTimeout(timeoutId);
+
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+
+      let data = {};
+      if (isJson) {
+        data = await response.json().catch(() => ({}));
+      } else {
+        // Guard against HTML returned on SPA fallback
+        const text = await response.text().catch(() => '');
+        if (text.trim().startsWith('<') || text.trim().startsWith('<!DOCTYPE')) {
+          const err = new Error(`API endpoint ${endpoint} returned HTML instead of JSON.`);
+          err.status = response.status;
+          throw err;
+        }
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = {};
+        }
+      }
 
       if (!response.ok) {
         if (response.status === 401 && endpoint !== '/api/auth/login') {
@@ -47,6 +72,12 @@ class ApiClient {
 
       return data;
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        const timeoutError = new Error(`Request to ${endpoint} timed out.`);
+        timeoutError.status = 408;
+        throw timeoutError;
+      }
       throw err;
     }
   }
@@ -202,7 +233,7 @@ class ApiClient {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `academic-platform-student-data-export.json`;
+    a.download = `studora-student-data-export.json`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);

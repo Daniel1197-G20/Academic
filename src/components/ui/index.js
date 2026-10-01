@@ -14,3 +14,4 @@ export * from './PageHeader';
 export * from './AnimatedNumber';
 export * from './TactileCheckbox';
 export * from './AppSplashScreen';
+export * from './StudoraLogo';

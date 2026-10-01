@@ -12,16 +12,16 @@ import crypto from 'crypto';
  * -> Attaches verified user context { id, firebase_uid, email, role }
  */
 
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'academic-platform-prod';
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'studora-a';
 
 // For local testing and development without live Google networks,
 // we support a cryptographic mock token generator and validator.
-const MOCK_FIREBASE_SECRET = process.env.FIREBASE_MOCK_SECRET || 'firebase-dev-mock-secret-academic-platform-2026';
+const MOCK_FIREBASE_SECRET = process.env.FIREBASE_MOCK_SECRET || 'firebase-dev-mock-secret-studora-2026';
 
 /**
  * Generates a mock Firebase ID token for local testing and CI/CD pipelines
  */
-export function createMockFirebaseToken({ uid, email, role = 'STUDENT', expSeconds = 3600 }) {
+export function createMockFirebaseToken({ uid, email, role = 'student', expSeconds = 3600 }) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT', kid: 'mock-firebase-key' })).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
   const payload = Buffer.from(JSON.stringify({
@@ -115,6 +115,6 @@ export async function verifyFirebaseIdToken(token) {
     uid: payload.sub,
     email: payload.email,
     emailVerified: Boolean(payload.email_verified),
-    role: payload.role || 'STUDENT'
+    role: (payload.role || 'student').toLowerCase()
   };
 }

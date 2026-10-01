@@ -1,5 +1,33 @@
-node_modules
-dist
-data
+# Dependencies
+node_modules/
+
+# Production builds
+dist/
+dist-ssr/
+*.local
+
+# Database & local data
+data/
+*.db
+*.db-journal
+
+# Environment files & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+serviceAccountKey*.json
+*service-account*.json
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# Firebase CLI cache
+.firebase/
+
+# OS metadata
 .DS_Store
-.impeccable
+Thumbs.db
+
+# Tool-specific
+.impeccable/

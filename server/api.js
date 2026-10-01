@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { db, hashPassword, verifyPassword } from './db.js';
 import { verifyFirebaseIdToken } from './firebase-auth.js';
+import { generateToken04 } from './zego.js';
 import {
   getSubscriptionPlans,
   getUserSubscription,
@@ -15,6 +16,8 @@ import {
 } from './billing-service.js';
 
 const JWT_SECRET = process.env.APP_SECRET || 'academic-platform-secret-key-2026-ghost-green';
+const ZEGO_APP_ID = Number(process.env.ZEGOCLOUD_APP_ID || process.env.VITE_ZEGOCLOUD_APP_ID || 1234567890);
+const ZEGO_SERVER_SECRET = process.env.ZEGOCLOUD_SERVER_SECRET || 'studora_zego_server_secret_2026';
 
 // Create a signed HMAC-SHA256 session token
 export function createSessionToken(payload) {
@@ -98,6 +101,12 @@ export async function getAuthenticatedUser(req) {
   // 2. Fallback to Legacy HMAC Session Token verification (Transition Window)
   const legacyPayload = verifySessionToken(token);
   if (legacyPayload && legacyPayload.userId) {
+    try {
+      const uRes = await db.query(`SELECT firebase_uid FROM users WHERE id = $1;`, [legacyPayload.userId]);
+      if (uRes.rows.length > 0 && uRes.rows[0].firebase_uid) {
+        legacyPayload.firebaseUid = uRes.rows[0].firebase_uid;
+      }
+    } catch (e) {}
     return legacyPayload;
   }
 
@@ -943,22 +952,80 @@ export async function handleApiRequest(req, res) {
 
     if (pathname === '/api/video/token' && method === 'POST') {
       const authUser = await getAuthenticatedUser(req);
-      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+      if (!authUser) {
+        return sendJson(res, 401, {
+          error: 'Authentication required. Please sign in with Firebase or Studora.',
+          code: 'AUTH_REQUIRED'
+        });
+      }
 
-      const { roomCode } = await parseJsonBody(req);
+      const body = await parseJsonBody(req).catch(() => ({}));
+      const roomID = (body.roomID || body.roomCode || 'studora-test-room').trim();
+
+      // Stable ZEGOCLOUD user ID: derived strictly from verified Firebase UID or stable user ID
+      const zegoUserId = authUser.firebaseUid || (authUser.userId && authUser.userId.startsWith('usr_') ? authUser.userId : 'usr_' + authUser.userId);
+
+      // Resolve display name for in-call identity from profile
+      let zegoUserName = authUser.email ? authUser.email.split('@')[0] : zegoUserId;
       try {
-        // Enforce VIDEO_TUTORING entitlement
-        const usage = await atomicIncrementUsage(authUser.userId, 'VIDEO_TUTORING');
-        // ZEGOCLOUD server-generated token simulation (credentials stay server-side)
-        const zegoToken = 'zego_tok_' + crypto.randomBytes(16).toString('hex');
+        const prof = await db.query(`SELECT full_name FROM profiles WHERE user_id = $1;`, [authUser.userId]);
+        if (prof.rows.length > 0 && prof.rows[0].full_name) {
+          zegoUserName = prof.rows[0].full_name;
+        }
+      } catch (e) {
+        // Fallback to email prefix
+      }
+
+      // If not the development test room, enforce subscription entitlement
+      let usage = null;
+      if (roomID !== 'studora-test-room') {
+        try {
+          usage = await atomicIncrementUsage(authUser.userId, 'VIDEO_TUTORING');
+        } catch (entErr) {
+          return sendJson(res, entErr.statusCode || 403, { error: entErr.message, code: entErr.code });
+        }
+      }
+
+      try {
+        // Generate ZEGOCLOUD Token04 strictly server-side
+        const effectiveTimeInSeconds = 3600; // 1 hour token validity
+        const payload = JSON.stringify({
+          room_id: roomID,
+          privilege: {
+            1: 1, // login room privilege
+            2: 1  // publish stream privilege
+          },
+          stream_id_list: []
+        });
+
+        const token = generateToken04({
+          appId: ZEGO_APP_ID,
+          userId: zegoUserId,
+          serverSecret: ZEGO_SERVER_SECRET,
+          effectiveTimeInSeconds,
+          payload
+        });
+
+        // ServerSecret MUST NEVER be included in the response
         return sendJson(res, 200, {
           success: true,
-          roomCode: roomCode || 'ZEGO-STUDY-MAIN',
-          zegoToken,
-          usage
+          token,
+          appId: ZEGO_APP_ID,
+          roomID,
+          roomCode: roomID,
+          userID: zegoUserId,
+          userName: zegoUserName,
+          expiresIn: effectiveTimeInSeconds,
+          expiresAt: Math.floor(Date.now() / 1000) + effectiveTimeInSeconds,
+          usage,
+          serverSecretExposed: false
         });
-      } catch (err) {
-        return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
+      } catch (genErr) {
+        console.error('ZEGOCLOUD token generation error:', genErr);
+        return sendJson(res, 500, {
+          error: 'Failed to generate ZEGOCLOUD room token: ' + genErr.message,
+          code: 'ZEGO_TOKEN_GENERATION_FAILED'
+        });
       }
     }
 

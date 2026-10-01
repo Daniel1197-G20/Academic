@@ -1,15 +1,15 @@
 import React from 'react';
-import { GraduationCap } from 'lucide-react';
+import { StudoraMark } from './StudoraLogo';
 
 /**
  * AppSplashScreen
- * Premium animated brand splash screen displayed when a visitor enters the website.
- * Features an extruded academic icon tile, concentric pulsing ripple rings, 
+ * Premium animated brand splash screen displayed when a visitor enters Studora.
+ * Features an extruded brand icon tile, concentric pulsing ripple rings, 
  * floating micro-motion, metallic light sheen sweep, and an indeterminate progress bar.
  */
 export function AppSplashScreen({ 
-  message = "Initializing Academic Workspace...", 
-  subMessage = "University Academic Productivity",
+  message = "Initializing Studora Workspace...", 
+  subMessage = "Study smarter. Go further.",
   isFading = false 
 }) {
   return (
@@ -19,7 +19,7 @@ export function AppSplashScreen({
       }`}
       role="status"
       aria-live="polite"
-      aria-label="Loading Academic Platform"
+      aria-label="Loading Studora"
     >
       {/* Ambient background glow */}
       <div 
@@ -38,20 +38,20 @@ export function AppSplashScreen({
 
           {/* Core App Icon Tile */}
           <div className="relative w-20 h-20 rounded-[22px] bg-gradient-to-br from-[#176B4D] via-[#145d43] to-[#0E3D2C] shadow-[0_12px_28px_rgba(23,107,77,0.32),0_4px_12px_rgba(0,0,0,0.06)] border border-white/25 flex items-center justify-center text-white overflow-hidden animate-icon-float">
-            {/* Glossy metallic light sheen sweep across the cap */}
+            {/* Glossy metallic light sheen sweep across the mark */}
             <div className="absolute inset-0 pointer-events-none">
               <div className="w-12 h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-icon-sheen" />
             </div>
 
-            {/* Crisp Graduation Cap Icon */}
-            <GraduationCap className="w-10 h-10 text-white stroke-[2.2] drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]" />
+            {/* Crisp Studora Mark Icon */}
+            <StudoraMark className="w-10 h-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]" strokeWidth={2.4} />
           </div>
         </div>
 
         {/* Brand Lockup & Staged Message */}
         <div className="mt-6 text-center space-y-1">
-          <h1 className="font-extrabold text-xl sm:text-2xl text-ink tracking-tight">
-            Academic Platform
+          <h1 className="font-extrabold text-xl sm:text-2xl text-ink tracking-tight font-sans">
+            Studora
           </h1>
           <p className="text-[10px] sm:text-[11px] font-mono tracking-widest uppercase text-muted font-bold">
             {subMessage}

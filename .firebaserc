@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "studora-a",
+    "Studora": "studora-a",
+    "Default": "studora-a"
+  },
+  "targets": {},
+  "etags": {}
+}

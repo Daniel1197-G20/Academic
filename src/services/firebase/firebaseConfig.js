@@ -47,3 +47,30 @@ export async function getFirebaseIdToken() {
   // If a mock or active Firebase session exists in localStorage, return it
   return localStorage.getItem('academic_platform_token') || null;
 }
+
+/**
+ * Stable Firebase / Client authentication state subscription listener
+ * Follows onAuthStateChanged pattern:
+ * - Registers a subscriber callback
+ * - Returns an unsubscribe cleanup function
+ * - Ensures there is one reliable, non-duplicative source of authentication state
+ */
+const authSubscribers = new Set();
+
+export function onAuthStateChangedListener(callback) {
+  authSubscribers.add(callback);
+  return () => {
+    authSubscribers.delete(callback);
+  };
+}
+
+export function notifyAuthStateChange(user, profile = null) {
+  for (const subscriber of authSubscribers) {
+    try {
+      subscriber({ user, profile, authLoading: false });
+    } catch (err) {
+      console.error('Error invoking auth state listener:', err);
+    }
+  }
+}
+

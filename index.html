@@ -4,13 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#176B4D" />
-    <meta name="description" content="Student Academic Platform - A premium academic productivity platform for serious university students: CGPA tracking, study planning, and performance analytics." />
-    <title>Academic Platform | Student Academic Productivity</title>
+    <meta name="description" content="Studora is an all-in-one academic platform for managing your CGPA, planning your studies, preparing for tests, learning with AI, and connecting with tutors." />
+    <meta property="og:title" content="Studora — Study smarter. Go further." />
+    <meta property="og:description" content="Studora helps you plan your semester, track your academic progress, prepare for tests, learn with AI, and connect with tutors — all in one academic platform." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Studora — Study smarter. Go further." />
+    <meta name="twitter:description" content="Studora helps you plan your semester, track your academic progress, prepare for tests, learn with AI, and connect with tutors — all in one academic platform." />
+    <title>Studora — Study smarter. Go further.</title>
     <!-- Google Fonts Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23176B4D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 10v6M2 10l10-5 10 5-10 5z'/><path d='M6 12v5c3 3 9 3 12 0v-5'/></svg>" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23176B4D' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M4.5 7.5C4.5 5.567 6.067 4 8 4H14C17.314 4 20 6.686 20 10C20 13.314 17.314 16 14 16H9.5'/><path d='M19.5 16.5C19.5 18.433 17.933 20 16 20H10C6.686 20 4 17.314 4 14C4 10.686 6.686 8 10 8H14.5'/><path d='M12 4.5L14 2.5L16 4.5'/></svg>" />
   </head>
   <body class="bg-[#F6F7F3] text-[#111827] antialiased selection:bg-[#DDEFE5] selection:text-[#176B4D] overflow-x-hidden min-h-screen">
     <div id="root">
@@ -21,19 +27,20 @@
           <div style="width:80px;height:80px;border-radius:22px;background:linear-gradient(135deg,#176B4D 0%,#0E3D2C 100%);box-shadow:0 12px 28px rgba(23,107,77,0.32),0 4px 10px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;animation:initFloat 2.4s ease-in-out infinite;border:1px solid rgba(255,255,255,0.25);">
             <div style="position:absolute;top:0;left:0;width:30px;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent);transform:rotate(25deg);animation:initSheen 2.6s ease-in-out infinite;"></div>
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+              <path d="M4.5 7.5C4.5 5.567 6.067 4 8 4H14C17.314 4 20 6.686 20 10C20 13.314 17.314 16 14 16H9.5"/>
+              <path d="M19.5 16.5C19.5 18.433 17.933 20 16 20H10C6.686 20 4 17.314 4 14C4 10.686 6.686 8 10 8H14.5"/>
+              <path d="M12 4.5L14 2.5L16 4.5"/>
             </svg>
           </div>
         </div>
         <div style="margin-top:22px;text-align:center;">
-          <div style="font-weight:800;font-size:20px;color:#111827;letter-spacing:-0.02em;">Academic Platform</div>
-          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:#667085;margin-top:4px;font-weight:700;">University Academic Productivity</div>
+          <div style="font-weight:800;font-size:22px;color:#111827;letter-spacing:-0.02em;">Studora</div>
+          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:#667085;margin-top:4px;font-weight:700;">Study smarter. Go further.</div>
         </div>
         <div style="margin-top:20px;width:160px;height:5px;background:#E5E7EB;border-radius:9999px;overflow:hidden;position:relative;box-shadow:inset 0 1px 2px rgba(0,0,0,0.06);">
           <div style="width:70px;height:100%;background:linear-gradient(90deg,#176B4D,#338F6A,#104633);border-radius:9999px;position:absolute;animation:initBar 1.5s cubic-bezier(0.4,0,0.2,1) infinite;"></div>
         </div>
-        <div style="font-size:12px;color:#667085;margin-top:14px;font-weight:500;animation:initBreathe 1.5s ease-in-out infinite;">Loading Academic Workspace...</div>
+        <div style="font-size:12px;color:#667085;margin-top:14px;font-weight:500;animation:initBreathe 1.5s ease-in-out infinite;">Loading Studora Workspace...</div>
         <style>
           @keyframes initPulse { 0% { transform:scale(0.92); opacity:0.65; } 50% { transform:scale(1.18); opacity:0.18; } 100% { transform:scale(1.35); opacity:0; } }
           @keyframes initFloat { 0%, 100% { transform:translateY(0) scale(1); } 50% { transform:translateY(-5px) scale(1.02); } }

@@ -12,9 +12,10 @@ import {
   ChevronLeft, 
   ChevronRight,
   LogOut,
-  CreditCard
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
-import { Avatar } from '../ui';
+import { Avatar, StudoraMark } from '../ui';
 
 export function Sidebar({
   activeTab,
@@ -29,9 +30,9 @@ export function Sidebar({
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'cgpa', label: 'CGPA', icon: GraduationCap },
     { id: 'study', label: 'Study Planner', icon: BookOpen },
-    { id: 'prep', label: 'Test Prep', icon: FileCheck2 },
+    { id: 'test-prep', label: 'Test Prep', icon: FileCheck2 },
     { id: 'tutors', label: 'Tutors', icon: Compass },
-    { id: 'community', label: 'Messages', icon: MessageSquare },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
   ];
 
   const personalNav = [
@@ -50,16 +51,16 @@ export function Sidebar({
       <div>
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-academic-100 flex items-center justify-center text-academic shrink-0 border border-academic-200/50">
-              <GraduationCap className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-academic-100 flex items-center justify-center text-academic shrink-0 border border-academic-200/50 shadow-tactile-surface">
+              <StudoraMark className="w-4 h-4" />
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="font-bold text-sm tracking-tight text-ink">
-                  Academic
+                <span className="font-extrabold text-sm tracking-tight text-ink font-sans">
+                  Studora
                 </span>
-                <span className="text-[10px] text-muted tracking-tight">
-                  Student Platform
+                <span className="text-[10px] text-muted tracking-tight font-medium">
+                  Academic Platform
                 </span>
               </div>
             )}
@@ -86,7 +87,10 @@ export function Sidebar({
             )}
             {mainNav.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id || (item.id === 'dashboard' && activeTab === 'overview');
+              const isActive = (item.id === 'dashboard' && (activeTab === 'dashboard' || activeTab === 'overview'))
+                || (item.id === 'test-prep' && (activeTab === 'test-prep' || activeTab === 'prep'))
+                || (item.id === 'messages' && (activeTab === 'messages' || activeTab === 'community'))
+                || activeTab === item.id;
 
               return (
                 <button
@@ -124,7 +128,8 @@ export function Sidebar({
             )}
             {personalNav.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive = (item.id === 'settings/subscription' && (activeTab === 'settings/subscription' || activeTab === 'settings' || activeTab === 'settings-subscription'))
+                || activeTab === item.id;
 
               return (
                 <button

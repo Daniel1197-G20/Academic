@@ -12,15 +12,15 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
           {/* Brand & Legal Disclaimer */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-1">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-ink tracking-tight">
-                Academic Platform
+              <span className="font-extrabold text-ink tracking-tight font-sans">
+                Studora
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-academic-50 text-academic border border-academic-100">
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-academic-50 text-academic border border-academic-100 font-semibold">
                 v1.0
               </span>
             </div>
             <p className="text-[11px] text-muted max-w-md">
-              © {new Date().getFullYear()} Academic Platform. Designed for serious academic study, grade tracking, and performance analytics.
+              © {new Date().getFullYear()} Studora. Study smarter. Go further.
             </p>
           </div>
 
@@ -88,7 +88,7 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
               For student data export requests, account deletion verification, or questions regarding our data practices:
             </p>
             <div className="font-mono text-academic bg-white p-2.5 rounded-btn border border-border shadow-tactile-inset-sm text-[11px] select-all">
-              privacy@academicplatform.edu
+              privacy@studora.app
             </div>
           </div>
 
@@ -101,7 +101,7 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
               For institution partnerships, grading scale adjustments, or bug reports:
             </p>
             <div className="font-mono text-academic bg-white p-2.5 rounded-btn border border-border shadow-tactile-inset-sm text-[11px] select-all">
-              support@academicplatform.edu
+              support@studora.app
             </div>
           </div>
 
