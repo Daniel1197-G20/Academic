@@ -59,12 +59,12 @@ export function ConsentBanner({ onOpenSettings }) {
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 p-4 sm:p-6 pointer-events-none transition-all duration-300">
-      <div className="max-w-4xl mx-auto bg-white/95 backdrop-blur-md border border-border rounded-2xl p-5 sm:p-6 shadow-modal pointer-events-auto">
+      <div className="max-w-4xl mx-auto bg-white border border-border rounded-hero p-5 sm:p-6 shadow-tactile-raised pointer-events-auto">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
           {/* Information Notice */}
           <div className="space-y-1.5 flex-1">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-academic-100 flex items-center justify-center text-academic border border-academic-200">
+              <div className="w-7 h-7 rounded-btn bg-academic-100 flex items-center justify-center text-academic border border-academic-200 shadow-tactile-surface">
                 <Cookie className="w-4 h-4" />
               </div>
               <h3 className="text-sm font-semibold text-ink">

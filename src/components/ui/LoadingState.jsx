@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 
 export function Skeleton({ className = '' }) {
   return (
-    <div className={`bg-gray-200/70 animate-pulse rounded-lg ${className}`} />
+    <div className={`bg-[#E8EAE4] animate-pulse rounded-[10px] ${className}`} />
   );
 }
 
@@ -23,12 +23,12 @@ export function LoadingSpinner({ size = 'md', className = '' }) {
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white border border-border rounded-card p-5 space-y-3 shadow-subtle">
+    <div className="bg-white border border-border rounded-card p-5 space-y-3 shadow-tactile-raised">
       <Skeleton className="h-4 w-1/3" />
       <Skeleton className="h-3 w-2/3" />
       <div className="pt-2 flex gap-2">
-        <Skeleton className="h-8 w-24 rounded-[10px]" />
-        <Skeleton className="h-8 w-24 rounded-[10px]" />
+        <Skeleton className="h-8 w-24 rounded-btn" />
+        <Skeleton className="h-8 w-24 rounded-btn" />
       </div>
     </div>
   );

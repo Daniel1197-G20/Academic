@@ -13,10 +13,12 @@ import {
   FileText, 
   Cookie, 
   Mail, 
-  AlertTriangle 
+  AlertTriangle,
+  CreditCard 
 } from 'lucide-react';
-import { Button, Input, Badge, Modal, Avatar, PageHeader } from '../../components/ui';
+import { Button, Input, Badge, Modal, Avatar, PageHeader, Tabs } from '../../components/ui';
 import { api } from '../../services/api/client';
+import { SubscriptionSettingsSection } from '../billing/SubscriptionSettingsSection';
 
 export function ProfilePage({ 
   userProfile, 
@@ -24,9 +26,10 @@ export function ProfilePage({
   onAccountDeleted, 
   onOpenCookieSettings, 
   onNavigateLegal,
+  onNavigatePricing,
   showToast 
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('academic'); // 'academic' | 'privacy'
+  const [activeSubTab, setActiveSubTab] = useState('academic'); // 'academic' | 'subscription' | 'privacy'
 
   // Academic Form States
   const [fullName, setFullName] = useState(userProfile?.full_name || '');
@@ -147,7 +150,7 @@ export function ProfilePage({
       />
 
       {/* 2. Profile Identity Banner */}
-      <div className="bg-white border border-border rounded-card p-6 shadow-subtle">
+      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
           <Avatar
             name={fullName || 'Student'}
@@ -163,43 +166,28 @@ export function ProfilePage({
               {institution || 'University Member'} • {department || 'Department Member'}
             </p>
             <p className="text-xs text-muted">
-              ID / Matric: <strong className="text-ink font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
+              ID / Matric: <strong className="text-ink font-mono font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
             </p>
           </div>
         </div>
       </div>
 
-      {/* 3. Section Tabs */}
-      <div className="flex border-b border-border gap-6">
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('academic')}
-          className={`pb-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-            activeSubTab === 'academic'
-              ? 'border-academic text-academic'
-              : 'border-transparent text-muted hover:text-ink'
-          }`}
-        >
-          <User className="w-4 h-4" />
-          Academic Identity
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('privacy')}
-          className={`pb-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-            activeSubTab === 'privacy'
-              ? 'border-academic text-academic'
-              : 'border-transparent text-muted hover:text-ink'
-          }`}
-        >
-          <Shield className="w-4 h-4" />
-          Privacy & Data Rights
-        </button>
+      {/* 3. Section Tabs — Physical Sliding Tile */}
+      <div className="flex justify-start">
+        <Tabs
+          tabs={[
+            { id: 'academic', label: 'Academic Identity', icon: User },
+            { id: 'subscription', label: 'Plan & Billing', icon: CreditCard },
+            { id: 'privacy', label: 'Privacy & Data Rights', icon: Shield }
+          ]}
+          activeTab={activeSubTab}
+          onChange={setActiveSubTab}
+        />
       </div>
 
       {/* 4. Tab 1: Academic Form */}
       {activeSubTab === 'academic' && (
-        <div className="bg-white border border-border rounded-card p-6 shadow-subtle">
+        <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
@@ -288,11 +276,19 @@ export function ProfilePage({
         </div>
       )}
 
+      {/* Tab 2: Subscription & Billing */}
+      {activeSubTab === 'subscription' && (
+        <SubscriptionSettingsSection
+          onNavigatePricing={onNavigatePricing}
+          showToast={showToast}
+        />
+      )}
+
       {/* 5. Tab 2: Privacy & Data Rights */}
       {activeSubTab === 'privacy' && (
         <div className="space-y-6">
           {/* Transparency & Legal Docs */}
-          <div className="bg-white border border-border rounded-card p-6 shadow-subtle space-y-4">
+          <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
             <h3 className="text-base font-semibold text-ink flex items-center gap-2">
               <Shield className="w-4 h-4 text-academic" />
               Legal Policies & Information Architecture
@@ -304,7 +300,7 @@ export function ProfilePage({
               <button
                 type="button"
                 onClick={() => onNavigateLegal?.('privacy')}
-                className="p-4 rounded-xl border border-border hover:border-gray-300 text-left transition-colors bg-surface-muted/40"
+                className="p-4 rounded-btn border border-border hover:border-gray-300 text-left transition-all bg-canvas/40 shadow-tactile-surface hover:-translate-y-[1px]"
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-semibold text-xs text-ink">Privacy Policy</span>
@@ -316,7 +312,7 @@ export function ProfilePage({
               <button
                 type="button"
                 onClick={() => onNavigateLegal?.('terms')}
-                className="p-4 rounded-xl border border-border hover:border-gray-300 text-left transition-colors bg-surface-muted/40"
+                className="p-4 rounded-btn border border-border hover:border-gray-300 text-left transition-all bg-canvas/40 shadow-tactile-surface hover:-translate-y-[1px]"
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-semibold text-xs text-ink">Terms of Service</span>
@@ -328,7 +324,7 @@ export function ProfilePage({
               <button
                 type="button"
                 onClick={onOpenCookieSettings}
-                className="p-4 rounded-xl border border-border hover:border-gray-300 text-left transition-colors bg-surface-muted/40"
+                className="p-4 rounded-btn border border-border hover:border-gray-300 text-left transition-all bg-canvas/40 shadow-tactile-surface hover:-translate-y-[1px]"
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-semibold text-xs text-ink">Cookie Settings</span>

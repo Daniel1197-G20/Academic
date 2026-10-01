@@ -79,7 +79,7 @@ export function CookieSettingsModal({
     >
       <div className="space-y-4 text-xs text-ink">
         {/* Category 1: Strictly Necessary */}
-        <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+        <div className="p-4 rounded-card bg-canvas border border-border shadow-tactile-surface space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-academic" />
@@ -91,25 +91,25 @@ export function CookieSettingsModal({
             Required to operate the Academic Platform securely. They maintain authenticated sessions, secure API communications, and enable local calculations. These cannot be disabled.
           </p>
           <div className="text-[11px] font-mono text-muted pt-1">
-            Keys: <span className="text-ink">academic_platform_token</span>, <span className="text-ink">auth_token</span>
+            Keys: <span className="text-ink font-semibold">academic_platform_token</span>, <span className="text-ink font-semibold">auth_token</span>
           </div>
         </div>
 
         {/* Category 2: Analytics Technologies */}
-        <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+        <div className="p-4 rounded-card bg-canvas border border-border shadow-tactile-surface space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-muted" />
               <span className="font-semibold text-ink text-sm">Diagnostic & Performance Telemetry</span>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={analyticsEnabled}
                 onChange={(e) => setAnalyticsEnabled(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-academic"></div>
+              <div className="w-10 h-5 bg-[#ECEEE9] border border-border shadow-tactile-track rounded-full peer peer-checked:bg-academic peer-checked:border-academic peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-tactile-btn"></div>
             </label>
           </div>
           <p className="text-muted text-xs leading-relaxed">
@@ -118,20 +118,20 @@ export function CookieSettingsModal({
         </div>
 
         {/* Category 3: Functional Preferences */}
-        <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+        <div className="p-4 rounded-card bg-canvas border border-border shadow-tactile-surface space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Cookie className="w-4 h-4 text-muted" />
               <span className="font-semibold text-ink text-sm">Interface & Layout Preferences</span>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={functionalEnabled}
                 onChange={(e) => setFunctionalEnabled(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-academic"></div>
+              <div className="w-10 h-5 bg-[#ECEEE9] border border-border shadow-tactile-track rounded-full peer peer-checked:bg-academic peer-checked:border-academic peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-tactile-btn"></div>
             </label>
           </div>
           <p className="text-muted text-xs leading-relaxed">

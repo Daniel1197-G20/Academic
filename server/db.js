@@ -151,6 +151,114 @@ export async function initializeDatabase() {
       user_agent TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- SUBSCRIPTION PLANS (Database-driven pricing and intervals)
+    CREATE TABLE IF NOT EXISTS subscription_plans (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      amount_kobo INT NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'NGN',
+      interval TEXT NOT NULL DEFAULT 'monthly',
+      paystack_plan_code TEXT,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      display_order INT NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- FEATURE DEFINITIONS (Centralized normalized features)
+    CREATE TABLE IF NOT EXISTS feature_definitions (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL DEFAULT 'general',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- PLAN ENTITLEMENTS (Feature and limit mapping per plan)
+    CREATE TABLE IF NOT EXISTS plan_entitlements (
+      id TEXT PRIMARY KEY,
+      plan_id TEXT NOT NULL REFERENCES subscription_plans(id) ON DELETE CASCADE,
+      feature_code TEXT NOT NULL REFERENCES feature_definitions(code) ON DELETE CASCADE,
+      is_enabled BOOLEAN NOT NULL DEFAULT true,
+      limit_value INT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(plan_id, feature_code)
+    );
+
+    -- USER SUBSCRIPTIONS (Authoritative subscription lifecycle)
+    CREATE TABLE IF NOT EXISTS user_subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      plan_id TEXT NOT NULL REFERENCES subscription_plans(id),
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trialing', 'past_due', 'non_renewing', 'cancelled', 'disabled', 'expired', 'pending')),
+      paystack_customer_code TEXT,
+      paystack_subscription_code TEXT,
+      paystack_email_token TEXT,
+      authorization_reference TEXT,
+      current_period_start TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      current_period_end TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+      cancel_at_period_end BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON user_subscriptions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);
+
+    -- PAYMENT TRANSACTIONS (Financial ledger for all Paystack transactions)
+    CREATE TABLE IF NOT EXISTS payment_transactions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subscription_id TEXT REFERENCES user_subscriptions(id) ON DELETE SET NULL,
+      plan_id TEXT NOT NULL REFERENCES subscription_plans(id),
+      provider TEXT NOT NULL DEFAULT 'paystack',
+      provider_transaction_id TEXT,
+      reference TEXT UNIQUE NOT NULL,
+      amount_kobo INT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'NGN',
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed', 'abandoned', 'reversed')),
+      metadata TEXT,
+      paid_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_payment_transactions_user ON payment_transactions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_payment_transactions_ref ON payment_transactions(reference);
+
+    -- PAYMENT WEBHOOK EVENTS (Mandatory idempotency journal)
+    CREATE TABLE IF NOT EXISTS payment_webhook_events (
+      id TEXT PRIMARY KEY,
+      event_id TEXT UNIQUE NOT NULL,
+      event_type TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      processed BOOLEAN NOT NULL DEFAULT false,
+      processed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_webhook_events_eid ON payment_webhook_events(event_id);
+
+    -- SUBSCRIPTION USAGE (Atomic monthly feature consumption counters)
+    CREATE TABLE IF NOT EXISTS subscription_usage (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      feature_code TEXT NOT NULL REFERENCES feature_definitions(code) ON DELETE CASCADE,
+      period_start DATE NOT NULL,
+      period_end DATE NOT NULL,
+      usage_count INT NOT NULL DEFAULT 0,
+      limit_value INT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, feature_code, period_start)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_subscription_usage_lookup ON subscription_usage(user_id, feature_code, period_start);
   `);
 
   // Seed default grading scales
@@ -211,6 +319,197 @@ export async function initializeDatabase() {
       rules = EXCLUDED.rules,
       classifications = EXCLUDED.classifications;
   `);
+
+  // Seed default subscription plans (Database-driven pricing and configuration)
+  const defaultPlans = [
+    {
+      id: 'plan_basic',
+      code: 'basic',
+      name: 'Basic',
+      description: 'Essential CGPA calculation and personal study planning.',
+      amount_kobo: 0,
+      currency: 'NGN',
+      interval: 'monthly',
+      paystack_plan_code: null,
+      is_active: true,
+      display_order: 1
+    },
+    {
+      id: 'plan_student',
+      code: 'student',
+      name: 'Student',
+      description: 'Advanced CGPA modeling, AI tutor assistance, and structured test prep.',
+      amount_kobo: 250000, // ₦2,500
+      currency: 'NGN',
+      interval: 'monthly',
+      paystack_plan_code: 'PLN_student_monthly',
+      is_active: true,
+      display_order: 2
+    },
+    {
+      id: 'plan_pro',
+      code: 'pro',
+      name: 'Pro',
+      description: 'Unlimited test prep, video tutoring sessions, and deep performance analytics.',
+      amount_kobo: 500000, // ₦5,000
+      currency: 'NGN',
+      interval: 'monthly',
+      paystack_plan_code: 'PLN_pro_monthly',
+      is_active: true,
+      display_order: 3
+    },
+    {
+      id: 'plan_premium',
+      code: 'premium',
+      name: 'Premium',
+      description: 'Highest AI allowance, dedicated tutor priority matching, and priority support.',
+      amount_kobo: 1000000, // ₦10,000
+      currency: 'NGN',
+      interval: 'monthly',
+      paystack_plan_code: 'PLN_premium_monthly',
+      is_active: true,
+      display_order: 4
+    }
+  ];
+
+  for (const p of defaultPlans) {
+    await db.query(`
+      INSERT INTO subscription_plans (id, code, name, description, amount_kobo, currency, interval, paystack_plan_code, is_active, display_order)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        amount_kobo = EXCLUDED.amount_kobo,
+        currency = EXCLUDED.currency,
+        interval = EXCLUDED.interval,
+        paystack_plan_code = EXCLUDED.paystack_plan_code,
+        is_active = EXCLUDED.is_active,
+        display_order = EXCLUDED.display_order,
+        updated_at = CURRENT_TIMESTAMP;
+    `, [p.id, p.code, p.name, p.description, p.amount_kobo, p.currency, p.interval, p.paystack_plan_code, p.is_active, p.display_order]);
+  }
+
+  // Seed default normalized feature definitions
+  const defaultFeatures = [
+    { code: 'CGPA_BASIC', name: 'Core CGPA Calculator', description: 'Multi-scale grade calculation and semester units tally', category: 'academic' },
+    { code: 'CGPA_ADVANCED', name: 'Target GPA Modeling', description: 'Target grade forecasting and graduation honors projections', category: 'academic' },
+    { code: 'STUDY_PLANNER_BASIC', name: 'Study Habit Planner', description: 'Organize study plans and track weekly syllabus checklists', category: 'study' },
+    { code: 'STUDY_PLANNER_ADVANCED', name: 'Unlimited Study Engine', description: 'Unlimited concurrent study plans, automated topic pacing, and streaks', category: 'study' },
+    { code: 'TEST_PREP_BASIC', name: 'Practice Exam Drills', description: 'Simulated practice tests and diagnostic feedback', category: 'exam' },
+    { code: 'TEST_PREP_ADVANCED', name: 'Unlimited Exam Simulation', description: 'Unlimited mock exams, timed drills, and weak topic breakdowns', category: 'exam' },
+    { code: 'AI_TUTOR', name: 'AI Academic Assistant', description: 'Contextual coursework explanations and step-by-step problem solver', category: 'ai' },
+    { code: 'AI_TUTOR_ADVANCED', name: 'Advanced AI Tutor Modes', description: 'Multi-mode tutoring: explain, deep study, quiz generator, and flashcards', category: 'ai' },
+    { code: 'TUTOR_MARKETPLACE', name: 'Tutor Directory', description: 'Browse verified campus subject-matter tutors and ratings', category: 'tutoring' },
+    { code: 'TUTOR_BOOKING', name: 'Tutor Session Booking', description: 'Schedule and book 1-on-1 tutoring sessions', category: 'tutoring' },
+    { code: 'VIDEO_TUTORING', name: 'ZEGOCLOUD Video Tutoring', description: 'Live interactive video calls, whiteboard, and screen sharing', category: 'tutoring' },
+    { code: 'PRIVATE_GROUPS', name: 'Private Study Groups', description: 'Create and join private peer study channels and shared resources', category: 'community' },
+    { code: 'ADVANCED_ANALYTICS', name: 'Predictive Academic Analytics', description: 'Grade trends, velocity graphs, and performance diagnostics', category: 'analytics' },
+    { code: 'PREMIUM_RESOURCES', name: 'Curated Academic Vault', description: 'Verified past exams, lecture notes, and revision sheets', category: 'resources' },
+    { code: 'PRIORITY_SUPPORT', name: 'Priority Academic Support', description: 'Expedited tutor matching and platform customer support', category: 'support' }
+  ];
+
+  for (const f of defaultFeatures) {
+    const id = 'feat_' + f.code.toLowerCase();
+    await db.query(`
+      INSERT INTO feature_definitions (id, code, name, description, category)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        category = EXCLUDED.category;
+    `, [id, f.code, f.name, f.description, f.category]);
+  }
+
+  // Seed Plan Entitlements
+  const planRows = await db.query(`SELECT id, code FROM subscription_plans;`);
+  const planMap = {};
+  for (const r of planRows.rows) {
+    planMap[r.code] = r.id;
+  }
+
+  const defaultEntitlements = [
+    // BASIC (₦0/month)
+    { plan: 'basic', feature: 'CGPA_BASIC', enabled: true, limit: null },
+    { plan: 'basic', feature: 'CGPA_ADVANCED', enabled: false, limit: null },
+    { plan: 'basic', feature: 'STUDY_PLANNER_BASIC', enabled: true, limit: 2 },
+    { plan: 'basic', feature: 'STUDY_PLANNER_ADVANCED', enabled: false, limit: null },
+    { plan: 'basic', feature: 'TEST_PREP_BASIC', enabled: true, limit: 3 },
+    { plan: 'basic', feature: 'TEST_PREP_ADVANCED', enabled: false, limit: null },
+    { plan: 'basic', feature: 'AI_TUTOR', enabled: true, limit: 10 },
+    { plan: 'basic', feature: 'AI_TUTOR_ADVANCED', enabled: false, limit: null },
+    { plan: 'basic', feature: 'TUTOR_MARKETPLACE', enabled: true, limit: null },
+    { plan: 'basic', feature: 'TUTOR_BOOKING', enabled: false, limit: null },
+    { plan: 'basic', feature: 'VIDEO_TUTORING', enabled: false, limit: null },
+    { plan: 'basic', feature: 'PRIVATE_GROUPS', enabled: false, limit: null },
+    { plan: 'basic', feature: 'ADVANCED_ANALYTICS', enabled: false, limit: null },
+    { plan: 'basic', feature: 'PREMIUM_RESOURCES', enabled: false, limit: null },
+    { plan: 'basic', feature: 'PRIORITY_SUPPORT', enabled: false, limit: null },
+
+    // STUDENT (₦2,500/month)
+    { plan: 'student', feature: 'CGPA_BASIC', enabled: true, limit: null },
+    { plan: 'student', feature: 'CGPA_ADVANCED', enabled: true, limit: null },
+    { plan: 'student', feature: 'STUDY_PLANNER_BASIC', enabled: true, limit: null },
+    { plan: 'student', feature: 'STUDY_PLANNER_ADVANCED', enabled: true, limit: null },
+    { plan: 'student', feature: 'TEST_PREP_BASIC', enabled: true, limit: 15 },
+    { plan: 'student', feature: 'TEST_PREP_ADVANCED', enabled: true, limit: 15 },
+    { plan: 'student', feature: 'AI_TUTOR', enabled: true, limit: 100 },
+    { plan: 'student', feature: 'AI_TUTOR_ADVANCED', enabled: false, limit: null },
+    { plan: 'student', feature: 'TUTOR_MARKETPLACE', enabled: true, limit: null },
+    { plan: 'student', feature: 'TUTOR_BOOKING', enabled: true, limit: 5 },
+    { plan: 'student', feature: 'VIDEO_TUTORING', enabled: false, limit: null },
+    { plan: 'student', feature: 'PRIVATE_GROUPS', enabled: true, limit: null },
+    { plan: 'student', feature: 'ADVANCED_ANALYTICS', enabled: false, limit: null },
+    { plan: 'student', feature: 'PREMIUM_RESOURCES', enabled: true, limit: null },
+    { plan: 'student', feature: 'PRIORITY_SUPPORT', enabled: false, limit: null },
+
+    // PRO (₦5,000/month)
+    { plan: 'pro', feature: 'CGPA_BASIC', enabled: true, limit: null },
+    { plan: 'pro', feature: 'CGPA_ADVANCED', enabled: true, limit: null },
+    { plan: 'pro', feature: 'STUDY_PLANNER_BASIC', enabled: true, limit: null },
+    { plan: 'pro', feature: 'STUDY_PLANNER_ADVANCED', enabled: true, limit: null },
+    { plan: 'pro', feature: 'TEST_PREP_BASIC', enabled: true, limit: null },
+    { plan: 'pro', feature: 'TEST_PREP_ADVANCED', enabled: true, limit: null },
+    { plan: 'pro', feature: 'AI_TUTOR', enabled: true, limit: 300 },
+    { plan: 'pro', feature: 'AI_TUTOR_ADVANCED', enabled: true, limit: 300 },
+    { plan: 'pro', feature: 'TUTOR_MARKETPLACE', enabled: true, limit: null },
+    { plan: 'pro', feature: 'TUTOR_BOOKING', enabled: true, limit: null },
+    { plan: 'pro', feature: 'VIDEO_TUTORING', enabled: true, limit: 10 },
+    { plan: 'pro', feature: 'PRIVATE_GROUPS', enabled: true, limit: null },
+    { plan: 'pro', feature: 'ADVANCED_ANALYTICS', enabled: true, limit: null },
+    { plan: 'pro', feature: 'PREMIUM_RESOURCES', enabled: true, limit: null },
+    { plan: 'pro', feature: 'PRIORITY_SUPPORT', enabled: false, limit: null },
+
+    // PREMIUM (₦10,000/month)
+    { plan: 'premium', feature: 'CGPA_BASIC', enabled: true, limit: null },
+    { plan: 'premium', feature: 'CGPA_ADVANCED', enabled: true, limit: null },
+    { plan: 'premium', feature: 'STUDY_PLANNER_BASIC', enabled: true, limit: null },
+    { plan: 'premium', feature: 'STUDY_PLANNER_ADVANCED', enabled: true, limit: null },
+    { plan: 'premium', feature: 'TEST_PREP_BASIC', enabled: true, limit: null },
+    { plan: 'premium', feature: 'TEST_PREP_ADVANCED', enabled: true, limit: null },
+    { plan: 'premium', feature: 'AI_TUTOR', enabled: true, limit: 1000 },
+    { plan: 'premium', feature: 'AI_TUTOR_ADVANCED', enabled: true, limit: 1000 },
+    { plan: 'premium', feature: 'TUTOR_MARKETPLACE', enabled: true, limit: null },
+    { plan: 'premium', feature: 'TUTOR_BOOKING', enabled: true, limit: null },
+    { plan: 'premium', feature: 'VIDEO_TUTORING', enabled: true, limit: null },
+    { plan: 'premium', feature: 'PRIVATE_GROUPS', enabled: true, limit: null },
+    { plan: 'premium', feature: 'ADVANCED_ANALYTICS', enabled: true, limit: null },
+    { plan: 'premium', feature: 'PREMIUM_RESOURCES', enabled: true, limit: null },
+    { plan: 'premium', feature: 'PRIORITY_SUPPORT', enabled: true, limit: null }
+  ];
+
+  for (const ent of defaultEntitlements) {
+    const planId = planMap[ent.plan];
+    if (!planId) continue;
+    const entId = `ent_${ent.plan}_${ent.feature.toLowerCase()}`;
+    await db.query(`
+      INSERT INTO plan_entitlements (id, plan_id, feature_code, is_enabled, limit_value)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (plan_id, feature_code) DO UPDATE SET
+        is_enabled = EXCLUDED.is_enabled,
+        limit_value = EXCLUDED.limit_value,
+        updated_at = CURRENT_TIMESTAMP;
+    `, [entId, planId, ent.feature, ent.enabled, ent.limit]);
+  }
 
   // Seed default demonstration user if none exists
   const userCheck = await db.query(`SELECT id FROM users WHERE email = 'alexander.vance@tech-academy.edu';`);
@@ -424,6 +723,19 @@ export async function initializeDatabase() {
       UPDATE users SET firebase_uid = 'fb_uid_alexander_vance'
       WHERE email = 'alexander.vance@tech-academy.edu' AND firebase_uid IS NULL;
     `);
+  }
+
+  // Ensure default demo user has active Basic subscription
+  const demoUser = await db.query(`SELECT id FROM users WHERE email = 'alexander.vance@tech-academy.edu';`);
+  if (demoUser.rows.length > 0) {
+    const dUserId = demoUser.rows[0].id;
+    const subCheck = await db.query(`SELECT id FROM user_subscriptions WHERE user_id = $1;`, [dUserId]);
+    if (subCheck.rows.length === 0) {
+      await db.query(`
+        INSERT INTO user_subscriptions (id, user_id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end)
+        VALUES ($1, $2, 'plan_basic', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '365 days', false);
+      `, ['sub_alexander_vance', dUserId]);
+    }
   }
 }
 

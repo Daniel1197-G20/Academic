@@ -4,15 +4,21 @@ import {
   Flame, 
   BookOpen, 
   CheckCircle2, 
-  Circle, 
-  Clock, 
   ArrowRight, 
   Plus, 
-  TrendingUp, 
   CheckSquare,
-  ArrowUpRight
+  ArrowUpRight,
+  TrendingUp,
+  Clock
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, Button, Badge, ProgressBar } from '../../components/ui';
+import { 
+  Card, 
+  Button, 
+  Badge, 
+  ProgressBar, 
+  AnimatedNumber, 
+  TactileCheckbox 
+} from '../../components/ui';
 import { calculateCumulativeMetrics, DEFAULT_GRADING_SCALES } from '../../services/academic/cgpaEngine';
 
 export function DashboardPage({
@@ -72,7 +78,7 @@ export function DashboardPage({
     return null;
   }, [studyPlans]);
 
-  // All pending study tasks for today's plan
+  // All study tasks for today's plan
   const todayTasks = useMemo(() => {
     const times = ['09:00', '11:30', '14:00', '16:30', '19:00'];
     const tasks = [];
@@ -113,8 +119,8 @@ export function DashboardPage({
 
   return (
     <div className="space-y-8 pb-20 md:pb-8">
-      {/* 1. Header Greeting & Academic Context */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border pb-6">
+      {/* 1. Header Greeting & Academic Context (Stage 1) */}
+      <div className="staged-1 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border pb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
             {greeting}, {studentFirstName}.
@@ -144,39 +150,44 @@ export function DashboardPage({
         </div>
       </div>
 
-      {/* 2. Primary Academic Hero Block: Current CGPA & Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Main CGPA Result Card */}
-        <div className="md:col-span-2 bg-white border border-border rounded-card p-6 shadow-subtle flex flex-col justify-between">
+      {/* 2. Command Center Hero: CURRENT CGPA | CONTINUE STUDYING (Stage 2) */}
+      <div className="staged-2 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        {/* CURRENT CGPA — SIGNATURE ELEMENT (Level 2 Raised Hero) */}
+        <div className="lg:col-span-6 bg-white border border-border rounded-hero p-6 sm:p-7 shadow-tactile-hero flex flex-col justify-between relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted tracking-wider uppercase">
-                Current Cumulative CGPA
+              <span className="text-[11px] font-semibold text-muted tracking-wider uppercase">
+                CURRENT CGPA
               </span>
               <Badge variant="academic">
-                {cumulative.classificationName}
+                {cumulative.classificationName || 'Honors'}
               </Badge>
             </div>
 
-            <div className="mt-3 flex items-baseline gap-3">
-              <span className="text-4xl sm:text-5xl font-extrabold text-ink tracking-tight font-sans">
-                {cumulative.cgpa.toFixed(2)}
-              </span>
-              <span className="text-lg sm:text-xl font-medium text-muted">
+            {/* Dominating Number */}
+            <div className="mt-4 flex items-baseline gap-2.5">
+              <AnimatedNumber 
+                value={cumulative.cgpa} 
+                decimals={2}
+                duration={850}
+                className="text-5xl sm:text-6xl font-extrabold text-ink tracking-tight font-mono"
+              />
+              <span className="text-xl sm:text-2xl font-medium text-muted font-mono">
                 / {activeScale.maxScale.toFixed(2)}
               </span>
             </div>
 
-            <div className="mt-2 flex items-center gap-3 text-xs">
+            {/* Supporting Information (Quiet) */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               {semesterDelta !== null ? (
                 <span className={`inline-flex items-center font-semibold ${semesterDelta >= 0 ? 'text-academic' : 'text-danger'}`}>
-                  {semesterDelta >= 0 ? `+${semesterDelta.toFixed(2)}` : semesterDelta.toFixed(2)} this semester
+                  {semesterDelta >= 0 ? `↑ +${semesterDelta.toFixed(2)}` : `↓ ${semesterDelta.toFixed(2)}`} this semester
                 </span>
               ) : (
                 <span className="text-muted">First recorded semester</span>
               )}
               <span className="text-muted">•</span>
-              <span className="text-muted">{cumulative.totalCreditUnits} total units earned</span>
+              <span className="text-muted font-mono">{cumulative.totalCreditUnits} total units</span>
               <span className="text-muted">•</span>
               <span className="text-muted">{semesters.length} semesters</span>
             </div>
@@ -184,277 +195,251 @@ export function DashboardPage({
 
           <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
             <span className="text-xs text-muted">
-              Scale: <strong className="text-ink">{activeScale.scaleName}</strong>
+              Scale: <strong className="text-ink font-mono">{activeScale.scaleName}</strong>
             </span>
             <button
               type="button"
               onClick={() => onNavigateTab('cgpa')}
-              className="text-xs font-semibold text-academic hover:underline inline-flex items-center gap-1"
+              className="text-xs font-semibold text-academic hover:underline inline-flex items-center gap-1.5 transition-colors"
             >
               Open CGPA Calculator <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Semester GPA Spotlight Card */}
-        <div className="bg-white border border-border rounded-card p-6 shadow-subtle flex flex-col justify-between">
+        {/* CONTINUE STUDYING (Level 2 Raised Card) */}
+        <div className="lg:col-span-6 bg-white border border-border rounded-hero p-6 sm:p-7 shadow-tactile-raised flex flex-col justify-between">
           <div>
-            <span className="text-xs font-semibold text-muted tracking-wider uppercase">
-              Current Semester GPA
-            </span>
-
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-bold text-ink tracking-tight font-sans">
-                {currentSemester ? currentSemester.gpa.toFixed(2) : '0.00'}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted tracking-wider uppercase">
+                CONTINUE STUDYING
               </span>
-              <span className="text-xs text-muted">
-                {currentSemester ? `${currentSemester.academicYear}` : 'No active term'}
-              </span>
+              {activeStudyItem && (
+                <Badge variant="neutral">
+                  {activeStudyItem.subject}
+                </Badge>
+              )}
             </div>
 
-            <p className="text-xs text-muted mt-2 leading-relaxed">
-              {currentSemester 
-                ? `${currentSemester.courses.length} courses enrolled (${currentSemester.totalCreditUnits} credit units).`
-                : 'No course grades recorded yet for this term.'}
-            </p>
+            {activeStudyItem ? (
+              <div className="mt-4 space-y-3.5">
+                <div>
+                  <h3 className="text-xl font-bold text-ink truncate">
+                    {activeStudyItem.subject}
+                  </h3>
+                  <p className="text-xs text-muted mt-0.5 truncate">
+                    Topic {activeStudyItem.completedCount + 1} of {activeStudyItem.totalTopics}: <span className="text-ink font-medium">{activeStudyItem.topic.title}</span>
+                  </p>
+                </div>
+
+                {/* Engraved Progress Track */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-xs text-muted">
+                    <span className="font-medium text-ink">Course Completion</span>
+                    <span className="font-mono text-ink font-semibold">{activeStudyItem.progress}%</span>
+                  </div>
+                  <div className="w-full tactile-track h-2.5">
+                    <div 
+                      className="h-full bg-academic rounded-track transition-all duration-400 ease-out"
+                      style={{ width: `${activeStudyItem.progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 py-4 text-center">
+                <CheckCircle2 className="w-8 h-8 text-academic mx-auto mb-2 opacity-90" />
+                <h3 className="text-sm font-semibold text-ink">All planned topics completed!</h3>
+                <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
+                  Create a new study goal or add more chapters to maintain your study streak.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
-            <span className="text-xs text-muted">
-              Term: {currentSemester ? currentSemester.semesterName : 'Semester 1'}
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('cgpa')}
-              className="text-xs font-semibold text-ink hover:text-academic inline-flex items-center gap-1"
-            >
-              Details <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Continue Studying Section */}
-      <div className="bg-white border border-border rounded-card p-6 shadow-subtle space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-ink">
-              Continue Studying
-            </h2>
-            <p className="text-xs text-muted">
-              Resume your next pending objective
-            </p>
-          </div>
-          {activeStudyItem && (
-            <Badge variant="neutral">
-              {activeStudyItem.subject}
-            </Badge>
-          )}
-        </div>
-
-        {activeStudyItem ? (
-          <div className="p-4 rounded-xl bg-canvas border border-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5 flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-academic uppercase tracking-wider">
-                  {activeStudyItem.subject}
-                </span>
-                <span className="text-muted text-xs">•</span>
-                <span className="text-xs text-muted">
-                  Topic {activeStudyItem.completedCount + 1} of {activeStudyItem.totalTopics}
-                </span>
-              </div>
-              <h3 className="text-base font-semibold text-ink truncate">
-                {activeStudyItem.topic.title}
-              </h3>
-              <div className="w-full max-w-md pt-1">
-                <ProgressBar
-                  value={activeStudyItem.progress}
-                  max={100}
-                  showPercentage={true}
-                  label="Course Syllabus Completion"
+            {activeStudyItem ? (
+              <div className="flex items-center gap-2.5 w-full justify-between">
+                <Button
+                  variant="secondary"
                   size="sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 shrink-0">
-              <Button
-                variant="academic"
-                size="sm"
-                onClick={() => onToggleTopic(activeStudyItem.topic.id)}
-                icon={CheckSquare}
-              >
-                Mark Complete
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onNavigateTab('study')}
-              >
-                View Plan
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="p-6 text-center rounded-xl bg-canvas border border-dashed border-border">
-            <CheckCircle2 className="w-8 h-8 text-academic mx-auto mb-2 opacity-90" />
-            <h3 className="text-sm font-semibold text-ink">All planned study topics are completed!</h3>
-            <p className="text-xs text-muted mt-1 max-w-md mx-auto">
-              Create a new study goal or add more chapters to maintain your daily study routine.
-            </p>
-            <Button
-              variant="academic"
-              size="sm"
-              className="mt-3.5"
-              onClick={() => onNavigateTab('study')}
-            >
-              Add New Study Plan
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* 4. Two-Column Layout: Today's Plan & Academic Progress Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Today's Plan (2 spans) */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-ink">
-                Today's Plan
-              </h2>
-              <p className="text-xs text-muted">
-                {pendingTasks.length} objectives due for review
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('study')}
-              className="text-xs font-semibold text-academic hover:underline inline-flex items-center gap-1"
-            >
-              All Plans ({studyPlans.length}) <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="bg-white border border-border rounded-card divide-y divide-border shadow-subtle overflow-hidden">
-            {pendingTasks.length === 0 ? (
-              <div className="p-8 text-center text-xs text-muted">
-                No pending tasks scheduled for today.
+                  onClick={() => onNavigateTab('study')}
+                >
+                  View Full Plan
+                </Button>
+                <Button
+                  variant="academic"
+                  size="sm"
+                  onClick={() => onToggleTopic(activeStudyItem.topic.id)}
+                  icon={CheckSquare}
+                >
+                  Mark Complete
+                </Button>
               </div>
             ) : (
-              pendingTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-surface-muted/60 transition-colors"
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-muted">Study Cadence Active</span>
+                <Button
+                  variant="academic"
+                  size="sm"
+                  onClick={() => onNavigateTab('study')}
+                  icon={Plus}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => onToggleTopic(task.id)}
-                      className="text-muted hover:text-academic transition-colors shrink-0"
-                      title="Mark as completed"
-                    >
-                      <Circle className="w-4 h-4" />
-                    </button>
-                    <div className="min-w-0">
-                      <p className="text-xs sm:text-sm font-semibold text-ink truncate">
-                        {task.title}
-                      </p>
-                      <p className="text-xs text-muted truncate">
-                        {task.subject}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5 shrink-0">
-                    <span className="text-[11px] font-mono text-muted bg-gray-100 px-2 py-0.5 rounded">
-                      {task.timeSlot}
-                    </span>
-                    <span className="text-[11px] text-muted hidden sm:inline">
-                      Due {task.deadline}
-                    </span>
-                  </div>
-                </div>
-              ))
+                  Create Plan
+                </Button>
+              </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Right Column: Academic Progress (1 span) */}
-        <div className="space-y-4">
+      {/* 3. Today's Plan (Stage 3) — Physical Timeline Rail */}
+      <div className="staged-3 space-y-4">
+        <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-ink">
-              Academic Progress
+              Today's Plan
             </h2>
             <p className="text-xs text-muted">
-              Consistency and completion metrics
+              {pendingTasks.length} pending objectives scheduled
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('study')}
+            className="text-xs font-semibold text-academic hover:underline inline-flex items-center gap-1"
+          >
+            All Plans ({studyPlans.length}) <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
-          <div className="bg-white border border-border rounded-card p-5 shadow-subtle space-y-5">
-            {/* Consistency / Study Streak */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted">Study Consistency</span>
-                <Flame className="w-4 h-4 text-gold-600 fill-gold-600" />
+        {/* Physical Timeline List with Inset/Raised Precision Hairlines */}
+        <div className="bg-white border border-border rounded-card shadow-tactile-raised divide-y divide-border overflow-hidden">
+          {todayTasks.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted">
+              No study tasks scheduled for today. Add a new study plan to begin.
+            </div>
+          ) : (
+            todayTasks.slice(0, 5).map((task) => (
+              <div
+                key={task.id}
+                className="p-4 flex items-center justify-between gap-4 hover:bg-canvas/50 transition-colors"
+              >
+                {/* Time & Physical Checkbox Rail */}
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <span className="font-mono text-xs font-semibold text-muted min-w-[44px]">
+                    {task.timeSlot}
+                  </span>
+
+                  {/* Tactile Checkbox with 5-phase feedback */}
+                  <TactileCheckbox
+                    checked={task.isCompleted}
+                    onChange={() => onToggleTopic(task.id)}
+                    aria-label={`Mark ${task.title} as completed`}
+                    title={task.isCompleted ? 'Mark incomplete' : 'Mark complete'}
+                  />
+
+                  {/* Task Text with physical strike-through */}
+                  <div className="min-w-0">
+                    <p className={`text-xs sm:text-sm font-semibold truncate transition-all ${
+                      task.isCompleted ? 'line-through text-muted' : 'text-ink'
+                    }`}>
+                      {task.title}
+                    </p>
+                    <p className="text-xs text-muted truncate">
+                      {task.subject}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="text-[11px] text-muted hidden sm:inline">
+                    Due {task.deadline}
+                  </span>
+                  <Badge variant={task.isCompleted ? 'neutral' : 'academic'} size="sm">
+                    {task.isCompleted ? 'Done' : 'Pending'}
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-ink">
-                  {streakData.streak} days
-                </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 4. Academic Progress (Stage 4) — Connected Command Center Row */}
+      <div className="staged-4 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-ink">
+            Academic Progress
+          </h2>
+          <p className="text-xs text-muted">
+            Performance metrics across active terms
+          </p>
+        </div>
+
+        <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-border">
+            {/* 1. Semester GPA */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-muted tracking-wider uppercase">
+                Semester GPA
+              </span>
+              <div className="flex items-baseline gap-2 pt-1">
+                <AnimatedNumber
+                  value={currentSemester ? currentSemester.gpa : 0.00}
+                  decimals={2}
+                  className="text-3xl font-extrabold text-ink font-mono tracking-tight"
+                />
                 <span className="text-xs text-muted">
-                  streak
+                  / {activeScale.maxScale.toFixed(2)}
                 </span>
               </div>
               <p className="text-xs text-muted">
-                {streakData.totalHours} total hours logged this term.
+                {currentSemester ? `${currentSemester.semesterName} (${currentSemester.academicYear})` : 'No active semester'}
               </p>
             </div>
 
-            <div className="h-px bg-border" />
-
-            {/* Completed Topics */}
-            <div className="space-y-1.5">
+            {/* 2. Study Streak */}
+            <div className="space-y-1.5 pt-4 md:pt-0 md:pl-6">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted">Completed Topics</span>
-                <span className="text-xs font-semibold text-academic">{completionRate}%</span>
+                <span className="text-xs font-semibold text-muted tracking-wider uppercase">
+                  Study Streak
+                </span>
+                <Flame className="w-4 h-4 text-gold-600 fill-gold-600 streak-breathing" />
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-ink">
+              <div className="flex items-baseline gap-2 pt-1">
+                <span className="text-3xl font-extrabold text-ink font-mono tracking-tight">
+                  {streakData.streak}
+                </span>
+                <span className="text-xs text-muted font-medium">days active</span>
+              </div>
+              <p className="text-xs text-muted">
+                {streakData.totalHours} total study hours tracked this term.
+              </p>
+            </div>
+
+            {/* 3. Topics */}
+            <div className="space-y-1.5 pt-4 md:pt-0 md:pl-6">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted tracking-wider uppercase">
+                  Topics Mastered
+                </span>
+                <span className="text-xs font-mono font-semibold text-academic">{completionRate}%</span>
+              </div>
+              <div className="flex items-baseline gap-2 pt-1">
+                <span className="text-3xl font-extrabold text-ink font-mono tracking-tight">
                   {completedTasksCount}
                 </span>
-                <span className="text-xs text-muted">
-                  of {totalTasksCount} topics cleared
+                <span className="text-xs text-muted font-medium">
+                  of {totalTasksCount} topics
                 </span>
               </div>
-              <ProgressBar
-                value={completedTasksCount}
-                max={Math.max(1, totalTasksCount)}
-                showPercentage={false}
-                size="sm"
-              />
-            </div>
-
-            <div className="h-px bg-border" />
-
-            {/* Credit Units Summary */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted">Degree Credit Units</span>
-                <GraduationCap className="w-4 h-4 text-muted" />
+              <div className="w-full tactile-track h-2 pt-1">
+                <div 
+                  className="h-full bg-academic rounded-track transition-all duration-400 ease-out"
+                  style={{ width: `${completionRate}%` }}
+                />
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-ink">
-                  {cumulative.totalCreditUnits}
-                </span>
-                <span className="text-xs text-muted">
-                  of 120 target units
-                </span>
-              </div>
-              <p className="text-xs text-muted">
-                {Math.round((cumulative.totalCreditUnits / 120) * 100)}% of standard graduation threshold.
-              </p>
             </div>
           </div>
         </div>

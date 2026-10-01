@@ -8,10 +8,13 @@ export function Card({
   ...props
 }) {
   const variantStyles = {
-    default: "bg-white border border-border rounded-card shadow-subtle",
-    flat: "bg-white border border-border rounded-card",
-    subtle: "bg-surface-muted border border-border-subtle rounded-card",
-    interactive: "bg-white border border-border rounded-card shadow-subtle cursor-pointer hover:border-gray-300 hover:shadow-card-hover transition-all duration-150"
+    default: "bg-white border border-border rounded-card shadow-tactile-raised",
+    raised: "bg-white border border-border rounded-card shadow-tactile-raised",
+    hero: "bg-white border border-border rounded-hero shadow-tactile-hero",
+    surface: "bg-white border border-border rounded-card shadow-tactile-surface",
+    flat: "bg-white border border-border rounded-card shadow-tactile-surface",
+    subtle: "bg-surface-subtle border border-border-subtle rounded-card",
+    interactive: "bg-white border border-border rounded-card shadow-tactile-raised cursor-pointer hover:-translate-y-[1px] hover:shadow-tactile-raised-hover transition-all duration-150 active:translate-y-0"
   };
 
   return (

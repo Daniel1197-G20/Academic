@@ -14,7 +14,7 @@ export function Button({
   onClick,
   ...props
 }) {
-  const baseStyles = "relative inline-flex items-center justify-center font-medium rounded-[10px] transition-colors duration-150 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-academic/40 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100";
+  const baseStyles = "relative inline-flex items-center justify-center font-medium rounded-btn transition-all duration-140 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-academic/40 focus-visible:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none disabled:transform-none disabled:shadow-none";
 
   const sizeStyles = {
     sm: "px-3 py-1.5 text-xs gap-1.5",
@@ -24,13 +24,12 @@ export function Button({
   };
 
   const variantStyles = {
-    // Primary: Deep Ink or Academic Green
-    primary: "bg-ink text-white hover:bg-navy shadow-sm active:bg-ink-950",
-    academic: "bg-academic text-white hover:bg-academic-700 shadow-sm active:bg-academic-800",
-    secondary: "bg-white text-ink border border-border shadow-subtle hover:bg-gray-50 hover:border-gray-300 active:bg-gray-100",
-    outline: "bg-transparent text-ink border border-border hover:bg-gray-50 active:bg-gray-100",
-    ghost: "bg-transparent text-muted hover:text-ink hover:bg-gray-100/70",
-    danger: "bg-danger-50 text-danger border border-danger-100 hover:bg-danger-100/80 active:bg-danger-100"
+    secondary: "tactile-btn-secondary",
+    academic: "tactile-btn-academic",
+    primary: "tactile-btn-primary",
+    outline: "bg-transparent text-ink border border-border hover:-translate-y-[1px] hover:bg-white/60 active:translate-y-[1px] active:bg-white/90",
+    ghost: "bg-transparent text-muted hover:text-ink hover:bg-black/[0.03] active:translate-y-[1px]",
+    danger: "bg-danger-50 text-danger border border-danger-100 hover:-translate-y-[1px] hover:bg-danger-100/80 active:translate-y-[1px] active:shadow-[inset_1px_1px_2px_rgba(194,65,65,0.15)]"
   };
 
   return (

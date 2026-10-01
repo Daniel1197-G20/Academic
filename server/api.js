@@ -1,6 +1,18 @@
 import crypto from 'crypto';
 import { db, hashPassword, verifyPassword } from './db.js';
 import { verifyFirebaseIdToken } from './firebase-auth.js';
+import {
+  getSubscriptionPlans,
+  getUserSubscription,
+  getUserEntitlements,
+  atomicIncrementUsage,
+  initializeCheckout,
+  verifyPayment,
+  cancelSubscription,
+  handlePaystackWebhook,
+  getBillingHistory,
+  getAdminBillingMetrics
+} from './billing-service.js';
 
 const JWT_SECRET = process.env.APP_SECRET || 'academic-platform-secret-key-2026-ghost-green';
 
@@ -108,6 +120,7 @@ export async function parseJsonBody(req, maxBytes = 1024 * 1024) {
       body += chunk;
     });
     req.on('end', () => {
+      req.rawBody = body;
       try {
         resolve(body ? JSON.parse(body) : {});
       } catch (err) {
@@ -773,6 +786,200 @@ export async function handleApiRequest(req, res) {
       const totalHours = Number((sumRes.rows[0].total_min / 60).toFixed(1));
 
       return sendJson(res, 200, { streak, totalHours, activeDays: dates.length });
+    }
+
+    // --- 5. SUBSCRIPTION & BILLING (PAYSTACK & ENTITLEMENTS) ---
+    if (pathname === '/api/billing/plans' && method === 'GET') {
+      const plans = await getSubscriptionPlans();
+      return sendJson(res, 200, { plans });
+    }
+
+    if (pathname === '/api/billing/subscription' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const subscription = await getUserSubscription(authUser.userId);
+      return sendJson(res, 200, { subscription });
+    }
+
+    if (pathname === '/api/billing/entitlements' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const entitlements = await getUserEntitlements(authUser.userId);
+      return sendJson(res, 200, { entitlements });
+    }
+
+    if (pathname === '/api/billing/checkout' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const { planCode, callbackUrl } = await parseJsonBody(req);
+      try {
+        const checkoutData = await initializeCheckout({
+          userId: authUser.userId,
+          planCode,
+          callbackUrl
+        });
+        return sendJson(res, 200, checkoutData);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message, code: err.code });
+      }
+    }
+
+    if (pathname === '/api/billing/verify' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const { reference } = await parseJsonBody(req);
+      try {
+        const result = await verifyPayment(reference);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    if (pathname === '/api/billing/cancel' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      try {
+        const result = await cancelSubscription(authUser.userId);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    if (pathname === '/api/billing/history' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const history = await getBillingHistory(authUser.userId);
+      return sendJson(res, 200, { history });
+    }
+
+    if (pathname === '/api/webhooks/paystack' && method === 'POST') {
+      await parseJsonBody(req);
+      const signature = req.headers['x-paystack-signature'] || '';
+      try {
+        const result = await handlePaystackWebhook(req.rawBody, signature);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message, code: err.code });
+      }
+    }
+
+    if (pathname === '/api/admin/billing' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || authUser.role !== 'ADMIN') {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      const metrics = await getAdminBillingMetrics();
+      return sendJson(res, 200, { metrics });
+    }
+
+    // --- 6. FEATURE-GATED ENDPOINTS (Real backend authorization & usage enforcement) ---
+    if (pathname === '/api/ai/query' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const { prompt } = await parseJsonBody(req);
+      if (!prompt) return sendJson(res, 400, { error: 'Prompt is required.' });
+
+      try {
+        // Enforce AI_TUTOR entitlement and atomically increment monthly usage
+        const usage = await atomicIncrementUsage(authUser.userId, 'AI_TUTOR');
+        return sendJson(res, 200, {
+          success: true,
+          answer: `[AI Academic Tutor] Detailed analytical response for: "${prompt.slice(0, 80)}"`,
+          usage
+        });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
+      }
+    }
+
+    if (pathname === '/api/prep/start' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const { subject } = await parseJsonBody(req);
+      try {
+        // Enforce TEST_PREP_BASIC entitlement and usage
+        const usage = await atomicIncrementUsage(authUser.userId, 'TEST_PREP_BASIC');
+        return sendJson(res, 200, {
+          success: true,
+          examSessionId: 'exam_' + Date.now(),
+          subject: subject || 'General Assessment',
+          usage
+        });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
+      }
+    }
+
+    if (pathname === '/api/tutors/book' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const { tutorId, slotTime } = await parseJsonBody(req);
+      try {
+        // Enforce TUTOR_BOOKING entitlement
+        const usage = await atomicIncrementUsage(authUser.userId, 'TUTOR_BOOKING');
+        return sendJson(res, 201, {
+          success: true,
+          bookingId: 'book_' + Date.now(),
+          tutorId,
+          slotTime,
+          usage
+        });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
+      }
+    }
+
+    if (pathname === '/api/video/token' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const { roomCode } = await parseJsonBody(req);
+      try {
+        // Enforce VIDEO_TUTORING entitlement
+        const usage = await atomicIncrementUsage(authUser.userId, 'VIDEO_TUTORING');
+        // ZEGOCLOUD server-generated token simulation (credentials stay server-side)
+        const zegoToken = 'zego_tok_' + crypto.randomBytes(16).toString('hex');
+        return sendJson(res, 200, {
+          success: true,
+          roomCode: roomCode || 'ZEGO-STUDY-MAIN',
+          zegoToken,
+          usage
+        });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
+      }
+    }
+
+    if (pathname === '/api/analytics/advanced' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const ents = await getUserEntitlements(authUser.userId);
+      if (!ents.features['ADVANCED_ANALYTICS']) {
+        return sendJson(res, 403, {
+          error: 'Advanced Analytics is reserved for Pro and Premium plans.',
+          code: 'FEATURE_NOT_AVAILABLE'
+        });
+      }
+
+      return sendJson(res, 200, {
+        success: true,
+        predictiveTrend: 'Upward trajectory (+0.32 CGPA projected next semester)',
+        retentionProbability: 98.4,
+        topicMasteryIndex: 87.2
+      });
     }
 
     // Default 404

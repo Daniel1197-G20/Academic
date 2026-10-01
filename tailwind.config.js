@@ -7,7 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary colors
+        // Core System Colors
+        canvas: '#F6F7F3',
+        surface: {
+          DEFAULT: '#FFFFFF',
+          muted: '#F6F7F3',
+          subtle: '#FAFBF8',
+        },
         ink: {
           DEFAULT: '#111827',
           50: '#F9FAFB',
@@ -49,17 +55,10 @@ export default {
           900: '#0E392B',
           950: '#071F17',
         },
-        canvas: '#F6F7F3',
-        surface: {
-          DEFAULT: '#FFFFFF',
-          muted: '#F9FAFB',
-          subtle: '#F3F4F6',
-        },
-        // Supporting colors
         muted: '#667085',
         border: {
           DEFAULT: '#E5E7EB',
-          subtle: '#F0F2F5',
+          subtle: '#ECEEE9',
           strong: '#D1D5DB',
         },
         gold: {
@@ -83,12 +82,6 @@ export default {
           600: '#A63333',
           700: '#8A2727',
         },
-        success: {
-          DEFAULT: '#176B4D',
-          50: '#F2F8F5',
-          100: '#DDEFE5',
-          600: '#176B4D',
-        },
         warning: {
           DEFAULT: '#B7791F',
           50: '#FFFBEB',
@@ -98,12 +91,30 @@ export default {
         },
       },
       boxShadow: {
-        'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02)',
-        'card': '0 1px 3px 0 rgba(17, 24, 39, 0.05), 0 1px 2px 0 rgba(17, 24, 39, 0.03)',
-        'card-hover': '0 4px 12px 0 rgba(17, 24, 39, 0.07), 0 2px 4px 0 rgba(17, 24, 39, 0.04)',
-        'elevated': '0 4px 6px -1px rgba(17, 24, 39, 0.06), 0 2px 4px -2px rgba(17, 24, 39, 0.04)',
-        'modal': '0 20px 25px -5px rgba(17, 24, 39, 0.08), 0 8px 10px -6px rgba(17, 24, 39, 0.04)',
-        'dropdown': '0 10px 15px -3px rgba(17, 24, 39, 0.07), 0 4px 6px -4px rgba(17, 24, 39, 0.03)',
+        // LEVEL 1 - SURFACE (almost flat, quiet hairlines)
+        'tactile-surface': '0 1px 2px 0 rgba(17, 24, 39, 0.03), -1px -1px 2px 0 rgba(255, 255, 255, 0.85)',
+        
+        // LEVEL 2 - RAISED (cards, hero, dock, modal)
+        'tactile-raised': '0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 4px 12px 0 rgba(17, 24, 39, 0.035), -1px -1px 5px 0 rgba(255, 255, 255, 0.85)',
+        'tactile-raised-hover': '0 2px 6px 0 rgba(17, 24, 39, 0.05), 0 6px 16px 0 rgba(17, 24, 39, 0.04), -1px -1px 6px 0 rgba(255, 255, 255, 0.95)',
+        'tactile-hero': '0 2px 6px 0 rgba(17, 24, 39, 0.045), 0 8px 20px 0 rgba(17, 24, 39, 0.035), -1px -1px 6px 0 rgba(255, 255, 255, 0.95)',
+        
+        // Tactile Button
+        'tactile-btn': '0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 3px 8px 0 rgba(17, 24, 39, 0.03), -1px -1px 3px 0 rgba(255, 255, 255, 0.9)',
+        'tactile-btn-hover': '0 2px 5px 0 rgba(17, 24, 39, 0.05), 0 5px 12px 0 rgba(17, 24, 39, 0.04), -1px -1px 4px 0 rgba(255, 255, 255, 0.95)',
+        'tactile-btn-press': 'inset 1px 1px 3px 0 rgba(17, 24, 39, 0.06), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.7)',
+        
+        // LEVEL 3 - PRESSED / INSET (inputs, progress tracks, active controls)
+        'tactile-inset': 'inset 2px 2px 5px 0 rgba(17, 24, 39, 0.045), inset -2px -2px 5px 0 rgba(255, 255, 255, 0.8)',
+        'tactile-inset-sm': 'inset 1px 1px 3px 0 rgba(17, 24, 39, 0.04), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.75)',
+        'tactile-track': 'inset 1px 2px 4px 0 rgba(17, 24, 39, 0.06), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.85)',
+        
+        // Active tile sliding tab
+        'tactile-tile': '0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 3px 6px 0 rgba(17, 24, 39, 0.02), -1px -1px 2px 0 rgba(255, 255, 255, 0.9)',
+        
+        // Navigation Dock & Modal
+        'tactile-dock': '0 -1px 4px 0 rgba(17, 24, 39, 0.03), 0 -4px 12px 0 rgba(17, 24, 39, 0.025), inset 0 1px 0 0 rgba(255, 255, 255, 0.9)',
+        'tactile-modal': '0 8px 24px -4px rgba(17, 24, 39, 0.07), 0 3px 8px -2px rgba(17, 24, 39, 0.03), -1px -1px 5px 0 rgba(255, 255, 255, 0.9)',
       },
       fontFamily: {
         sans: ['Manrope', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
@@ -111,21 +122,36 @@ export default {
         mono: ['JetBrains Mono', 'Fira Code', 'monospace']
       },
       borderRadius: {
-        'card': '14px',
-        'btn': '10px',
+        'card': '16px',     // 14-18px primary cards
+        'btn': '11px',      // 10-12px interactive controls
+        'hero': '20px',     // 18-22px large hero surfaces
+        'tile': '9px',      // tactile sliding tabs
+        'track': '6px',     // progress tracks
+      },
+      transitionTimingFunction: {
+        'spring': 'cubic-bezier(0.34, 1.20, 0.64, 1)',
       },
       animation: {
-        'fade-in': 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'scale-in': 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'streak-breathe': 'streakBreathe 2s ease-in-out infinite',
+        'fade-in': 'fadeIn 250ms ease-out forwards',
+        'stage-1': 'stagedFade 250ms ease-out 0ms forwards',
+        'stage-2': 'stagedFade 250ms ease-out 60ms forwards',
+        'stage-3': 'stagedFade 250ms ease-out 120ms forwards',
+        'stage-4': 'stagedFade 250ms ease-out 180ms forwards',
+        'stage-5': 'stagedFade 250ms ease-out 240ms forwards',
       },
       keyframes: {
+        streakBreathe: {
+          '0%, 100%': { transform: 'scale(1.00)' },
+          '50%': { transform: 'scale(1.03)' },
+        },
         fadeIn: {
-          '0%': { opacity: '0', transform: 'translateY(3px)' },
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        scaleIn: {
-          '0%': { opacity: '0', transform: 'scale(0.98)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
+        stagedFade: {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       }
     },

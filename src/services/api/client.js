@@ -218,6 +218,47 @@ class ApiClient {
     this.logout();
     return res;
   }
+
+  // --- Billing & Subscription (Paystack) ---
+  async getBillingPlans() {
+    return this.request('/api/billing/plans');
+  }
+
+  async getSubscription() {
+    return this.request('/api/billing/subscription');
+  }
+
+  async getEntitlements() {
+    return this.request('/api/billing/entitlements');
+  }
+
+  async initializeCheckout(planCode, callbackUrl) {
+    return this.request('/api/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ planCode, callbackUrl })
+    });
+  }
+
+  async verifyPayment(reference) {
+    return this.request('/api/billing/verify', {
+      method: 'POST',
+      body: JSON.stringify({ reference })
+    });
+  }
+
+  async cancelSubscription() {
+    return this.request('/api/billing/cancel', {
+      method: 'POST'
+    });
+  }
+
+  async getBillingHistory() {
+    return this.request('/api/billing/history');
+  }
+
+  async getAdminBillingMetrics() {
+    return this.request('/api/admin/billing');
+  }
 }
 
 export const api = new ApiClient();

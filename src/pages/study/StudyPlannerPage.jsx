@@ -17,8 +17,10 @@ import {
   Select, 
   Modal, 
   Badge, 
-  ProgressBar,
-  PageHeader 
+  ProgressBar, 
+  PageHeader,
+  AnimatedNumber,
+  TactileCheckbox
 } from '../../components/ui';
 import { api } from '../../services/api/client';
 
@@ -196,16 +198,16 @@ export function StudyPlannerPage({
       />
 
       {/* 2. Overview Strip (Velocity & Habit Consistency) */}
-      <div className="bg-white border border-border rounded-card p-6 shadow-subtle">
+      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 divide-y md:divide-y-0 md:divide-x divide-border">
           {/* Consistency Streak */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <Flame className="w-4 h-4 text-gold-600 fill-gold-600" />
+              <Flame className="w-4 h-4 text-gold-600 fill-gold-600 streak-breathing" />
               <span>Study Streak</span>
             </div>
             <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-sans">{streakData.streak}</span>
+              <span className="text-3xl font-extrabold text-ink font-mono">{streakData.streak}</span>
               <span className="text-xs text-muted font-medium">days active</span>
             </div>
             <p className="text-[11px] text-muted">Daily review cadence</p>
@@ -218,7 +220,7 @@ export function StudyPlannerPage({
               <span>Hours Logged</span>
             </div>
             <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-sans">{streakData.totalHours}</span>
+              <span className="text-3xl font-extrabold text-ink font-mono">{streakData.totalHours}</span>
               <span className="text-xs text-muted font-medium">hours total</span>
             </div>
             <p className="text-[11px] text-muted">Tracked study sessions</p>
@@ -231,10 +233,10 @@ export function StudyPlannerPage({
               <span>Topics Mastered</span>
             </div>
             <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-sans">{completedTopics}</span>
-              <span className="text-xs text-muted font-medium">of {totalTopics}</span>
+              <span className="text-3xl font-extrabold text-ink font-mono">{completedTopics}</span>
+              <span className="text-xs text-muted font-medium font-mono">of {totalTopics}</span>
             </div>
-            <p className="text-[11px] text-muted">{totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0}% syllabus covered</p>
+            <p className="text-[11px] text-muted font-mono">{totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0}% syllabus covered</p>
           </div>
 
           {/* Active Plans */}
@@ -244,7 +246,7 @@ export function StudyPlannerPage({
               <span>Active Plans</span>
             </div>
             <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-sans">{studyPlans.length}</span>
+              <span className="text-3xl font-extrabold text-ink font-mono">{studyPlans.length}</span>
               <span className="text-xs text-muted font-medium">courses</span>
             </div>
             <p className="text-[11px] text-muted">Current semester load</p>
@@ -252,7 +254,7 @@ export function StudyPlannerPage({
         </div>
       </div>
 
-      {/* 3. Today's Timeline Schedule */}
+      {/* 3. Today's Timeline Schedule — Physical Rail */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -263,68 +265,73 @@ export function StudyPlannerPage({
               Chronological study objectives and focus blocks
             </p>
           </div>
-          <span className="text-xs font-semibold text-muted">
+          <span className="text-xs font-semibold text-muted font-mono">
             {todaySchedule.filter(s => !s.isCompleted).length} pending
           </span>
         </div>
 
-        <div className="bg-white border border-border rounded-card p-5 shadow-subtle">
+        <div className="bg-white border border-border rounded-card p-5 sm:p-6 shadow-tactile-raised">
           {todaySchedule.length === 0 ? (
             <div className="py-8 text-center text-xs text-muted">
               No study tasks scheduled for today. Create a plan below to set up your schedule.
             </div>
           ) : (
-            <div className="space-y-4 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-px before:bg-border">
-              {todaySchedule.map((item) => (
+            <div className="space-y-6 relative before:absolute before:left-[72px] before:top-3 before:bottom-3 before:w-[2px] before:bg-border">
+              {todaySchedule.map((item, idx) => (
                 <div key={item.id} className="flex items-start gap-4 relative">
-                  {/* Timeline dot / checkmark */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleTopic(item.id, item.subject)}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors ${
-                      item.isCompleted 
-                        ? 'bg-academic text-white' 
-                        : 'bg-white border border-border text-muted hover:border-academic hover:text-academic'
-                    }`}
-                    title={item.isCompleted ? 'Mark incomplete' : 'Mark completed'}
-                  >
-                    {item.isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
-                  </button>
+                  {/* Left: Time Column */}
+                  <div className="w-14 text-right pt-1 shrink-0">
+                    <span className="font-mono text-xs font-bold text-ink">
+                      {item.time}
+                    </span>
+                  </div>
 
-                  {/* Task details */}
-                  <div className={`flex-1 p-3.5 rounded-xl border transition-colors ${
+                  {/* Center: Tactile Rail Node */}
+                  <div className="relative pt-1.5 z-10 flex items-center justify-center shrink-0">
+                    <div 
+                      className={`w-3.5 h-3.5 rounded-full transition-all ${
+                        item.isCompleted 
+                          ? 'tactile-rail-node-active' 
+                          : idx === 0 
+                            ? 'bg-academic ring-4 ring-academic-100' 
+                            : 'tactile-rail-node-inactive'
+                      }`} 
+                    />
+                  </div>
+
+                  {/* Right: Task Details Card */}
+                  <div className={`flex-1 p-4 rounded-btn border transition-all ${
                     item.isCompleted 
-                      ? 'bg-gray-50 border-gray-200 opacity-60' 
-                      : 'bg-white border-border hover:border-gray-300'
+                      ? 'bg-canvas/60 border-border text-muted opacity-65' 
+                      : 'bg-white border-border shadow-tactile-surface hover:shadow-tactile-raised hover:border-gray-300'
                   }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-academic uppercase tracking-wider">
-                            {item.subject}
-                          </span>
-                          <span className="text-muted text-xs">•</span>
-                          <span className="text-xs font-mono font-semibold text-ink bg-gray-100 px-1.5 py-0.2 rounded">
-                            {item.time}
-                          </span>
-                          <span className="text-xs text-muted">
-                            ({item.duration})
-                          </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <TactileCheckbox
+                          checked={item.isCompleted}
+                          onChange={() => handleToggleTopic(item.id, item.subject)}
+                          aria-label={`Mark ${item.topicTitle} as completed`}
+                        />
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-academic uppercase tracking-wider">
+                              {item.subject}
+                            </span>
+                            <span className="text-muted text-xs">•</span>
+                            <span className="text-xs text-muted font-mono">
+                              {item.duration}
+                            </span>
+                          </div>
+                          <p className={`text-sm font-semibold truncate transition-all ${item.isCompleted ? 'line-through text-muted' : 'text-ink'}`}>
+                            {item.topicTitle}
+                          </p>
                         </div>
-                        <p className={`text-sm font-semibold truncate ${item.isCompleted ? 'line-through text-muted' : 'text-ink'}`}>
-                          {item.topicTitle}
-                        </p>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleTopic(item.id, item.subject)}
-                          className="text-xs py-1"
-                        >
-                          {item.isCompleted ? 'Completed' : 'Mark Done'}
-                        </Button>
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <Badge variant={item.isCompleted ? 'neutral' : 'academic'} size="sm">
+                          {item.isCompleted ? 'Completed' : 'Pending Focus'}
+                        </Badge>
                       </div>
                     </div>
                   </div>

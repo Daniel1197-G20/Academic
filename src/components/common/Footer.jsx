@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Shield, FileText, Cookie, Mail } from 'lucide-react';
 import { Modal, Button } from '../ui';
 
-export function Footer({ onNavigate, onOpenCookieSettings }) {
+export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
   const [showContactModal, setShowContactModal] = useState(false);
 
   return (
     <>
-      <footer className="w-full bg-white border-t border-border py-8 px-4 sm:px-6 mt-auto text-xs text-muted">
+      <footer className={`w-full py-8 px-4 sm:px-6 mt-auto text-xs text-muted ${className || 'bg-white border-t border-border'}`}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Brand & Legal Disclaimer */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-1">
@@ -79,7 +79,7 @@ export function Footer({ onNavigate, onOpenCookieSettings }) {
         size="md"
       >
         <div className="space-y-4 text-xs text-ink">
-          <div className="p-3.5 rounded-xl bg-surface-muted border border-border space-y-1.5">
+          <div className="p-4 rounded-card bg-canvas border border-border shadow-tactile-surface space-y-1.5">
             <h4 className="font-semibold text-ink flex items-center gap-1.5">
               <Mail className="w-4 h-4 text-academic" />
               Privacy & Data Inquiries
@@ -87,12 +87,12 @@ export function Footer({ onNavigate, onOpenCookieSettings }) {
             <p className="text-muted leading-relaxed">
               For student data export requests, account deletion verification, or questions regarding our data practices:
             </p>
-            <div className="font-mono text-academic bg-white p-2 rounded-lg border border-border text-[11px] select-all">
+            <div className="font-mono text-academic bg-white p-2.5 rounded-btn border border-border shadow-tactile-inset-sm text-[11px] select-all">
               privacy@academicplatform.edu
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-surface-muted border border-border space-y-1.5">
+          <div className="p-4 rounded-card bg-canvas border border-border shadow-tactile-surface space-y-1.5">
             <h4 className="font-semibold text-ink flex items-center gap-1.5">
               <Shield className="w-4 h-4 text-academic" />
               Academic Inquiries & Feedback
@@ -100,7 +100,7 @@ export function Footer({ onNavigate, onOpenCookieSettings }) {
             <p className="text-muted leading-relaxed">
               For institution partnerships, grading scale adjustments, or bug reports:
             </p>
-            <div className="font-mono text-academic bg-white p-2 rounded-lg border border-border text-[11px] select-all">
+            <div className="font-mono text-academic bg-white p-2.5 rounded-btn border border-border shadow-tactile-inset-sm text-[11px] select-all">
               support@academicplatform.edu
             </div>
           </div>

@@ -11,3 +11,6 @@ export * from './Toast';
 export * from './Avatar';
 export * from './Stat';
 export * from './PageHeader';
+export * from './AnimatedNumber';
+export * from './TactileCheckbox';
+export * from './AppSplashScreen';

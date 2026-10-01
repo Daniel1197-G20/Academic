@@ -34,11 +34,11 @@ export const Input = forwardRef(function Input({
           id={inputId}
           type={type}
           disabled={disabled}
-          className={`w-full bg-white text-ink text-sm rounded-[10px] px-3.5 py-2.5 
-            border transition-colors duration-150
+          className={`w-full bg-white text-ink text-sm rounded-btn px-3.5 py-2.5 
+            border shadow-tactile-inset-sm transition-all duration-150
             placeholder:text-muted/60
-            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic
-            disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed
+            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm
+            disabled:opacity-50 disabled:bg-canvas disabled:cursor-not-allowed disabled:shadow-none
             ${Icon ? 'pl-9' : ''}
             ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border hover:border-gray-400'}
             ${className}`}
@@ -81,10 +81,10 @@ export const Select = forwardRef(function Select({
           ref={ref}
           id={selectId}
           disabled={disabled}
-          className={`w-full appearance-none bg-white text-ink text-sm rounded-[10px] px-3.5 py-2.5 pr-9
-            border transition-colors duration-150
-            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic
-            disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed
+          className={`w-full appearance-none bg-white text-ink text-sm rounded-btn px-3.5 py-2.5 pr-9
+            border shadow-tactile-inset-sm transition-all duration-150
+            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm
+            disabled:opacity-50 disabled:bg-canvas disabled:cursor-not-allowed disabled:shadow-none
             ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border hover:border-gray-400'}
             ${className}`}
           {...props}
@@ -137,11 +137,11 @@ export const Textarea = forwardRef(function Textarea({
         id={textareaId}
         rows={rows}
         disabled={disabled}
-        className={`w-full bg-white text-ink text-sm rounded-[10px] px-3.5 py-2.5 
-          border transition-colors duration-150
+        className={`w-full bg-white text-ink text-sm rounded-btn px-3.5 py-2.5 
+          border shadow-tactile-inset-sm transition-all duration-150
           placeholder:text-muted/60
-          focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic
-          disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed
+          focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm
+          disabled:opacity-50 disabled:bg-canvas disabled:cursor-not-allowed disabled:shadow-none
           ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border hover:border-gray-400'}
           ${className}`}
         {...props}

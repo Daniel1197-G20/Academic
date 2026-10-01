@@ -44,7 +44,7 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={toast.id}
-              className="pointer-events-auto bg-white border border-border rounded-xl p-3.5 shadow-modal flex items-start gap-3 animate-fade-in"
+              className="pointer-events-auto bg-white border border-border rounded-btn p-3.5 shadow-tactile-raised flex items-start gap-3 animate-fade-in"
             >
               {icons[toast.type]}
               <div className="flex-1 min-w-0">

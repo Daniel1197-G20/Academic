@@ -50,40 +50,418 @@
 }
 
 @layer components {
-  /* Premium, restrained card surface */
+  /* LEVEL 1 — SURFACE (content sections, tables, normal panels) */
+  .tactile-surface {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px 0 rgba(17, 24, 39, 0.03), -1px -1px 2px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  /* LEVEL 2 — RAISED (important cards, CGPA hero, navigation dock, modal) */
+  .tactile-raised {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 4px 12px 0 rgba(17, 24, 39, 0.035), -1px -1px 5px 0 rgba(255, 255, 255, 0.85);
+    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  }
+
+  .tactile-raised-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px 0 rgba(17, 24, 39, 0.05), 0 6px 16px 0 rgba(17, 24, 39, 0.04), -1px -1px 6px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .tactile-hero {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px 0 rgba(17, 24, 39, 0.045), 0 8px 20px 0 rgba(17, 24, 39, 0.035), -1px -1px 6px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  /* LEVEL 3 — PRESSED / INSET (inputs, progress tracks, active controls) */
+  .tactile-inset {
+    box-shadow: inset 2px 2px 5px 0 rgba(17, 24, 39, 0.045), inset -2px -2px 5px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .tactile-inset-sm {
+    box-shadow: inset 1px 1px 3px 0 rgba(17, 24, 39, 0.04), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.75);
+  }
+
+  /* Tactile Physical Button Rest / Hover / Press */
+  .tactile-btn-base {
+    position: relative;
+    border-radius: 11px;
+    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, border-color 140ms ease;
+    user-select: none;
+  }
+
+  .tactile-btn-secondary {
+    background-color: #FFFFFF;
+    color: #111827;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 3px 8px 0 rgba(17, 24, 39, 0.03), -1px -1px 3px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .tactile-btn-secondary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px 0 rgba(17, 24, 39, 0.05), 0 5px 12px 0 rgba(17, 24, 39, 0.04), -1px -1px 4px 0 rgba(255, 255, 255, 0.95);
+    background-color: #FAFAFA;
+  }
+
+  .tactile-btn-secondary:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: inset 1px 1px 3px 0 rgba(17, 24, 39, 0.06), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .tactile-btn-academic {
+    background-color: #176B4D;
+    color: #FFFFFF;
+    border: 1px solid #13583F;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.08), 0 3px 8px 0 rgba(23, 107, 77, 0.15), -1px -1px 2px 0 rgba(255, 255, 255, 0.2) inset;
+  }
+
+  .tactile-btn-academic:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background-color: #156145;
+    box-shadow: 0 2px 5px 0 rgba(17, 24, 39, 0.1), 0 5px 12px 0 rgba(23, 107, 77, 0.2);
+  }
+
+  .tactile-btn-academic:active:not(:disabled) {
+    transform: translateY(1px);
+    background-color: #104633;
+    box-shadow: inset 1px 1px 3px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  .tactile-btn-primary {
+    background-color: #111827;
+    color: #FFFFFF;
+    border: 1px solid #0B0F19;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.1), 0 3px 8px 0 rgba(17, 24, 39, 0.15);
+  }
+
+  .tactile-btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background-color: #172033;
+    box-shadow: 0 2px 5px 0 rgba(17, 24, 39, 0.15), 0 5px 12px 0 rgba(17, 24, 39, 0.2);
+  }
+
+  .tactile-btn-primary:active:not(:disabled) {
+    transform: translateY(1px);
+    background-color: #070B12;
+    box-shadow: inset 1px 1px 3px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* Tactile Engraved Progress Track */
+  .tactile-track {
+    background-color: #ECEEE9;
+    box-shadow: inset 1px 2px 4px 0 rgba(17, 24, 39, 0.06), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.85);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  /* Tactile Sliding Tab Container & Active Tile */
+  .tactile-tab-bar {
+    background-color: #ECEEE9;
+    border: 1px solid #E5E7EB;
+    box-shadow: inset 1px 2px 4px 0 rgba(17, 24, 39, 0.05), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.85);
+    border-radius: 12px;
+    padding: 3px;
+  }
+
+  .tactile-tab-tile-active {
+    background-color: #FFFFFF;
+    color: #111827;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 3px 6px 0 rgba(17, 24, 39, 0.02), -1px -1px 2px 0 rgba(255, 255, 255, 0.95);
+    border-radius: 9px;
+    font-weight: 600;
+  }
+
+  /* Tactile Mobile Dock */
+  .tactile-dock {
+    background-color: #FFFFFF;
+    border-top: 1px solid #E5E7EB;
+    box-shadow: 0 -1px 4px 0 rgba(17, 24, 39, 0.03), 0 -4px 12px 0 rgba(17, 24, 39, 0.025), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  }
+
+  /* Physical Rail Timeline */
+  .tactile-rail-line {
+    background: #E5E7EB;
+    width: 2px;
+  }
+
+  .tactile-rail-node-active {
+    background-color: #176B4D;
+    color: #FFFFFF;
+    box-shadow: 0 1px 3px 0 rgba(23, 107, 77, 0.25), -1px -1px 2px 0 rgba(255, 255, 255, 0.3) inset;
+  }
+
+  .tactile-rail-node-inactive {
+    background-color: #FFFFFF;
+    border: 1.5px solid #D1D5DB;
+    box-shadow: 0 1px 2px 0 rgba(17, 24, 39, 0.04), -1px -1px 2px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  /* Legacy card support alias mapped to tactile system */
   .card-surface {
     background: #FFFFFF;
     border: 1px solid #E5E7EB;
-    border-radius: 14px;
-    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 1px 2px 0 rgba(17, 24, 39, 0.02);
+    border-radius: 16px;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 4px 12px 0 rgba(17, 24, 39, 0.035), -1px -1px 5px 0 rgba(255, 255, 255, 0.85);
   }
 
   .card-surface-interactive {
     background: #FFFFFF;
     border: 1px solid #E5E7EB;
-    border-radius: 14px;
-    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04);
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 4px 12px 0 rgba(17, 24, 39, 0.035), -1px -1px 5px 0 rgba(255, 255, 255, 0.85);
+    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
   }
 
   .card-surface-interactive:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px 0 rgba(17, 24, 39, 0.07);
-    border-color: #D1D5DB;
+    box-shadow: 0 2px 6px 0 rgba(17, 24, 39, 0.05), 0 6px 16px 0 rgba(17, 24, 39, 0.04), -1px -1px 6px 0 rgba(255, 255, 255, 0.95);
   }
 
-  /* Subtle contextual glass - used only for floating bars & modal backdrops */
-  .surface-glass {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(229, 231, 235, 0.85);
+  /* ==========================================================================
+     NEUMORPHISM (Soft UI) DESIGN SYSTEM — AUTHENTICATION SUITE
+     ========================================================================== */
+  .neu-canvas {
+    background-color: #e9eef5;
   }
 
-  .surface-glass-modal {
-    background: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    box-shadow: 0 20px 25px -5px rgba(17, 24, 39, 0.08), 0 8px 10px -6px rgba(17, 24, 39, 0.04);
+  .neu-plate {
+    background-color: #e9eef5;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 16px 16px 36px #b8c5d6, -16px -16px 36px #ffffff;
+    border-radius: 28px;
+  }
+
+  .neu-surface {
+    background-color: #e9eef5;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 8px 8px 18px #b8c5d6, -8px -8px 18px #ffffff;
+    border-radius: 20px;
+    transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .neu-surface-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 10px 10px 22px #abbbce, -10px -10px 22px #ffffff;
+  }
+
+  .neu-inset {
+    background-color: #e9eef5;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: inset 4px 4px 8px #b8c5d6, inset -4px -4px 8px #ffffff;
+    border-radius: 14px;
+    transition: box-shadow 150ms ease, border-color 150ms ease;
+  }
+
+  .neu-inset-focus:focus-within,
+  .neu-inset:focus {
+    box-shadow: inset 4px 4px 8px #a8b7ca, inset -4px -4px 8px #ffffff, 0 0 0 2px rgba(23, 107, 77, 0.35);
+    border-color: rgba(23, 107, 77, 0.5);
+    outline: none;
+  }
+
+  .neu-inset-sm {
+    background-color: #e9eef5;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: inset 2px 2px 5px #b8c5d6, inset -2px -2px 5px #ffffff;
+    border-radius: 12px;
+  }
+
+  .neu-btn {
+    background-color: #e9eef5;
+    color: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 4px 4px 10px #b8c5d6, -4px -4px 10px #ffffff;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+    user-select: none;
+  }
+
+  .neu-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 6px 6px 14px #abbbce, -6px -6px 14px #ffffff;
+  }
+
+  .neu-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: inset 3px 3px 6px #b8c5d6, inset -3px -3px 6px #ffffff;
+  }
+
+  .neu-btn-primary {
+    background: linear-gradient(135deg, #176b4d 0%, #11523a 100%);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 6px 6px 16px rgba(19, 88, 63, 0.4), -5px -5px 14px #ffffff;
+    border-radius: 14px;
+    font-weight: 700;
+    transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+    user-select: none;
+  }
+
+  .neu-btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: 8px 8px 22px rgba(19, 88, 63, 0.48), -6px -6px 18px #ffffff;
+  }
+
+  .neu-btn-primary:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: inset 3px 3px 7px #092c1f, inset -3px -3px 7px #23956b;
+  }
+
+  .neu-tab-track {
+    background-color: #e2e8f1;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: inset 3px 3px 7px #b8c5d6, inset -3px -3px 7px #ffffff;
+    border-radius: 16px;
+    padding: 4px;
+  }
+
+  .neu-tab-active {
+    background-color: #e9eef5;
+    color: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 4px 4px 10px #b8c5d6, -4px -4px 10px #ffffff;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+
+  .neu-checkbox-unchecked {
+    background-color: #e9eef5;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: inset 2px 2px 4px #b8c5d6, inset -2px -2px 4px #ffffff;
+    border-radius: 7px;
+  }
+
+  .neu-checkbox-checked {
+    background: #176b4d;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 3px 3px 8px rgba(19, 88, 63, 0.45), -2px -2px 6px #ffffff;
+    border-radius: 7px;
+    color: #ffffff;
+  }
+
+  .neu-alert-danger {
+    background-color: #faeeee;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    box-shadow: inset 2px 2px 5px #f0c3c3, inset -2px -2px 5px #ffffff;
+    color: #b91c1c;
+    border-radius: 14px;
+  }
+}
+
+/* Study streak breathing motion */
+@keyframes streakBreatheAnimation {
+  0%, 100% {
+    transform: scale(1.00);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.streak-breathing {
+  animation: streakBreatheAnimation 2s ease-in-out infinite;
+}
+
+/* Staged entrance utilities */
+.staged-1 {
+  animation: fadeIn 240ms ease-out 0ms forwards;
+}
+.staged-2 {
+  animation: fadeIn 240ms ease-out 60ms forwards;
+}
+.staged-3 {
+  animation: fadeIn 240ms ease-out 120ms forwards;
+}
+.staged-4 {
+  animation: fadeIn 240ms ease-out 180ms forwards;
+}
+.staged-5 {
+  animation: fadeIn 240ms ease-out 240ms forwards;
+}
+
+/* ==========================================================================
+   APP ICON SPLASH & LOADER ANIMATIONS
+   ========================================================================== */
+@keyframes iconFloatAnimation {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.02);
+  }
+}
+
+@keyframes pulseHaloAnimation {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.18;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes indeterminateBarAnimation {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(35%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes iconSheenAnimation {
+  0% {
+    transform: translateX(-150%) rotate(25deg);
+  }
+  100% {
+    transform: translateX(250%) rotate(25deg);
+  }
+}
+
+.animate-icon-float {
+  animation: iconFloatAnimation 2.4s ease-in-out infinite;
+}
+
+.animate-pulse-halo {
+  animation: pulseHaloAnimation 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.animate-bar-indeterminate {
+  animation: indeterminateBarAnimation 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-icon-sheen {
+  animation: iconSheenAnimation 2.6s ease-in-out infinite;
+}
+
+/* Accessibility / Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .streak-breathing {
+    animation: none !important;
   }
 }
 

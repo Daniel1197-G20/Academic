@@ -11,7 +11,8 @@ import {
   ShieldCheck, 
   ChevronLeft, 
   ChevronRight,
-  LogOut
+  LogOut,
+  CreditCard
 } from 'lucide-react';
 import { Avatar } from '../ui';
 
@@ -28,13 +29,15 @@ export function Sidebar({
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'cgpa', label: 'CGPA', icon: GraduationCap },
     { id: 'study', label: 'Study Planner', icon: BookOpen },
-    { id: 'prep', label: 'Test Prep', icon: FileCheck2, badge: 'Soon', isFuture: true },
-    { id: 'tutors', label: 'Tutors', icon: Compass, badge: 'Soon', isFuture: true },
-    { id: 'community', label: 'Messages', icon: MessageSquare, badge: 'Soon', isFuture: true },
+    { id: 'prep', label: 'Test Prep', icon: FileCheck2 },
+    { id: 'tutors', label: 'Tutors', icon: Compass },
+    { id: 'community', label: 'Messages', icon: MessageSquare },
   ];
 
   const personalNav = [
     { id: 'profile', label: 'Profile', icon: User },
+    { id: 'settings/subscription', label: 'Subscription', icon: CreditCard },
+    { id: 'pricing', label: 'Plans & Pricing', icon: Sparkles },
     { id: 'privacy-settings', label: 'Privacy', icon: ShieldCheck },
   ];
 
@@ -90,18 +93,18 @@ export function Sidebar({
                   key={item.id}
                   type="button"
                   onClick={() => onSelectTab(item.id)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-left group
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-btn text-xs sm:text-sm transition-all text-left group select-none
                     ${isActive
-                      ? 'bg-academic-50 text-academic font-semibold'
-                      : 'text-gray-600 hover:text-ink hover:bg-gray-50'}`}
+                      ? 'bg-white text-ink font-semibold border border-border shadow-tactile-surface'
+                      : 'text-muted hover:text-ink hover:bg-canvas/80 border border-transparent'}`}
                   title={collapsed ? item.label : undefined}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-academic' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-academic' : 'text-muted group-hover:text-ink'}`} />
                   {!collapsed && (
                     <div className="flex-1 flex items-center justify-between min-w-0">
                       <span className="truncate">{item.label}</span>
                       {item.badge && (
-                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-canvas border border-border text-muted">
                           {item.badge}
                         </span>
                       )}
@@ -128,13 +131,13 @@ export function Sidebar({
                   key={item.id}
                   type="button"
                   onClick={() => onSelectTab(item.id)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-left group
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-btn text-xs sm:text-sm transition-all text-left group select-none
                     ${isActive
-                      ? 'bg-academic-50 text-academic font-semibold'
-                      : 'text-gray-600 hover:text-ink hover:bg-gray-50'}`}
+                      ? 'bg-white text-ink font-semibold border border-border shadow-tactile-surface'
+                      : 'text-muted hover:text-ink hover:bg-canvas/80 border border-transparent'}`}
                   title={collapsed ? item.label : undefined}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-academic' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-academic' : 'text-muted group-hover:text-ink'}`} />
                   {!collapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
@@ -153,8 +156,8 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => onSelectTab('profile')}
-          className={`w-full flex items-center gap-2.5 p-2 rounded-lg transition-colors text-left
-            ${activeTab === 'profile' ? 'bg-academic-50' : 'hover:bg-gray-50'}`}
+          className={`w-full flex items-center gap-2.5 p-2 rounded-btn transition-all text-left
+            ${activeTab === 'profile' ? 'bg-white border border-border shadow-tactile-surface' : 'hover:bg-canvas/80 border border-transparent'}`}
         >
           <Avatar
             name={userProfile?.full_name || 'Student'}
@@ -176,7 +179,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onLogout}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-gray-500 hover:text-danger hover:bg-danger-50 transition-colors
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-btn text-xs font-medium text-muted hover:text-danger hover:bg-danger-50 border border-transparent hover:border-danger-100 transition-colors
             ${collapsed ? 'justify-center' : ''}`}
           title="Sign out of platform"
         >

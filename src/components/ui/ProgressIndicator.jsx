@@ -23,9 +23,9 @@ export function ProgressBar({
           {showPercentage && <span className="font-mono text-ink font-semibold">{percentage}%</span>}
         </div>
       )}
-      <div className={`w-full bg-gray-100 rounded-full overflow-hidden ${heights[size]}`}>
+      <div className={`w-full tactile-track ${heights[size]}`}>
         <div 
-          className="h-full bg-academic rounded-full transition-all duration-300 ease-out"
+          className="h-full bg-academic rounded-track transition-all duration-400 ease-out"
           style={{ width: `${percentage}%` }}
         />
       </div>
