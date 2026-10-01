@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-zero: #050505;
+    --accent-ghost: #D7FFE0;
+    --accent-ghost-glow: rgba(215, 255, 224, 0.25);
+  }
+
+  body {
+    background-color: #050505;
+    color: #e4e4e7;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Custom high-performance dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #090A0B;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1C2229;
+    border-radius: 9999px;
+    border: 1px solid rgba(215, 255, 224, 0.06);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2A333E;
+  }
+
+  /* Accessible focus ring styled in Ghost Green */
+  :focus-visible {
+    outline: 2px solid #D7FFE0;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Neumorphic surfaces */
+  .neu-card {
+    background: #0A0C0E;
+    border: 1px solid rgba(215, 255, 224, 0.05);
+    box-shadow: -3px -3px 8px rgba(255, 255, 255, 0.015), 4px 5px 14px rgba(0, 0, 0, 0.75);
+    border-radius: 1rem;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .neu-card:hover {
+    transform: translateY(-2px);
+    box-shadow: -4px -4px 12px rgba(255, 255, 255, 0.025), 6px 8px 20px rgba(0, 0, 0, 0.85);
+    border-color: rgba(215, 255, 224, 0.12);
+  }
+
+  .neu-card-flat {
+    background: #0A0C0E;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.5);
+    border-radius: 0.875rem;
+  }
+
+  .neu-inset {
+    background: #060708;
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.9), inset -1px -1px 4px rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  .neu-button {
+    background: #0E1114;
+    border: 1px solid rgba(215, 255, 224, 0.1);
+    box-shadow: -2px -2px 6px rgba(255, 255, 255, 0.02), 3px 3px 8px rgba(0, 0, 0, 0.8);
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .neu-button:active {
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.95), inset -1px -1px 3px rgba(255, 255, 255, 0.02);
+    transform: scale(0.98);
+  }
+
+  /* Liquid Glass Surfaces */
+  .liquid-glass {
+    background: rgba(10, 13, 16, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(215, 255, 224, 0.09);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55);
+  }
+
+  .liquid-glass-accent {
+    background: rgba(215, 255, 224, 0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(215, 255, 224, 0.18);
+    box-shadow: 0 0 24px rgba(215, 255, 224, 0.06), 0 8px 32px rgba(0, 0, 0, 0.6);
+  }
+
+  .liquid-glass-modal {
+    background: rgba(8, 10, 12, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(215, 255, 224, 0.14);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 40px rgba(215, 255, 224, 0.05);
+  }
+
+  /* Ghost Green Button Hero */
+  .btn-ghost-primary {
+    background: #D7FFE0;
+    color: #050505;
+    font-weight: 600;
+    box-shadow: 0 0 20px rgba(215, 255, 224, 0.35);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-ghost-primary:hover {
+    background: #E8FFF0;
+    box-shadow: 0 0 28px rgba(215, 255, 224, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 0 10px rgba(215, 255, 224, 0.25);
+  }
+
+  /* Glass Glow Badge */
+  .badge-ghost {
+    background: rgba(215, 255, 224, 0.08);
+    color: #D7FFE0;
+    border: 1px solid rgba(215, 255, 224, 0.2);
+  }
+}
+
+/* Subtle grid backdrop for visual depth */
+.bg-grid-pattern {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(215, 255, 224, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(215, 255, 224, 0.015) 1px, transparent 1px);
+}

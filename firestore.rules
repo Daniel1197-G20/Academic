@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // STRICT MANDATE: Academic records MUST NOT exist in Firestore.
+    // PostgreSQL is the single source of truth for grades, CGPA, courses, and transcripts.
+    match /academic/{document=**} {
+      allow read, write: if false;
+    }
+    match /grades/{document=**} {
+      allow read, write: if false;
+    }
+    match /semesters/{document=**} {
+      allow read, write: if false;
+    }
+    match /student_courses/{document=**} {
+      allow read, write: if false;
+    }
+
+    // 1. REALTIME CHAT (Milestone 2 - selective Firebase usage)
+    // Only participants can read or create messages
+    match /conversations/{conversationId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && 
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if isAuthenticated() && 
+          request.resource.data.senderId == request.auth.uid &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+      }
+    }
+
+    // 2. STUDY GROUP REALTIME MESSAGING (Milestone 2)
+    match /groups/{groupId}/discussions/{discussionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
+        resource.data.authorUid == request.auth.uid;
+    }
+
+    // 3. USER REALTIME PRESENCE
+    // Only the authenticated user can update their online presence document
+    match /presence/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+    }
+    
+    // Default Deny All Other Unmatched Paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

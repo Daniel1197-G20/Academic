@@ -1,0 +1,57 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isDocument() {
+      return request.resource.contentType.matches('application/pdf') ||
+             request.resource.contentType.matches('application/msword') ||
+             request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.wordprocessingml.document') ||
+             request.resource.contentType.matches('image/.*');
+    }
+
+    // 1. User Profile Avatars
+    // Max size: 5MB, Images only
+    match /users/{userId}/avatar/{fileName} {
+      allow read: if true; // Avatars are publicly viewable by peers
+      allow write: if isOwner(userId) 
+        && isImage() 
+        && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // 2. Study Materials & Assignment Uploads (Milestone 2)
+    // Max size: 25MB, Documents & images only
+    match /study-materials/{userId}/{fileId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId)
+        && isDocument()
+        && request.resource.size < 25 * 1024 * 1024;
+      allow delete: if isOwner(userId);
+    }
+
+    // 3. Chat Media Attachments (Milestone 2)
+    // Max size: 15MB
+    match /chat-attachments/{conversationId}/{fileId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() 
+        && request.resource.size < 15 * 1024 * 1024;
+    }
+
+    // Default Deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
