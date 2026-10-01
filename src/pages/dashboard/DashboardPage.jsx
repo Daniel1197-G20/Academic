@@ -509,6 +509,16 @@ export function DashboardPage({
                   </div>
                 </div>
               </div>
+            ) : studyPlans.length === 0 ? (
+              <div className="mt-4 py-5 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-academic-100/70 border border-academic-200/80 flex items-center justify-center text-academic mx-auto mb-3 shadow-tactile-surface">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-bold text-ink">Start Your First Study Plan</h3>
+                <p className="text-xs text-muted mt-1 max-w-sm mx-auto leading-relaxed">
+                  Break your courses down into scheduled topics, log study hours, and build a consistent daily academic streak.
+                </p>
+              </div>
             ) : (
               <div className="mt-4 py-4 text-center">
                 <CheckCircle2 className="w-8 h-8 text-academic mx-auto mb-2 opacity-90" />
@@ -541,14 +551,16 @@ export function DashboardPage({
               </div>
             ) : (
               <div className="flex items-center justify-between w-full">
-                <span className="text-xs text-muted">Study Cadence Active</span>
+                <span className="text-xs text-muted">
+                  {studyPlans.length === 0 ? 'No study plans yet' : 'Study Cadence Active'}
+                </span>
                 <Button
                   variant="academic"
                   size="sm"
                   onClick={() => onNavigateTab('study')}
                   icon={Plus}
                 >
-                  Create Plan
+                  {studyPlans.length === 0 ? 'Create First Plan' : 'Create Plan'}
                 </Button>
               </div>
             )}

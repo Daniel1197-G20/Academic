@@ -31,7 +31,7 @@ import { PageLoader } from './components/common/PageLoader';
 import { api } from './services/api/client';
 import { supabase } from './lib/supabase/client';
 import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
-import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, Video, BookOpen } from 'lucide-react';
+import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, Video, BookOpen, Copy, Check, Loader2 } from 'lucide-react';
 import { BillingProvider } from './context/BillingContext';
 import { PricingPage } from './pages/billing/PricingPage';
 import { BillingCallbackPage } from './pages/billing/BillingCallbackPage';
@@ -136,6 +136,13 @@ function AppContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showCookieModal, setShowCookieModal] = useState(false);
 
+  // AI Academic Assistant State
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiResponse, setAiResponse] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [copiedAiResponse, setCopiedAiResponse] = useState(false);
+
   // Handle URL Path / Hash routing via popstate (browser back/forward buttons)
   useEffect(() => {
     const handlePopState = () => {
@@ -167,6 +174,36 @@ function AppContent() {
       navigateRoute('register');
     } else {
       navigateRoute('pricing');
+    }
+  };
+
+  const handleAiQuerySubmit = async (overridePrompt) => {
+    const promptToSubmit = (overridePrompt ?? aiQuery ?? '').trim();
+    if (!promptToSubmit) {
+      addToast({ type: 'warning', title: 'Empty Query', message: 'Please enter a coursework question or select a prompt.' });
+      return;
+    }
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await api.request('/api/ai/query', { 
+        method: 'POST', 
+        body: JSON.stringify({ prompt: promptToSubmit }) 
+      });
+      if (res && res.answer) {
+        setAiResponse({
+          prompt: promptToSubmit,
+          answer: res.answer,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+      } else {
+        throw new Error('No analytical response received from AI Tutor.');
+      }
+    } catch (err) {
+      setAiError(err.message || 'AI query limit reached or server unavailable.');
+      addToast({ type: 'error', title: 'AI Limit Reached', message: err.message });
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -1013,29 +1050,38 @@ function AppContent() {
                 >
                   <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-ink">Ask AI Tutor a coursework question:</label>
+                      <label htmlFor="aiQueryInput" className="text-xs font-semibold text-ink">
+                        Ask AI Tutor a coursework question:
+                      </label>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           placeholder="e.g. Prove why the 0/1 knapsack problem cannot be solved greedily..."
                           id="aiQueryInput"
+                          value={aiQuery}
+                          onChange={(e) => setAiQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !aiLoading) {
+                              e.preventDefault();
+                              handleAiQuerySubmit();
+                            }
+                          }}
                           className="flex-1 bg-canvas border border-border rounded-btn px-3 py-2 text-xs text-ink focus:outline-none focus:border-academic"
                         />
                         <Button
                           variant="academic"
                           size="sm"
-                          onClick={async () => {
-                            const input = document.getElementById('aiQueryInput');
-                            const q = input?.value || 'Explain dynamic programming memoization';
-                            try {
-                              const res = await api.request('/api/ai/query', { method: 'POST', body: JSON.stringify({ prompt: q }) });
-                              addToast({ type: 'success', title: 'AI Tutor Response', message: res.answer });
-                            } catch (err) {
-                              addToast({ type: 'error', title: 'AI Limit Reached', message: err.message });
-                            }
-                          }}
+                          disabled={aiLoading}
+                          onClick={() => handleAiQuerySubmit()}
                         >
-                          Submit Query
+                          {aiLoading ? (
+                            <span className="flex items-center gap-1.5">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Analyzing...</span>
+                            </span>
+                          ) : (
+                            'Submit Query'
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -1048,16 +1094,130 @@ function AppContent() {
                             key={i}
                             type="button"
                             onClick={() => {
-                              const el = document.getElementById('aiQueryInput');
-                              if (el) el.value = prompt;
+                              setAiQuery(prompt);
+                              handleAiQuerySubmit(prompt);
                             }}
-                            className="px-2.5 py-1 rounded-btn bg-white border border-border text-[11px] text-ink hover:border-academic shadow-tactile-surface transition-colors"
+                            className="px-2.5 py-1 rounded-btn bg-white border border-border text-[11px] text-ink hover:border-academic shadow-tactile-surface transition-colors cursor-pointer"
                           >
                             {prompt}
                           </button>
                         ))}
                       </div>
                     </div>
+
+                    {/* In-page Response Card rendering the full AI coursework answer */}
+                    {aiLoading && (
+                      <div className="p-5 rounded-card bg-canvas/40 border border-border/80 animate-pulse space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 text-academic animate-spin" />
+                          <span className="text-xs font-semibold text-ink">AI Academic Assistant is synthesizing coursework answer...</span>
+                        </div>
+                        <div className="h-3.5 bg-muted/20 rounded w-3/4" />
+                        <div className="h-3.5 bg-muted/20 rounded w-5/6" />
+                        <div className="h-3.5 bg-muted/20 rounded w-2/3" />
+                      </div>
+                    )}
+
+                    {aiError && !aiLoading && (
+                      <div className="p-4 rounded-btn bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-bold">Query Notice</p>
+                          <p className="mt-0.5">{aiError}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAiError(null)}
+                          className="text-rose-600 hover:text-rose-900 text-xs font-semibold cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+
+                    {aiResponse && !aiLoading && (
+                      <div className="mt-4 pt-4 border-t border-border space-y-4">
+                        <div className="bg-canvas/30 border border-border/80 rounded-card p-5 sm:p-6 space-y-4 shadow-tactile-surface">
+                          {/* Response Card Header */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-academic-100 border border-academic-200 flex items-center justify-center text-academic">
+                                <Sparkles className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
+                                  Coursework Analysis & Solution
+                                </h4>
+                                <span className="text-[10px] text-muted font-mono">
+                                  Generated at {aiResponse.timestamp}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="academic" size="sm">
+                                Full Explanation
+                              </Badge>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (aiResponse?.answer) {
+                                    navigator.clipboard?.writeText(aiResponse.answer);
+                                    setCopiedAiResponse(true);
+                                    setTimeout(() => setCopiedAiResponse(false), 2000);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-btn bg-white border border-border text-[11px] font-medium text-ink hover:border-academic transition-colors shadow-tactile-surface cursor-pointer"
+                                title="Copy answer"
+                              >
+                                {copiedAiResponse ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span className="text-emerald-700 font-semibold">Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-muted" />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Query Prompt */}
+                          <div className="px-3.5 py-2.5 rounded-btn bg-white border border-border text-xs">
+                            <span className="font-semibold text-muted uppercase tracking-wide text-[10px] block mb-0.5">
+                              Coursework Topic / Question
+                            </span>
+                            <span className="text-ink font-medium">"{aiResponse.prompt}"</span>
+                          </div>
+
+                          {/* Render Full AI Coursework Answer */}
+                          <div className="space-y-2">
+                            <span className="font-semibold text-muted uppercase tracking-wide text-[10px] block">
+                              AI Academic Solution
+                            </span>
+                            <div className="p-4 rounded-btn bg-white border border-border text-ink text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                              {aiResponse.answer}
+                            </div>
+                          </div>
+
+                          {/* Footer */}
+                          <div className="flex items-center justify-between pt-1 text-xs text-muted">
+                            <span className="text-[11px]">Academic Tutor Entitlement Active</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAiResponse(null);
+                                setAiQuery('');
+                              }}
+                              className="text-xs font-semibold text-slate-500 hover:text-ink transition-colors cursor-pointer"
+                            >
+                              Clear Solution
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </FeatureGate>
               </div>

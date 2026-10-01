@@ -113,6 +113,46 @@ function NeuCheckbox({
   );
 }
 
+/**
+ * Map Supabase and network errors to clean, friendly user-facing messages
+ */
+export function mapAuthError(err) {
+  if (!err) return 'An error occurred during authentication.';
+  const msg = (err.message || err.toString() || '').toLowerCase();
+
+  if (
+    msg.includes('invalid login credentials') || 
+    msg.includes('invalid credentials') || 
+    msg.includes('email not confirmed') ||
+    msg.includes('invalid email or password')
+  ) {
+    return 'Email or password is incorrect.';
+  }
+  if (
+    msg.includes('user already registered') || 
+    msg.includes('already exists') || 
+    msg.includes('duplicate')
+  ) {
+    return 'An account with this email already exists. Try signing in instead.';
+  }
+  if (
+    msg.includes('fetch') || 
+    msg.includes('network') || 
+    msg.includes('failed to fetch') || 
+    msg.includes('connection')
+  ) {
+    return "We couldn't connect to Studora. Please check your internet connection and try again.";
+  }
+  if (msg.includes('password should be at least')) {
+    return 'Password must be at least 6 characters.';
+  }
+  if (msg.includes('rate limit') || msg.includes('too many requests')) {
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
+
+  return err.message || 'An error occurred. Please try again.';
+}
+
 export function AuthPage({ 
   onLoginSuccess, 
   onNavigateLegal, 
@@ -124,6 +164,14 @@ export function AuthPage({
   const [isRegistering, setIsRegistering] = useState(initialMode === 'register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
+
+  // Password Reset States
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
 
   // Form states
   const [email, setEmail] = useState('');
@@ -143,11 +191,42 @@ export function AuthPage({
     setPassword('Password123!');
     setIsRegistering(false);
     setError('');
+    setInfoMessage('');
+  };
+
+  // Handle Supabase Password Reset
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    setResetSuccess(false);
+
+    const trimmed = resetEmail.toLowerCase().trim();
+    if (!trimmed) {
+      setResetError('Please enter your email address.');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/auth?reset=true` : undefined;
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: redirectUrl
+      });
+      if (resetErr) {
+        throw resetErr;
+      }
+      setResetSuccess(true);
+    } catch (err) {
+      setResetError(mapAuthError(err));
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfoMessage('');
 
     const trimmedEmail = email.toLowerCase().trim();
 
@@ -185,12 +264,20 @@ export function AuthPage({
         });
 
         if (signUpError) {
-          throw new Error(signUpError.message || 'Registration failed.');
+          throw new Error(mapAuthError(signUpError));
         }
 
         const user = authData.user;
+        const session = authData.session;
         if (!user) {
           throw new Error('Registration failed. Please try again.');
+        }
+
+        // Section 19: Check if email verification is required
+        if (user && !session) {
+          setInfoMessage("Account created successfully! We've sent a verification link to your email. Please check your inbox and verify your email to log in.");
+          setIsRegistering(false);
+          return;
         }
 
         // STEP 10: Legal Consent Records (associated with authenticated Supabase user)
@@ -216,6 +303,21 @@ export function AuthPage({
               user_agent: userAgent
             }
           ];
+
+          // Auto-persist consent to localStorage so new users don't see consent banner immediately
+          try {
+            const consentPrefs = {
+              necessary: true,
+              analytics: Boolean(analyticsConsent),
+              functional: true,
+              updatedAt: new Date().toISOString(),
+              policyVersion: '1.0'
+            };
+            localStorage.setItem('academic_consent_preferences', JSON.stringify(consentPrefs));
+            localStorage.setItem('academic_consent_timestamp', new Date().toISOString());
+          } catch (storageErr) {
+            console.warn('Could not persist consent to localStorage:', storageErr);
+          }
 
           // Record optional analytics consent only if explicitly opted in
           if (analyticsConsent) {
@@ -262,13 +364,13 @@ export function AuthPage({
           profile = {
             id: user.id,
             full_name: fullName.trim(),
+            role: 'student',
             institution: institution.trim() || 'General Academy',
             department: department.trim() || 'General Studies',
             academic_level: academicLevel || 'Year 1'
           };
         }
 
-        const session = authData.session;
         if (session?.access_token) {
           api.setToken(session.access_token);
         }
@@ -278,13 +380,13 @@ export function AuthPage({
           user: {
             id: user.id,
             email: user.email,
-            role: 'student'
+            role: profile.role || 'student'
           },
           profile,
           selectedScale
         });
       } catch (err) {
-        setError(err.message || 'An error occurred during registration.');
+        setError(mapAuthError(err));
       } finally {
         setLoading(false);
       }
@@ -318,7 +420,7 @@ export function AuthPage({
             return;
           }
 
-          throw new Error(signInError.message || 'Invalid email or password.');
+          throw new Error(mapAuthError(signInError));
         }
 
         const user = authData.user;
@@ -341,16 +443,19 @@ export function AuthPage({
           .eq('user_id', user.id)
           .maybeSingle();
 
+        const userRole = profile?.role || 'student';
+
         onLoginSuccess({
           token: session?.access_token,
           user: {
             id: user.id,
             email: user.email,
-            role: 'student'
+            role: userRole
           },
           profile: profile || {
             id: user.id,
             full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+            role: 'student',
             institution: 'General Academy',
             department: 'General Studies',
             academic_level: 'Year 1'
@@ -358,7 +463,7 @@ export function AuthPage({
           selectedScale: settings?.selected_scale || '5.0'
         });
       } catch (err) {
-        setError(err.message || 'Invalid email or password.');
+        setError(mapAuthError(err));
       } finally {
         setLoading(false);
       }
@@ -572,6 +677,14 @@ export function AuthPage({
               </div>
             )}
 
+            {/* Info Message Box (e.g. Email verification notice) */}
+            {infoMessage && (
+              <div className="p-3.5 rounded-2xl bg-academic-50 border border-academic-200 text-xs font-semibold text-academic flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 shrink-0 text-academic mt-0.5" />
+                <span className="leading-snug">{infoMessage}</span>
+              </div>
+            )}
+
             {/* Error Message Box */}
             {error && (
               <div className="neu-alert-danger p-3.5 rounded-2xl text-xs font-semibold flex items-start gap-2.5">
@@ -580,61 +693,159 @@ export function AuthPage({
               </div>
             )}
 
-            {/* Auth Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isRegistering && (
-                <>
-                  <NeuInput
-                    label="Full Name"
-                    id="fullName"
-                    placeholder="e.g. Maya Lin"
-                    icon={User}
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <NeuInput
-                      label="Institution / University"
-                      id="institution"
-                      placeholder="e.g. Apex Tech"
-                      icon={School}
-                      value={institution}
-                      onChange={(e) => setInstitution(e.target.value)}
-                    />
-                    <NeuInput
-                      label="Department / Major"
-                      id="department"
-                      placeholder="e.g. Computer Science"
-                      icon={GraduationCap}
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                    />
+            {showForgotPassword ? (
+              /* Dedicated Supabase Password Reset View */
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl neu-inset text-xs space-y-1.5 text-slate-700">
+                  <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-academic" />
+                    Reset Your Password
+                  </p>
+                  <p className="text-slate-500 text-[11px] leading-relaxed">
+                    Enter your registered email address and we'll send you a secure link to reset your account password.
+                  </p>
+                </div>
+
+                {resetSuccess ? (
+                  <div className="p-4 rounded-2xl bg-academic-50 border border-academic-200 text-xs text-academic space-y-2">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <Check className="w-4 h-4 text-academic" />
+                      Check your email!
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      We've dispatched a secure password reset link to <strong className="font-mono">{resetEmail}</strong>. Follow the instructions in the email to choose a new password.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPassword(false);
+                        setResetSuccess(false);
+                        setResetEmail('');
+                      }}
+                      className="neu-btn px-3 py-1.5 text-xs text-academic font-bold mt-2 cursor-pointer"
+                    >
+                      Return to Sign In
+                    </button>
                   </div>
-                </>
-              )}
+                ) : (
+                  <form onSubmit={handlePasswordReset} className="space-y-4">
+                    {resetError && (
+                      <div className="neu-alert-danger p-3 rounded-xl text-xs font-medium">
+                        {resetError}
+                      </div>
+                    )}
 
-              <NeuInput
-                label="Academic Email"
-                id="email"
-                type="email"
-                placeholder="student@university.edu"
-                icon={Mail}
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+                    <NeuInput
+                      label="Your Email"
+                      id="reset-email"
+                      type="email"
+                      placeholder="student@university.edu"
+                      icon={Mail}
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                    />
 
-              <NeuInput
-                label="Password"
-                id="password"
-                type="password"
-                placeholder="••••••••••••"
-                icon={Lock}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForgotPassword(false);
+                          setResetError('');
+                        }}
+                        className="neu-btn py-3 px-4 text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={resetLoading}
+                        className="neu-btn-primary flex-1 py-3 px-4 flex items-center justify-center gap-2 text-xs font-bold text-white cursor-pointer disabled:opacity-60"
+                      >
+                        {resetLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <span>Send Reset Link</span>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            ) : (
+              /* Standard Auth Form */
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {isRegistering && (
+                  <>
+                    <NeuInput
+                      label="Full Name"
+                      id="fullName"
+                      placeholder="e.g. Maya Lin"
+                      icon={User}
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <NeuInput
+                        label="Institution / University"
+                        id="institution"
+                        placeholder="e.g. Apex Tech"
+                        icon={School}
+                        value={institution}
+                        onChange={(e) => setInstitution(e.target.value)}
+                      />
+                      <NeuInput
+                        label="Department / Major"
+                        id="department"
+                        placeholder="e.g. Computer Science"
+                        icon={GraduationCap}
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <NeuInput
+                  label="Academic Email"
+                  id="email"
+                  type="email"
+                  placeholder="student@university.edu"
+                  icon={Mail}
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+
+                <div className="space-y-1">
+                  <NeuInput
+                    label="Password"
+                    id="password"
+                    type="password"
+                    placeholder="••••••••••••"
+                    icon={Lock}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  {!isRegistering && (
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForgotPassword(true);
+                          setResetEmail(email);
+                          setResetError('');
+                          setResetSuccess(false);
+                        }}
+                        className="text-xs text-slate-500 hover:text-academic transition-colors font-medium cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+                </div>
 
               {/* Registration Consent & Disclosures */}
               {isRegistering && (
@@ -695,8 +906,9 @@ export function AuthPage({
                 )}
               </button>
             </form>
+          )}
 
-            {/* Toggle Register/Login Prompt */}
+          {/* Toggle Register/Login Prompt */}
             <div className="pt-2 text-center">
               <button
                 type="button"

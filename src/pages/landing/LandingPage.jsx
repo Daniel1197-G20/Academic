@@ -394,7 +394,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <GraduationCap className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-base tracking-tight text-ink">Academic</span>
+              <span className="font-bold text-base tracking-tight text-ink">Studora</span>
               <span className="hidden sm:inline-block text-[11px] text-muted ml-1.5 font-normal tracking-normal border-l border-border pl-1.5">
                 Student Platform
               </span>

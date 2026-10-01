@@ -167,6 +167,21 @@ export function calculateCumulativeMetrics(semesters = [], scale = DEFAULT_GRADI
     : 0.00;
 
   // Determine Academic Classification
+  if (cumulativeUnits === 0) {
+    return {
+      totalCreditUnits: cumulativeUnits,
+      totalQualityPoints: Number(cumulativeQualityPoints.toFixed(2)),
+      cgpa,
+      totalCourses,
+      classificationName: 'Not Started',
+      classificationDesc: 'No coursework recorded yet',
+      semesterBreakdown,
+      trend,
+      scaleId: scale.id,
+      maxScale: scale.maxScale
+    };
+  }
+
   let classification = { name: 'Pass', description: 'Passing' };
   if (scale.classifications && scale.classifications.length > 0) {
     // Sort descending by minCgpa
