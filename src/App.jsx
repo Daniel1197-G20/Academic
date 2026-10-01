@@ -253,12 +253,12 @@ function AppContent() {
     }
   };
 
-  if (authChecking) {
+  if (showSplash) {
     return (
-      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center text-muted">
-        <LoadingSpinner size="lg" />
-        <p className="text-xs font-medium mt-3 text-muted">Loading Academic Workspace...</p>
-      </div>
+      <AppSplashScreen 
+        isFading={splashFading} 
+        message={authChecking ? "Initializing Academic Workspace..." : "Preparing Academic Workspace..."} 
+      />
     );
   }
 

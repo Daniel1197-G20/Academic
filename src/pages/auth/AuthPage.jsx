@@ -16,6 +16,7 @@ import {
   Shield
 } from 'lucide-react';
 import { Footer } from '../../components/common/Footer';
+import { api } from '../../services/api/client';
 
 /**
  * Dedicated Neumorphic Input Component
@@ -168,6 +169,10 @@ export function AuthPage({
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Authentication failed');
+      }
+
+      if (data.token) {
+        api.setToken(data.token);
       }
 
       onLoginSuccess(data);
