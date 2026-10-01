@@ -9,7 +9,8 @@ import {
   useToast, 
   LoadingSpinner, 
   Card, 
-  Badge 
+  Badge,
+  Button 
 } from './components/ui';
 import { AuthPage } from './pages/auth/AuthPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
@@ -24,7 +25,7 @@ import { CookieSettingsModal } from './components/legal/CookieSettingsModal';
 import { ConsentBanner } from './components/legal/ConsentBanner';
 import { Footer } from './components/common/Footer';
 import { api } from './services/api/client';
-import { Users, Compass, Sparkles } from 'lucide-react';
+import { Users, Compass, Sparkles, FileCheck2, ArrowLeft } from 'lucide-react';
 
 function AppContent() {
   const { addToast } = useToast();
@@ -60,7 +61,7 @@ function AppContent() {
       const p = window.location.pathname.replace(/^\//, '');
       const h = window.location.hash.replace(/^#\/?/, '');
       const r = p || h;
-      if (['privacy', 'terms', 'cookie-settings', 'privacy-settings', 'dashboard', 'cgpa', 'study', 'profile'].includes(r)) {
+      if (['privacy', 'terms', 'cookie-settings', 'privacy-settings', 'dashboard', 'overview', 'cgpa', 'study', 'profile'].includes(r)) {
         setActiveTab(r);
       }
     };
@@ -181,9 +182,9 @@ function AppContent() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-zero flex flex-col items-center justify-center text-zinc-400">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center text-muted">
         <LoadingSpinner size="lg" />
-        <p className="text-xs font-mono mt-3 text-zinc-500">Initializing Academic OS...</p>
+        <p className="text-xs font-medium mt-3 text-muted">Loading Academic Workspace...</p>
       </div>
     );
   }
@@ -192,7 +193,7 @@ function AppContent() {
   if (!currentUser) {
     if (activeTab === 'privacy') {
       return (
-        <div className="min-h-screen bg-zero text-zinc-100 flex flex-col justify-between selection:bg-ghost-200 selection:text-zero">
+        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
           <PrivacyPolicyPage onBack={() => navigateRoute('auth')} />
           <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
           <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -203,7 +204,7 @@ function AppContent() {
 
     if (activeTab === 'terms') {
       return (
-        <div className="min-h-screen bg-zero text-zinc-100 flex flex-col justify-between selection:bg-ghost-200 selection:text-zero">
+        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
           <TermsPage onBack={() => navigateRoute('auth')} />
           <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
           <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -214,7 +215,7 @@ function AppContent() {
 
     if (activeTab === 'cookie-settings') {
       return (
-        <div className="min-h-screen bg-zero text-zinc-100 flex flex-col justify-between selection:bg-ghost-200 selection:text-zero">
+        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
           <CookieSettingsPage onBack={() => navigateRoute('auth')} showToast={addToast} />
           <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
           <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -225,7 +226,7 @@ function AppContent() {
 
     if (activeTab === 'privacy-settings') {
       return (
-        <div className="min-h-screen bg-zero text-zinc-100 flex flex-col justify-between selection:bg-ghost-200 selection:text-zero">
+        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
           <PrivacySettingsPage 
             currentUser={currentUser}
             onBack={() => navigateRoute('auth')} 
@@ -262,12 +263,14 @@ function AppContent() {
 
   // --- Logged-In Views ---
   const tabTitles = {
-    dashboard: 'Command Center',
-    cgpa: 'CGPA & Academic History',
-    study: 'Personalized Study Planner',
-    community: 'Peer Study Groups (Milestone 2)',
-    tutors: 'Tutor Marketplace (Milestone 2)',
-    ai: 'AI Academic Assistant (Milestone 2)',
+    dashboard: 'Overview',
+    overview: 'Overview',
+    cgpa: 'CGPA & Academic Records',
+    study: 'Study Planner',
+    prep: 'Test Preparation',
+    community: 'Messages & Study Groups',
+    tutors: 'Tutor Directory',
+    ai: 'AI Academic Assistant',
     profile: 'Student Profile & Settings',
     privacy: 'Privacy Policy',
     terms: 'Terms of Service',
@@ -276,7 +279,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-zero flex text-zinc-100 antialiased selection:bg-ghost-200 selection:text-zero">
+    <div className="min-h-screen bg-canvas flex text-ink antialiased selection:bg-academic-100 selection:text-academic">
       {/* Desktop Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -295,12 +298,12 @@ function AppContent() {
           cgpaMetrics={null}
           streakDays={streakData.streak}
           onOpenProfile={() => navigateRoute('profile')}
-          activeTabTitle={tabTitles[activeTab] || 'Academic Hub'}
+          activeTabTitle={tabTitles[activeTab] || 'Overview'}
         />
 
         {/* Page Container */}
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
-          {activeTab === 'dashboard' && (
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {(activeTab === 'dashboard' || activeTab === 'overview') && (
             <DashboardPage
               userProfile={userProfile}
               semesters={semesters}
@@ -367,72 +370,99 @@ function AppContent() {
           )}
 
           {/* Placeholders for Future Modules */}
+          {activeTab === 'prep' && (
+            <div className="max-w-2xl mx-auto py-12 text-center">
+              <div className="bg-white border border-border rounded-card p-8 shadow-subtle space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-academic-100 border border-academic-200 text-academic flex items-center justify-center mx-auto mb-2">
+                  <FileCheck2 className="w-6 h-6" />
+                </div>
+                <Badge variant="academic" size="sm">Upcoming Module</Badge>
+                <h2 className="text-lg font-bold text-ink">Test Preparation & Exam Simulation</h2>
+                <p className="text-xs sm:text-sm text-muted max-w-md mx-auto leading-relaxed">
+                  Diagnostic question banks, timed test drills, and real-time weak topic breakdowns will be activated in the next release cycle.
+                </p>
+                <div className="pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigateRoute('dashboard')}
+                  >
+                    Return to Overview
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'community' && (
             <div className="max-w-2xl mx-auto py-12 text-center">
-              <Card variant="glass" className="p-8 border-ghost-200/15">
-                <div className="w-12 h-12 rounded-2xl bg-purple-950/40 border border-purple-500/20 text-purple-300 flex items-center justify-center mx-auto mb-4">
+              <div className="bg-white border border-border rounded-card p-8 shadow-subtle space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-academic-100 border border-academic-200 text-academic flex items-center justify-center mx-auto mb-2">
                   <Users className="w-6 h-6" />
                 </div>
-                <Badge variant="neutral" size="sm" className="mb-2">Milestone 2 Architecture</Badge>
-                <h3 className="text-lg font-semibold text-zinc-100">Study Groups & Peer Collaboration</h3>
-                <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
+                <Badge variant="academic" size="sm">Upcoming Module</Badge>
+                <h2 className="text-lg font-bold text-ink">Study Groups & Peer Collaboration</h2>
+                <p className="text-xs sm:text-sm text-muted max-w-md mx-auto leading-relaxed">
                   Real-time peer study groups, channel discussions, and audio study halls are slated for Phase 4.
                 </p>
-                <div className="mt-6 flex justify-center">
-                  <button
+                <div className="pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => navigateRoute('study')}
-                    className="text-xs font-mono text-ghost-200 hover:underline"
                   >
-                    ← Return to Study Planner
-                  </button>
+                    Return to Study Planner
+                  </Button>
                 </div>
-              </Card>
+              </div>
             </div>
           )}
 
           {activeTab === 'tutors' && (
             <div className="max-w-2xl mx-auto py-12 text-center">
-              <Card variant="glass" className="p-8 border-ghost-200/15">
-                <div className="w-12 h-12 rounded-2xl bg-blue-950/40 border border-blue-500/20 text-blue-300 flex items-center justify-center mx-auto mb-4">
+              <div className="bg-white border border-border rounded-card p-8 shadow-subtle space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-academic-100 border border-academic-200 text-academic flex items-center justify-center mx-auto mb-2">
                   <Compass className="w-6 h-6" />
                 </div>
-                <Badge variant="neutral" size="sm" className="mb-2">Milestone 2 Architecture</Badge>
-                <h3 className="text-lg font-semibold text-zinc-100">Tutor Marketplace & Booking Engine</h3>
-                <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
+                <Badge variant="academic" size="sm">Upcoming Module</Badge>
+                <h2 className="text-lg font-bold text-ink">Tutor Marketplace & Booking Engine</h2>
+                <p className="text-xs sm:text-sm text-muted max-w-md mx-auto leading-relaxed">
                   The verified tutor directory, slot availability calendar, and escrow booking workflow are slated for Phase 3.
                 </p>
-                <div className="mt-6 flex justify-center">
-                  <button
+                <div className="pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => navigateRoute('dashboard')}
-                    className="text-xs font-mono text-ghost-200 hover:underline"
                   >
-                    ← Return to Command Center
-                  </button>
+                    Return to Overview
+                  </Button>
                 </div>
-              </Card>
+              </div>
             </div>
           )}
 
           {activeTab === 'ai' && (
             <div className="max-w-2xl mx-auto py-12 text-center">
-              <Card variant="glass" className="p-8 border-ghost-200/15">
-                <div className="w-12 h-12 rounded-2xl bg-ghost-200/10 border border-ghost-200/25 text-ghost-200 flex items-center justify-center mx-auto mb-4 shadow-ghost-glow">
+              <div className="bg-white border border-border rounded-card p-8 shadow-subtle space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-academic-100 border border-academic-200 text-academic flex items-center justify-center mx-auto mb-2">
                   <Sparkles className="w-6 h-6" />
                 </div>
-                <Badge variant="ghost" size="sm" className="mb-2">Milestone 2 Architecture</Badge>
-                <h3 className="text-lg font-semibold text-zinc-100">AI Academic Tutor Orchestrator</h3>
-                <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
+                <Badge variant="academic" size="sm">Upcoming Module</Badge>
+                <h2 className="text-lg font-bold text-ink">AI Academic Assistant</h2>
+                <p className="text-xs sm:text-sm text-muted max-w-md mx-auto leading-relaxed">
                   Contextual AI tutoring across 6 learning modes with real-time SSE streaming is slated for Phase 6.
                 </p>
-                <div className="mt-6 flex justify-center">
-                  <button
+                <div className="pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => navigateRoute('dashboard')}
-                    className="text-xs font-mono text-ghost-200 hover:underline"
                   >
-                    ← Return to Command Center
-                  </button>
+                    Return to Overview
+                  </Button>
                 </div>
-              </Card>
+              </div>
             </div>
           )}
         </main>

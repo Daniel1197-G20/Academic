@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cookie, Lock, Shield, ArrowLeft, Save, CheckCircle2 } from 'lucide-react';
-import { Card, Button, Badge } from '../../components/ui';
+import { Button, Badge, PageHeader } from '../../components/ui';
 import { api } from '../../services/api/client';
 
 export function CookieSettingsPage({ onBack, showToast }) {
@@ -65,69 +65,59 @@ export function CookieSettingsPage({ onBack, showToast }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-20 pt-4 px-4 sm:px-6">
+    <div className="max-w-4xl mx-auto space-y-8 pb-20 pt-4 px-4 sm:px-6">
       {onBack && (
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-ghost-200 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Workspace</span>
         </button>
       )}
 
-      {/* Hero */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0B0F13] to-[#050608] border border-ghost-200/20 shadow-neu-raised-md relative overflow-hidden">
-        <div className="relative z-10 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="ghost" size="sm">Privacy Control</Badge>
-            <span className="text-[11px] font-mono text-zinc-400">Policy Version 1.0</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 flex items-center gap-3">
-            <Cookie className="w-7 h-7 text-ghost-200" />
-            Cookie & Local Storage Preferences
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl leading-relaxed">
-            Configure how the Student Academic Platform uses local storage and cookies on your device. We use strictly necessary technologies to deliver secure core services, and optional technologies for diagnostics and interface customization.
-          </p>
-        </div>
-      </div>
+      {/* Header */}
+      <PageHeader
+        title="Cookie & Local Storage Preferences"
+        description="Configure how the Academic Platform uses device local storage and session tokens."
+        badge={<Badge variant="academic" size="sm">Policy Version 1.0</Badge>}
+      />
 
       {savedSuccess && (
-        <div className="p-4 rounded-xl bg-ghost-200/10 border border-ghost-200/30 text-ghost-200 text-xs flex items-center gap-2 font-mono">
+        <div className="p-4 rounded-xl bg-academic-50 border border-academic-200 text-academic text-xs flex items-center gap-2 font-medium">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          Your preferences are saved and active.
+          Your preferences are saved and currently active.
         </div>
       )}
 
       {/* Settings Cards */}
       <div className="space-y-4">
         {/* Strictly Necessary */}
-        <Card variant="neu" className="p-6 space-y-3">
+        <div className="bg-white border border-border rounded-card p-6 shadow-subtle space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Lock className="w-5 h-5 text-ghost-200" />
+              <Lock className="w-4 h-4 text-academic" />
               <div>
-                <h3 className="text-sm font-semibold text-zinc-100">Strictly Necessary Technologies</h3>
-                <p className="text-[11px] font-mono text-zinc-500">Essential for core security & database synchronization</p>
+                <h3 className="text-sm font-semibold text-ink">Strictly Necessary Technologies</h3>
+                <p className="text-xs text-muted">Essential for core security and session validation</p>
               </div>
             </div>
-            <Badge variant="ghost" size="sm">Always Active</Badge>
+            <Badge variant="academic" size="sm">Always Active</Badge>
           </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            These cookies and local storage tokens are required for user authentication, cryptographic session signing, preventing cross-site request forgery, and maintaining your verified student session. They cannot be deactivated without rendering the application inoperable.
+          <p className="text-xs text-muted leading-relaxed pt-1">
+            Required for user authentication, cryptographic session integrity, preventing cross-site request forgery, and maintaining your verified student session. They cannot be deactivated.
           </p>
-        </Card>
+        </div>
 
         {/* Analytics */}
-        <Card variant="neu" className="p-6 space-y-3">
+        <div className="bg-white border border-border rounded-card p-6 shadow-subtle space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Shield className="w-5 h-5 text-zinc-400" />
+              <Shield className="w-4 h-4 text-muted" />
               <div>
-                <h3 className="text-sm font-semibold text-zinc-100">Analytics Technologies</h3>
-                <p className="text-[11px] font-mono text-zinc-500">Performance telemetry and diagnostic monitoring</p>
+                <h3 className="text-sm font-semibold text-ink">Diagnostic & Performance Telemetry</h3>
+                <p className="text-xs text-muted">Error reporting and latency telemetry</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -137,22 +127,22 @@ export function CookieSettingsPage({ onBack, showToast }) {
                 onChange={(e) => setAnalyticsEnabled(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ghost-200"></div>
+              <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-academic"></div>
             </label>
           </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Enables anonymous measurement of page loading speed, component render times, and client-side error reporting. This data helps our engineering team optimize software responsiveness across high refresh rate displays. No grades, CGPA records, or personal identifying data are collected.
+          <p className="text-xs text-muted leading-relaxed pt-1">
+            Enables anonymous measurement of screen transition latency and client-side error reporting. This helps our team optimize software responsiveness. No grades, CGPA records, or personal data are collected.
           </p>
-        </Card>
+        </div>
 
         {/* Functional */}
-        <Card variant="neu" className="p-6 space-y-3">
+        <div className="bg-white border border-border rounded-card p-6 shadow-subtle space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Cookie className="w-5 h-5 text-zinc-400" />
+              <Cookie className="w-4 h-4 text-muted" />
               <div>
-                <h3 className="text-sm font-semibold text-zinc-100">Functional & Layout Preferences</h3>
-                <p className="text-[11px] font-mono text-zinc-500">Interface layout and workspace display memory</p>
+                <h3 className="text-sm font-semibold text-ink">Functional & Interface Preferences</h3>
+                <p className="text-xs text-muted">Workspace display memory and sidebar preference</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -162,22 +152,22 @@ export function CookieSettingsPage({ onBack, showToast }) {
                 onChange={(e) => setFunctionalEnabled(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ghost-200"></div>
+              <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-academic"></div>
             </label>
           </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Allows the platform to remember your navigation sidebar collapse preference, active grading scale view (e.g. 5.0 vs 4.0), and table density settings across browser sessions.
+          <p className="text-xs text-muted leading-relaxed pt-1">
+            Allows the platform to remember your navigation sidebar collapse preference and active grading scale view across browser sessions.
           </p>
-        </Card>
+        </div>
       </div>
 
       {/* Action Footer */}
       <div className="pt-4 flex items-center justify-between">
-        <span className="text-xs text-zinc-500 font-mono">
+        <span className="text-xs text-muted">
           We do not use advertising or third-party behavioral marketing trackers.
         </span>
         <Button
-          variant="primary"
+          variant="academic"
           onClick={handleSave}
           loading={saving}
           icon={Save}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   BookOpen, 
   Plus, 
@@ -9,20 +9,16 @@ import {
   Calendar, 
   Trash2, 
   Timer, 
-  Sparkles,
-  Award
+  ArrowRight
 } from 'lucide-react';
 import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
   Button, 
   Input, 
   Select, 
   Modal, 
   Badge, 
-  ProgressBar 
+  ProgressBar,
+  PageHeader 
 } from '../../components/ui';
 import { api } from '../../services/api/client';
 
@@ -49,6 +45,39 @@ export function StudyPlannerPage({
   // Log Hours form states
   const [logMinutes, setLogMinutes] = useState('60');
   const [logNotes, setLogNotes] = useState('');
+
+  // Computed summary metrics
+  const totalTopics = useMemo(() => {
+    return studyPlans.reduce((sum, p) => sum + (p.topics ? p.topics.length : 0), 0);
+  }, [studyPlans]);
+
+  const completedTopics = useMemo(() => {
+    return studyPlans.reduce((sum, p) => sum + (p.topics ? p.topics.filter(t => t.is_completed).length : 0), 0);
+  }, [studyPlans]);
+
+  // Today's timeline schedule generated from plans
+  const todaySchedule = useMemo(() => {
+    const times = ['09:00', '11:30', '14:00', '16:30', '19:00'];
+    const schedule = [];
+    let idx = 0;
+    for (const plan of studyPlans) {
+      if (plan.topics) {
+        for (const topic of plan.topics) {
+          schedule.push({
+            id: topic.id,
+            time: times[idx % times.length],
+            duration: idx % 2 === 0 ? '90 min' : '60 min',
+            subject: plan.subject,
+            topicTitle: topic.title,
+            isCompleted: !!topic.is_completed,
+            planId: plan.id
+          });
+          idx++;
+        }
+      }
+    }
+    return schedule;
+  }, [studyPlans]);
 
   // Handle Toggle Topic
   const handleToggleTopic = async (topicId, planSubject) => {
@@ -83,7 +112,6 @@ export function StudyPlannerPage({
 
       showToast({ type: 'success', title: 'Study Plan Created', message: `${subject} plan ready.` });
       setIsNewPlanOpen(false);
-      // Reset form
       setSubject('');
       setGoal('');
       setDeadline('');
@@ -138,176 +166,290 @@ export function StudyPlannerPage({
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      {/* Top Banner: Streak & Habit Velocity */}
-      <div className="neu-card p-6 border-ghost-200/15 bg-gradient-to-br from-[#090C0F] to-[#050607]">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-950/30 border border-orange-500/25 text-orange-300 text-xs font-mono">
-                <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400" />
-                ACTIVE STREAK
-              </span>
-              <span className="text-xs text-zinc-500 font-mono">Timezone Synced</span>
+    <div className="space-y-8 pb-20 md:pb-8">
+      {/* 1. Page Header */}
+      <PageHeader
+        title="Study Planner"
+        description="Structured study habits, topic checklists, and session logging for your courses."
+        actions={
+          <>
+            {studyPlans.length > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Timer}
+                onClick={() => openLogHoursModal(studyPlans[0])}
+              >
+                Log Study Session
+              </Button>
+            )}
+            <Button
+              variant="academic"
+              size="sm"
+              icon={Plus}
+              onClick={() => setIsNewPlanOpen(true)}
+            >
+              New Study Plan
+            </Button>
+          </>
+        }
+      />
+
+      {/* 2. Overview Strip (Velocity & Habit Consistency) */}
+      <div className="bg-white border border-border rounded-card p-6 shadow-subtle">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 divide-y md:divide-y-0 md:divide-x divide-border">
+          {/* Consistency Streak */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+              <Flame className="w-4 h-4 text-gold-600 fill-gold-600" />
+              <span>Study Streak</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 flex items-baseline gap-2">
-              <span className="font-mono text-ghost-200">{streakData.streak}</span>
-              <span className="text-base font-normal text-zinc-400">Consecutive Days</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-xl leading-relaxed">
-              Consistent focused study maintains optimal topic retention for examinations and coursework deadlines.
-            </p>
+            <div className="flex items-baseline gap-1.5 pt-1">
+              <span className="text-3xl font-extrabold text-ink font-sans">{streakData.streak}</span>
+              <span className="text-xs text-muted font-medium">days active</span>
+            </div>
+            <p className="text-[11px] text-muted">Daily review cadence</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full md:w-auto">
-            <div className="bg-[#07080A] p-4 rounded-xl border border-white/[0.04] neu-inset text-center min-w-[120px]">
-              <p className="text-[11px] text-zinc-500 uppercase font-mono tracking-wider">Total Studied</p>
-              <p className="text-xl font-bold text-ghost-200 font-mono mt-0.5">{streakData.totalHours}h</p>
+          {/* Total Time Logged */}
+          <div className="space-y-1 pt-4 md:pt-0 md:pl-6">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+              <Clock className="w-4 h-4 text-academic" />
+              <span>Hours Logged</span>
             </div>
-            <div className="bg-[#07080A] p-4 rounded-xl border border-white/[0.04] neu-inset text-center min-w-[120px]">
-              <p className="text-[11px] text-zinc-500 uppercase font-mono tracking-wider">Active Plans</p>
-              <p className="text-xl font-bold text-zinc-100 font-mono mt-0.5">{studyPlans.length}</p>
+            <div className="flex items-baseline gap-1.5 pt-1">
+              <span className="text-3xl font-extrabold text-ink font-sans">{streakData.totalHours}</span>
+              <span className="text-xs text-muted font-medium">hours total</span>
             </div>
+            <p className="text-[11px] text-muted">Tracked study sessions</p>
           </div>
-        </div>
 
-        {/* Action Header */}
-        <div className="mt-6 pt-4 border-t border-white/[0.05] flex items-center justify-between">
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Plus}
-            onClick={() => setIsNewPlanOpen(true)}
-          >
-            Create Study Plan
-          </Button>
-          <span className="text-xs text-zinc-500 font-mono">
-            {studyPlans.reduce((acc, p) => acc + (p.topics ? p.topics.filter(t => t.is_completed).length : 0), 0)} Topics Mastered
-          </span>
+          {/* Topics Completed */}
+          <div className="space-y-1 pt-4 md:pt-0 md:pl-6">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+              <CheckCircle2 className="w-4 h-4 text-academic" />
+              <span>Topics Mastered</span>
+            </div>
+            <div className="flex items-baseline gap-1.5 pt-1">
+              <span className="text-3xl font-extrabold text-ink font-sans">{completedTopics}</span>
+              <span className="text-xs text-muted font-medium">of {totalTopics}</span>
+            </div>
+            <p className="text-[11px] text-muted">{totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0}% syllabus covered</p>
+          </div>
+
+          {/* Active Plans */}
+          <div className="space-y-1 pt-4 md:pt-0 md:pl-6">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+              <BookOpen className="w-4 h-4 text-navy" />
+              <span>Active Plans</span>
+            </div>
+            <div className="flex items-baseline gap-1.5 pt-1">
+              <span className="text-3xl font-extrabold text-ink font-sans">{studyPlans.length}</span>
+              <span className="text-xs text-muted font-medium">courses</span>
+            </div>
+            <p className="text-[11px] text-muted">Current semester load</p>
+          </div>
         </div>
       </div>
 
-      {/* Active Study Plans Grid */}
+      {/* 3. Today's Timeline Schedule */}
       <div className="space-y-4">
-        <h3 className="text-base sm:text-lg font-semibold text-zinc-100 flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-ghost-200" />
-          Active Course Study Schedules
-        </h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-ink">
+              Today's Timeline
+            </h2>
+            <p className="text-xs text-muted">
+              Chronological study objectives and focus blocks
+            </p>
+          </div>
+          <span className="text-xs font-semibold text-muted">
+            {todaySchedule.filter(s => !s.isCompleted).length} pending
+          </span>
+        </div>
+
+        <div className="bg-white border border-border rounded-card p-5 shadow-subtle">
+          {todaySchedule.length === 0 ? (
+            <div className="py-8 text-center text-xs text-muted">
+              No study tasks scheduled for today. Create a plan below to set up your schedule.
+            </div>
+          ) : (
+            <div className="space-y-4 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-px before:bg-border">
+              {todaySchedule.map((item) => (
+                <div key={item.id} className="flex items-start gap-4 relative">
+                  {/* Timeline dot / checkmark */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTopic(item.id, item.subject)}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors ${
+                      item.isCompleted 
+                        ? 'bg-academic text-white' 
+                        : 'bg-white border border-border text-muted hover:border-academic hover:text-academic'
+                    }`}
+                    title={item.isCompleted ? 'Mark incomplete' : 'Mark completed'}
+                  >
+                    {item.isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                  </button>
+
+                  {/* Task details */}
+                  <div className={`flex-1 p-3.5 rounded-xl border transition-colors ${
+                    item.isCompleted 
+                      ? 'bg-gray-50 border-gray-200 opacity-60' 
+                      : 'bg-white border-border hover:border-gray-300'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-academic uppercase tracking-wider">
+                            {item.subject}
+                          </span>
+                          <span className="text-muted text-xs">•</span>
+                          <span className="text-xs font-mono font-semibold text-ink bg-gray-100 px-1.5 py-0.2 rounded">
+                            {item.time}
+                          </span>
+                          <span className="text-xs text-muted">
+                            ({item.duration})
+                          </span>
+                        </div>
+                        <p className={`text-sm font-semibold truncate ${item.isCompleted ? 'line-through text-muted' : 'text-ink'}`}>
+                          {item.topicTitle}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleTopic(item.id, item.subject)}
+                          className="text-xs py-1"
+                        >
+                          {item.isCompleted ? 'Completed' : 'Mark Done'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 4. Course Study Schedules (Grouped Plans) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-ink">
+              Course Study Plans
+            </h2>
+            <p className="text-xs text-muted">
+              Structured topics, milestones, and tracked study duration
+            </p>
+          </div>
+          <span className="text-xs text-muted font-medium">
+            {studyPlans.length} Active Plans
+          </span>
+        </div>
 
         {studyPlans.length === 0 ? (
-          <div className="text-center p-12 border border-dashed border-white/[0.08] rounded-2xl bg-[#07080A]">
-            <BookOpen className="w-10 h-10 text-ghost-200/40 mx-auto mb-3" />
-            <p className="text-sm font-semibold text-zinc-200">No study plans created yet.</p>
-            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto mb-4">
-              Break down challenging topics into structured checklists with deadlines and target study hours.
+          <div className="text-center p-12 border border-dashed border-border rounded-card bg-surface-muted/40">
+            <BookOpen className="w-10 h-10 text-muted mx-auto mb-3 opacity-60" />
+            <h3 className="text-sm font-semibold text-ink">No course study plans yet</h3>
+            <p className="text-xs text-muted mt-1 max-w-sm mx-auto mb-4">
+              Add your current courses and target topics to build a disciplined daily review schedule.
             </p>
-            <Button variant="primary" size="sm" onClick={() => setIsNewPlanOpen(true)}>
+            <Button variant="academic" size="sm" onClick={() => setIsNewPlanOpen(true)}>
               Create First Study Plan
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-5">
             {studyPlans.map((plan) => {
               const topics = plan.topics || [];
-              const completedCount = topics.filter(t => t.is_completed).length;
-              const progressPct = topics.length > 0 ? Math.round((completedCount / topics.length) * 100) : 0;
-              const isOverdue = new Date(plan.deadline) < new Date();
+              const doneCount = topics.filter(t => t.is_completed).length;
+              const percent = topics.length > 0 ? Math.round((doneCount / topics.length) * 100) : 0;
 
               return (
-                <Card key={plan.id} variant="neu" className="flex flex-col justify-between">
-                  <div>
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-semibold text-ghost-200">
-                            {plan.subject}
-                          </span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                            plan.difficulty === 'Hard' ? 'bg-red-950/40 text-red-300 border border-red-500/20' :
-                            plan.difficulty === 'Medium' ? 'bg-amber-950/40 text-amber-300 border border-amber-500/20' :
-                            'bg-emerald-950/40 text-emerald-300 border border-emerald-500/20'
-                          }`}>
-                            {plan.difficulty}
-                          </span>
-                        </div>
-                        <h4 className="text-base font-semibold text-zinc-100 mt-1 tracking-tight">
-                          {plan.goal}
-                        </h4>
+                <div key={plan.id} className="bg-white border border-border rounded-card p-5 sm:p-6 shadow-subtle space-y-4">
+                  {/* Plan Top Bar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-ink">
+                          {plan.subject}
+                        </span>
+                        <Badge variant="neutral" size="sm">
+                          {plan.difficulty || 'Medium'}
+                        </Badge>
+                        <span className="text-xs text-muted font-medium">
+                          Due {plan.deadline}
+                        </span>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePlan(plan.id, plan.subject)}
-                        className="text-zinc-500 hover:text-red-400 p-1 transition-colors"
-                        title="Delete study plan"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <p className="text-xs text-muted">
+                        Goal: {plan.goal}
+                      </p>
                     </div>
 
-                    {/* Metadata Badges */}
-                    <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-zinc-400 font-mono">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-                        Due: {plan.deadline}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                        {plan.logged_hours}h / {plan.estimated_hours}h
-                      </span>
-                      <span className="text-zinc-500">• {plan.study_frequency}</span>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="mt-4">
-                      <ProgressBar
-                        value={completedCount}
-                        max={topics.length || 1}
-                        label={`${completedCount} of ${topics.length} Topics Completed`}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="secondary"
                         size="sm"
-                      />
+                        icon={Timer}
+                        onClick={() => openLogHoursModal(plan)}
+                      >
+                        Log Hours
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeletePlan(plan.id, plan.subject)}
+                        title="Delete plan"
+                      >
+                        <Trash2 className="w-4 h-4 text-danger/80 hover:text-danger" />
+                      </Button>
                     </div>
+                  </div>
 
-                    {/* Topics Checklist */}
-                    <div className="mt-4 space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                      {topics.map((topic) => (
+                  {/* Progress Overview */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-ink">
+                        {doneCount} of {topics.length} topics cleared
+                      </span>
+                      <span className="font-semibold text-academic">{percent}% Complete</span>
+                    </div>
+                    <ProgressBar value={doneCount} max={Math.max(1, topics.length)} showPercentage={false} size="sm" />
+                  </div>
+
+                  {/* Topic Checklist */}
+                  <div className="pt-2">
+                    <p className="text-[11px] font-semibold text-muted uppercase tracking-tight mb-2">
+                      Syllabus Topics
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {topics.map((t) => (
                         <div
-                          key={topic.id}
-                          onClick={() => handleToggleTopic(topic.id, plan.subject)}
-                          className={`flex items-start gap-2.5 p-2 rounded-xl border cursor-pointer select-none transition-all duration-150
-                            ${topic.is_completed 
-                              ? 'bg-ghost-200/[0.03] border-ghost-200/15 text-zinc-400 line-through' 
-                              : 'bg-[#080A0C] border-white/[0.04] text-zinc-200 hover:border-ghost-200/20'}`}
+                          key={t.id}
+                          onClick={() => handleToggleTopic(t.id, plan.subject)}
+                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
+                            t.is_completed
+                              ? 'bg-gray-50 border-gray-200 text-muted line-through'
+                              : 'bg-white border-border text-ink hover:border-gray-300'
+                          }`}
                         >
-                          {topic.is_completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-ghost-200 shrink-0 mt-0.5" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />
-                          )}
-                          <span className="text-xs leading-snug break-words">
-                            {topic.title}
-                          </span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            {t.is_completed ? (
+                              <CheckCircle2 className="w-4 h-4 text-academic shrink-0" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-muted shrink-0" />
+                            )}
+                            <span className="truncate font-medium">{t.title}</span>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
-
-                  {/* Card Action Footer */}
-                  <div className="mt-5 pt-3 border-t border-white/[0.04] flex items-center justify-between">
-                    <span className="text-[11px] text-zinc-500 font-mono">
-                      {topics.length - completedCount} pending
-                    </span>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      icon={Timer}
-                      onClick={() => openLogHoursModal(plan)}
-                    >
-                      Log Study Session
-                    </Button>
-                  </div>
-                </Card>
+                </div>
               );
             })}
           </div>
@@ -318,20 +460,20 @@ export function StudyPlannerPage({
       <Modal
         isOpen={isNewPlanOpen}
         onClose={() => setIsNewPlanOpen(false)}
-        title="Create Structured Study Plan"
-        description="Set academic objectives, target milestones, and study schedule."
+        title="Create Study Plan"
+        description="Establish goals, schedule study cadence, and list topics to cover."
       >
         <form onSubmit={handleCreatePlan} className="space-y-4">
           <Input
-            label="Subject / Course"
-            placeholder="e.g. CSC301: Advanced Algorithms"
+            label="Course / Subject"
+            placeholder="e.g. Database Systems, Linear Algebra"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             required
           />
           <Input
-            label="Study Goal / Objective"
-            placeholder="e.g. Master Dynamic Programming & Trees for Midterm"
+            label="Target Goal"
+            placeholder="e.g. Master SQL queries and schema normalization"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
             required
@@ -345,7 +487,19 @@ export function StudyPlannerPage({
               required
             />
             <Select
-              label="Difficulty"
+              label="Review Cadence"
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+              options={[
+                { value: 'Daily (2 hours)', label: 'Daily (2 hours)' },
+                { value: '3x Weekly (1.5 hours)', label: '3x Weekly (1.5 hours)' },
+                { value: 'Weekend Marathon (4 hours)', label: 'Weekend Marathon (4 hours)' }
+              ]}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Select
+              label="Difficulty Level"
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value)}
               options={[
@@ -354,8 +508,6 @@ export function StudyPlannerPage({
                 { value: 'Hard', label: 'Hard' }
               ]}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <Input
               label="Estimated Total Hours"
               type="number"
@@ -364,30 +516,26 @@ export function StudyPlannerPage({
               value={estimatedHours}
               onChange={(e) => setEstimatedHours(e.target.value)}
             />
-            <Input
-              label="Study Frequency"
-              placeholder="e.g. Daily (2 hours)"
-              value={frequency}
-              onChange={(e) => setFrequency(e.target.value)}
-            />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-300 tracking-wide mb-1.5">
-              Subtopics / Chapters (One per line)
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-ink">
+              Topic Checklist (One topic per line)
             </label>
             <textarea
               rows={4}
+              placeholder="Introduction to Relational Models&#10;ER Diagrams & Entities&#10;SQL Joins & Aggregations&#10;Normal Forms (1NF, 2NF, 3NF)"
               value={topicsInput}
               onChange={(e) => setTopicsInput(e.target.value)}
-              placeholder="Asymptotic Analysis & Recurrences&#10;Greedy Algorithms&#10;Dynamic Programming Table Design&#10;Flow Networks"
-              className="w-full bg-[#080A0C] text-zinc-100 text-sm rounded-xl p-3 border border-white/[0.06] neu-inset focus:outline-none focus:border-ghost-200/50 focus:ring-1 focus:ring-ghost-200/40 placeholder:text-zinc-600"
+              className="w-full bg-white text-ink text-sm rounded-[10px] p-3 border border-border focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic"
             />
           </div>
+
           <div className="flex items-center justify-end gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setIsNewPlanOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsNewPlanOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="academic">
               Create Plan
             </Button>
           </div>
@@ -398,32 +546,33 @@ export function StudyPlannerPage({
       <Modal
         isOpen={isLogHoursOpen}
         onClose={() => setIsLogHoursOpen(false)}
-        title="Log Completed Study Session"
-        description={selectedPlanForLog ? `Record study duration towards ${selectedPlanForLog.subject}.` : ''}
+        title={`Log Study Session: ${selectedPlanForLog?.subject || ''}`}
+        description="Record focused study minutes to keep your streak and habit velocity updated."
       >
         <form onSubmit={handleSubmitLogHours} className="space-y-4">
           <Input
             label="Duration in Minutes"
             type="number"
-            min="15"
-            step="15"
-            max="480"
+            min="10"
+            max="600"
+            step="5"
             value={logMinutes}
             onChange={(e) => setLogMinutes(e.target.value)}
             required
           />
           <Input
-            label="Session Notes / Reflection (Optional)"
-            placeholder="e.g. Solved 4 knapsack DP recurrences and reviewed Bellman-Ford"
+            label="Session Notes (Optional)"
+            placeholder="e.g. Covered Chapter 4 exercises and sample exam questions."
             value={logNotes}
             onChange={(e) => setLogNotes(e.target.value)}
           />
+
           <div className="flex items-center justify-end gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setIsLogHoursOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsLogHoursOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
-              Save Session & Update Streak
+            <Button type="submit" variant="academic">
+              Save Session
             </Button>
           </div>
         </form>

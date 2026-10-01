@@ -11,21 +11,21 @@ export function ProgressBar({
   const percentage = Math.min(100, Math.max(0, Math.round((value / max) * 100)));
   const heights = {
     sm: 'h-1.5',
-    md: 'h-2.5',
-    lg: 'h-3.5'
+    md: 'h-2',
+    lg: 'h-3'
   };
 
   return (
-    <div className={`w-full space-y-1.5 ${className}`}>
+    <div className={`w-full space-y-1 ${className}`}>
       {(label || showPercentage) && (
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          {label && <span>{label}</span>}
-          {showPercentage && <span className="font-mono text-ghost-200">{percentage}%</span>}
+        <div className="flex items-center justify-between text-xs text-muted">
+          {label && <span className="font-medium text-ink">{label}</span>}
+          {showPercentage && <span className="font-mono text-ink font-semibold">{percentage}%</span>}
         </div>
       )}
-      <div className={`w-full bg-[#080A0C] border border-white/[0.04] rounded-full overflow-hidden neu-inset ${heights[size]}`}>
+      <div className={`w-full bg-gray-100 rounded-full overflow-hidden ${heights[size]}`}>
         <div 
-          className="h-full bg-gradient-to-r from-ghost-400 to-ghost-200 rounded-full transition-all duration-300 ease-out shadow-ghost-glow"
+          className="h-full bg-academic rounded-full transition-all duration-300 ease-out"
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -54,7 +54,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="rgba(255, 255, 255, 0.05)"
+          stroke="#E5E7EB"
           strokeWidth={strokeWidth}
           fill="transparent"
         />
@@ -63,18 +63,17 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#D7FFE0"
+          stroke="#176B4D"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           fill="transparent"
-          className="transition-all duration-500 ease-out"
-          style={{ filter: 'drop-shadow(0 0 6px rgba(215, 255, 224, 0.4))' }}
+          className="transition-all duration-300 ease-out"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        {children || <span className="font-mono font-bold text-xs sm:text-sm text-zinc-100">{percentage}%</span>}
+        {children || <span className="font-mono font-semibold text-xs sm:text-sm text-ink">{percentage}%</span>}
       </div>
     </div>
   );

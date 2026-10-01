@@ -7,23 +7,24 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  actionVariant = 'primary',
   className = ''
 }) {
   return (
-    <div className={`flex flex-col items-center justify-center text-center p-8 sm:p-12 border border-dashed border-white/[0.08] rounded-2xl bg-[#07080A] ${className}`}>
+    <div className={`flex flex-col items-center justify-center text-center p-8 sm:p-12 border border-dashed border-border rounded-card bg-surface-muted/50 ${className}`}>
       {Icon && (
-        <div className="w-12 h-12 rounded-2xl bg-ghost-200/10 border border-ghost-200/20 flex items-center justify-center text-ghost-200 mb-4 shadow-ghost-glow">
-          <Icon className="w-6 h-6" />
+        <div className="w-11 h-11 rounded-xl bg-academic-100/70 border border-academic-200/50 flex items-center justify-center text-academic mb-3.5">
+          <Icon className="w-5 h-5" />
         </div>
       )}
-      <h3 className="text-base font-semibold text-zinc-100 tracking-tight mb-1">
+      <h3 className="text-sm sm:text-base font-semibold text-ink tracking-tight mb-1">
         {title}
       </h3>
-      <p className="text-xs sm:text-sm text-zinc-400 max-w-sm mb-6 leading-relaxed">
+      <p className="text-xs sm:text-sm text-muted max-w-sm mb-5 leading-relaxed">
         {description}
       </p>
       {actionLabel && onAction && (
-        <Button variant="primary" size="sm" onClick={onAction}>
+        <Button variant={actionVariant} size="sm" onClick={onAction}>
           {actionLabel}
         </Button>
       )}

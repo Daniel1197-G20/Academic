@@ -9,9 +9,9 @@ export function Avatar({
 }) {
   const sizeClasses = {
     sm: 'w-7 h-7 text-[11px]',
-    md: 'w-9 h-9 text-xs',
-    lg: 'w-12 h-12 text-sm',
-    xl: 'w-20 h-20 text-xl font-bold'
+    md: 'w-8 h-8 text-xs',
+    lg: 'w-11 h-11 text-sm',
+    xl: 'w-16 h-16 text-lg font-bold'
   };
 
   const getInitials = (fullName) => {
@@ -28,11 +28,10 @@ export function Avatar({
       <img
         src={src}
         alt={`${name}'s avatar`}
-        className={`rounded-xl object-cover shrink-0 select-none ${sizeClasses[size] || sizeClasses.md} ${
-          border ? 'border border-ghost-200/25 shadow-neu-raised-sm' : ''
+        className={`rounded-full object-cover shrink-0 select-none ${sizeClasses[size] || sizeClasses.md} ${
+          border ? 'border border-border shadow-subtle' : ''
         } ${className}`}
         onError={(e) => {
-          // If image fails to load, suppress broken icon and let initials render
           e.target.style.display = 'none';
         }}
       />
@@ -42,9 +41,9 @@ export function Avatar({
   return (
     <div
       aria-label={`${name}'s avatar`}
-      className={`rounded-xl bg-[#0E1216] text-ghost-200 font-mono font-semibold flex items-center justify-center shrink-0 select-none ${
+      className={`rounded-full bg-academic-100 text-academic font-sans font-bold flex items-center justify-center shrink-0 select-none ${
         sizeClasses[size] || sizeClasses.md
-      } ${border ? 'border border-ghost-200/25 shadow-neu-raised-sm' : ''} ${className}`}
+      } ${border ? 'border border-academic-200/60' : ''} ${className}`}
     >
       <span>{initials}</span>
     </div>

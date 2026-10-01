@@ -9,3 +9,5 @@ export * from './LoadingState';
 export * from './EmptyState';
 export * from './Toast';
 export * from './Avatar';
+export * from './Stat';
+export * from './PageHeader';

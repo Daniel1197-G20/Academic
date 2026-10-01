@@ -12,7 +12,7 @@ import {
   CheckCircle2, 
   UserCheck 
 } from 'lucide-react';
-import { Card, Button, Badge, Modal, Input } from '../../components/ui';
+import { Button, Badge, Modal, Input, PageHeader } from '../../components/ui';
 import { api } from '../../services/api/client';
 
 export function PrivacySettingsPage({ 
@@ -89,44 +89,34 @@ export function PrivacySettingsPage({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-20 pt-4 px-4 sm:px-6">
-      {/* Top Navigation */}
+    <div className="max-w-4xl mx-auto space-y-8 pb-20 pt-4 px-4 sm:px-6">
+      {/* Top Back Navigation */}
       {onBack && (
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-ghost-200 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Workspace</span>
         </button>
       )}
 
-      {/* Hero Header */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0B0F13] to-[#050608] border border-ghost-200/20 shadow-neu-raised-md relative overflow-hidden">
-        <div className="relative z-10 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="ghost" size="sm">Privacy Dashboard</Badge>
-            <span className="text-[11px] font-mono text-zinc-400">Policy Version 1.0</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 flex items-center gap-3">
-            <Shield className="w-7 h-7 text-ghost-200" />
-            Privacy & Data Rights Settings
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl leading-relaxed">
-            Manage your personal data sovereignty, export your complete academic and study records, configure consent choices, or exercise account erasure rights.
-          </p>
-        </div>
-      </div>
+      {/* Header */}
+      <PageHeader
+        title="Privacy & Data Rights Settings"
+        description="Manage your student data sovereignty, download your academic history, and control consent choices."
+        badge={<Badge variant="academic" size="sm">Policy Version 1.0</Badge>}
+      />
 
-      {/* Authenticated Status Banner */}
+      {/* Unauthenticated Session Notice */}
       {!currentUser && (
-        <div className="p-4 rounded-xl bg-blue-950/20 border border-blue-500/25 text-blue-200 text-xs leading-relaxed flex items-start gap-3">
-          <UserCheck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-ink text-xs leading-relaxed flex items-start gap-3">
+          <UserCheck className="w-5 h-5 text-navy shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <div className="font-semibold text-blue-300">Unauthenticated Session</div>
-            <p className="text-blue-200/80">
-              You are currently viewing public privacy settings. You can manage local cookie and telemetry consent preferences below. To export your academic transcripts, CGPA history, or delete an account, please sign in.
+            <p className="font-semibold text-ink">Public Guest Mode</p>
+            <p className="text-muted leading-relaxed">
+              You are currently viewing public privacy settings. You can manage local cookie and telemetry preferences below. Sign in to export your academic transcripts or delete an existing account.
             </p>
           </div>
         </div>
@@ -137,105 +127,104 @@ export function PrivacySettingsPage({
         <button
           type="button"
           onClick={() => onNavigate?.('privacy')}
-          className="p-4 rounded-xl bg-[#090C0F] border border-white/[0.06] hover:border-ghost-200/30 text-left transition-colors group"
+          className="p-4 rounded-xl bg-white border border-border hover:border-gray-300 text-left transition-colors shadow-subtle"
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="font-semibold text-xs text-zinc-200 group-hover:text-ghost-200">Privacy Policy</span>
-            <Badge variant="ghost" size="sm">v1.0</Badge>
+            <span className="font-semibold text-xs text-ink">Privacy Policy</span>
+            <Badge variant="academic" size="sm">v1.0</Badge>
           </div>
-          <p className="text-[11px] text-zinc-500">Read our formal data processing and retention policy</p>
+          <p className="text-[11px] text-muted leading-relaxed">Read our formal data processing and retention policy</p>
         </button>
 
         <button
           type="button"
           onClick={() => onNavigate?.('terms')}
-          className="p-4 rounded-xl bg-[#090C0F] border border-white/[0.06] hover:border-ghost-200/30 text-left transition-colors group"
+          className="p-4 rounded-xl bg-white border border-border hover:border-gray-300 text-left transition-colors shadow-subtle"
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="font-semibold text-xs text-zinc-200 group-hover:text-ghost-200">Terms of Service</span>
+            <span className="font-semibold text-xs text-ink">Terms of Service</span>
             <Badge variant="neutral" size="sm">v1.0</Badge>
           </div>
-          <p className="text-[11px] text-zinc-500">Student academic conduct, AI limits, and platform terms</p>
+          <p className="text-[11px] text-muted leading-relaxed">Student academic conduct, integrity rules, and terms</p>
         </button>
 
         <button
           type="button"
           onClick={onOpenCookieSettings}
-          className="p-4 rounded-xl bg-[#090C0F] border border-white/[0.06] hover:border-ghost-200/30 text-left transition-colors group"
+          className="p-4 rounded-xl bg-white border border-border hover:border-gray-300 text-left transition-colors shadow-subtle"
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="font-semibold text-xs text-zinc-200 group-hover:text-ghost-200">Cookie Preferences</span>
-            <Cookie className="w-3.5 h-3.5 text-zinc-500 group-hover:text-ghost-200" />
+            <span className="font-semibold text-xs text-ink">Cookie Preferences</span>
+            <Cookie className="w-3.5 h-3.5 text-muted" />
           </div>
-          <p className="text-[11px] text-zinc-500">Customize analytics & functional local storage tokens</p>
+          <p className="text-[11px] text-muted leading-relaxed">Customize diagnostic and functional technologies</p>
         </button>
       </div>
 
       {/* Section 1: Data Portability & Archive Export */}
-      <Card variant="neu" className="p-6 space-y-4">
+      <div className="bg-white border border-border rounded-card p-6 shadow-subtle space-y-4">
         <div className="flex items-center gap-2">
-          <Download className="w-5 h-5 text-ghost-200" />
-          <h2 className="text-base sm:text-lg font-semibold text-zinc-100">
+          <Download className="w-5 h-5 text-academic" />
+          <h2 className="text-base sm:text-lg font-semibold text-ink">
             Right to Data Portability (Personal Archive Export)
           </h2>
         </div>
-        <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-          You have the right to request a complete, machine-readable export of all data stored in our PostgreSQL database associated with your identity.
+        <p className="text-xs sm:text-sm text-muted leading-relaxed">
+          You have the right to request a complete, machine-readable export of all records stored in our database associated with your student identity.
         </p>
-        <div className="p-3.5 rounded-xl bg-[#080A0C] border border-white/[0.04] space-y-2 text-xs text-zinc-400">
-          <div className="font-semibold text-zinc-300">The downloadable JSON archive contains:</div>
-          <ul className="list-disc list-inside space-y-1 text-[11px] text-zinc-400">
-            <li>User account identity, role, and registration timestamp</li>
-            <li>Student profile, university, department, level, and matric number</li>
-            <li>All recorded academic semesters, courses, units, and grades</li>
-            <li>Personal study plans, topics, checklist states, and study session logs</li>
-            <li>Complete timestamped consent audit trail records</li>
+        <div className="p-4 rounded-xl bg-canvas border border-border/80 space-y-1.5 text-xs text-muted">
+          <p className="font-semibold text-ink">The downloadable JSON archive contains:</p>
+          <ul className="list-disc list-inside space-y-1 text-[11px] text-muted">
+            <li>User account identity, role, and registration date</li>
+            <li>Student profile, institution, department, and matric ID</li>
+            <li>All recorded academic terms, courses, credit units, and letter grades</li>
+            <li>Personal study plans, checklists, and logged study hours</li>
+            <li>Complete timestamped consent audit logs</li>
           </ul>
         </div>
         <div className="pt-2">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleExportData}
             loading={exporting}
             icon={Download}
-            className="text-xs border-ghost-200/25 text-ghost-200 hover:bg-ghost-200/10"
+            size="sm"
           >
             Download Academic & Personal Data (JSON)
           </Button>
         </div>
-      </Card>
+      </div>
 
-      {/* Section 2: Contact Data Protection Officer */}
-      <Card variant="neu" className="p-6 space-y-3">
+      {/* Section 2: Privacy Desk */}
+      <div className="bg-white border border-border rounded-card p-5 shadow-subtle space-y-2">
         <div className="flex items-center gap-2">
-          <Mail className="w-5 h-5 text-ghost-200" />
-          <h2 className="text-base sm:text-lg font-semibold text-zinc-100">
+          <Mail className="w-4 h-4 text-academic" />
+          <h2 className="text-sm font-semibold text-ink">
             Privacy Desk & Data Inquiries
           </h2>
         </div>
-        <p className="text-xs text-zinc-400 leading-relaxed">
-          To submit formal data access or rectification requests, ask questions about our data retention practices, or report concerns:
+        <p className="text-xs text-muted leading-relaxed">
+          To submit formal access or rectification requests, ask questions about our data retention practices, or report concerns:
         </p>
-        <div className="p-3 rounded-xl bg-[#080A0C] border border-white/[0.04] font-mono text-xs text-zinc-300 space-y-1">
-          <div>Privacy Desk: <span className="text-ghost-200 select-all">privacy@academicplatform.example</span></div>
-          <div className="text-[10px] text-zinc-500">Contact addresses are configuration placeholders pending official institutional deployment.</div>
+        <div className="font-mono text-xs text-academic select-all pt-1">
+          privacy@academicplatform.edu
         </div>
-      </Card>
+      </div>
 
       {/* Section 3: Permanent Account Deletion */}
       {currentUser && (
-        <Card variant="neu" className="p-6 border-red-500/20 bg-red-950/5 space-y-4">
-          <div className="flex items-center gap-2 text-red-400">
+        <div className="bg-white border border-danger-100 rounded-card p-6 shadow-subtle space-y-4">
+          <div className="flex items-center gap-2 text-danger">
             <AlertTriangle className="w-5 h-5 shrink-0" />
-            <h2 className="text-base font-semibold text-red-200">
+            <h2 className="text-base font-bold text-danger">
               Danger Zone: Right to Erasure (Permanent Account Deletion)
             </h2>
           </div>
-          <p className="text-xs text-zinc-300 leading-relaxed">
-            Deleting your account permanently purges your user record, profile, semester grades, courses, study plans, study history, and consent audit logs from the database via cascading deletion.
+          <p className="text-xs text-muted leading-relaxed">
+            Deleting your account permanently purges your user profile, course entries, semester grades, CGPA calculation history, and study plans from the database via cascading deletion.
           </p>
-          <div className="p-3 rounded-xl bg-red-950/20 border border-red-500/20 text-xs text-red-200/90 leading-relaxed font-mono">
-            ⚠️ Warning: Account deletion is permanent and cannot be undone. We do not retain shadow backups of deleted student data.
+          <div className="p-3.5 rounded-xl bg-danger-50 border border-danger-100 text-xs text-danger font-medium leading-relaxed">
+            This action is permanent and cannot be undone. All active sessions will be terminated immediately.
           </div>
           <div>
             <Button
@@ -248,12 +237,11 @@ export function PrivacySettingsPage({
                 setShowDeleteModal(true);
               }}
               icon={Trash2}
-              className="text-xs"
             >
               Permanently Delete My Account
             </Button>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Deletion Modal */}
@@ -261,28 +249,28 @@ export function PrivacySettingsPage({
         isOpen={showDeleteModal}
         onClose={() => !deleting && setShowDeleteModal(false)}
         title="Confirm Permanent Account Deletion"
-        description="Verify your identity to proceed with cascading database deletion."
-        size="md"
+        description="Verify your identity to proceed with permanent database deletion."
+        maxWidth="max-w-md"
       >
-        <form onSubmit={handleDeleteAccount} className="space-y-4 text-xs text-zinc-300">
-          <div className="p-3.5 rounded-xl bg-red-950/30 border border-red-500/30 text-red-200 leading-relaxed space-y-2">
-            <p className="font-semibold text-red-300">
-              Are you absolutely sure you want to proceed?
+        <form onSubmit={handleDeleteAccount} className="space-y-4 text-xs text-ink">
+          <div className="p-3.5 rounded-xl bg-danger-50 border border-danger-100 text-danger leading-relaxed space-y-1">
+            <p className="font-bold">
+              Are you sure you want to proceed?
             </p>
-            <p className="text-xs text-red-200/80">
+            <p className="text-xs opacity-90">
               Your profile, courses, grades, study plans, and diagnostic progress will be completely removed.
             </p>
           </div>
 
           {deleteError && (
-            <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-xs text-red-200 font-mono">
+            <div className="p-3 rounded-lg bg-danger-50 border border-danger-100 text-xs text-danger font-medium">
               {deleteError}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1.5">
-              Type <strong className="text-red-400 font-mono">DELETE</strong> in capital letters to confirm:
+            <label className="block text-xs font-semibold text-ink mb-1.5">
+              Type <strong className="text-danger font-mono">DELETE</strong> in capital letters to confirm:
             </label>
             <Input
               value={deleteConfirmText}
@@ -293,7 +281,7 @@ export function PrivacySettingsPage({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+            <label className="block text-xs font-semibold text-ink mb-1.5">
               Enter your current account password:
             </label>
             <Input
@@ -305,10 +293,10 @@ export function PrivacySettingsPage({
             />
           </div>
 
-          <div className="pt-3 border-t border-white/[0.04] flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-border flex items-center justify-end gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={deleting}
               onClick={() => setShowDeleteModal(false)}

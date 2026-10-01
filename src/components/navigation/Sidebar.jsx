@@ -3,10 +3,12 @@ import {
   LayoutDashboard, 
   GraduationCap, 
   BookOpen, 
-  Users, 
+  FileCheck2, 
   Compass, 
-  Sparkles, 
+  MessageSquare, 
   User, 
+  Settings, 
+  ShieldCheck, 
   ChevronLeft, 
   ChevronRight,
   LogOut
@@ -22,34 +24,38 @@ export function Sidebar({
   onLogout,
   className = ''
 }) {
-  const navItems = [
-    { id: 'dashboard', label: 'Command Center', icon: LayoutDashboard, badge: null },
-    { id: 'cgpa', label: 'CGPA & Records', icon: GraduationCap, badge: '5.0' },
-    { id: 'study', label: 'Study Planner', icon: BookOpen, badge: null },
-    { id: 'community', label: 'Study Groups', icon: Users, badge: 'Soon', isFuture: true },
+  const mainNav = [
+    { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+    { id: 'cgpa', label: 'CGPA', icon: GraduationCap },
+    { id: 'study', label: 'Study Planner', icon: BookOpen },
+    { id: 'prep', label: 'Test Prep', icon: FileCheck2, badge: 'Soon', isFuture: true },
     { id: 'tutors', label: 'Tutors', icon: Compass, badge: 'Soon', isFuture: true },
-    { id: 'ai', label: 'AI Tutor', icon: Sparkles, badge: 'Soon', isFuture: true },
-    { id: 'profile', label: 'Student Profile', icon: User, badge: null }
+    { id: 'community', label: 'Messages', icon: MessageSquare, badge: 'Soon', isFuture: true },
+  ];
+
+  const personalNav = [
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'privacy-settings', label: 'Privacy', icon: ShieldCheck },
   ];
 
   return (
     <aside
-      className={`hidden md:flex flex-col justify-between bg-[#07080A] border-r border-white/[0.05] transition-all duration-300 ease-in-out z-30 select-none
-        ${collapsed ? 'w-20' : 'w-64'} ${className}`}
+      className={`hidden md:flex flex-col justify-between bg-white border-r border-border transition-all duration-200 ease-in-out z-30 select-none
+        ${collapsed ? 'w-16' : 'w-60'} ${className}`}
     >
       {/* Brand Header */}
       <div>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/[0.04]">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-ghost-200/10 border border-ghost-200/25 flex items-center justify-center text-ghost-200 shrink-0 shadow-ghost-glow">
-              <GraduationCap className="w-5 h-5" />
+        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-8 h-8 rounded-lg bg-academic-100 flex items-center justify-center text-academic shrink-0 border border-academic-200/50">
+              <GraduationCap className="w-4 h-4" />
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="font-bold text-sm tracking-tight text-zinc-100 flex items-center gap-1.5">
-                  ACADEMIC<span className="text-ghost-200 font-mono">OS</span>
+                <span className="font-bold text-sm tracking-tight text-ink">
+                  Academic
                 </span>
-                <span className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase">
+                <span className="text-[10px] text-muted tracking-tight">
                   Student Platform
                 </span>
               </div>
@@ -58,73 +64,109 @@ export function Sidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-ghost-200 hover:bg-white/[0.04] transition-colors"
+            className="p-1 rounded-md text-muted hover:text-ink hover:bg-gray-100 transition-colors"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="p-3 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+        {/* Navigation Sections */}
+        <div className="p-3 space-y-5">
+          {/* Main Section */}
+          <div className="space-y-1">
+            {!collapsed && (
+              <p className="px-2 pb-1 text-[11px] font-semibold text-muted/80 tracking-wider uppercase">
+                Main
+              </p>
+            )}
+            {mainNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id || (item.id === 'dashboard' && activeTab === 'overview');
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 group relative
-                  ${isActive
-                    ? 'bg-[#12161A] text-ghost-200 border border-ghost-200/20 shadow-neu-raised-sm'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]'}`}
-                title={collapsed ? item.label : undefined}
-              >
-                {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-1 bg-ghost-200 rounded-r shadow-ghost-glow" />
-                )}
-                <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-ghost-200' : 'text-zinc-500 group-hover:text-zinc-300'}`} />
-                {!collapsed && (
-                  <div className="flex-1 flex items-center justify-between min-w-0 text-left">
-                    <span className="truncate">{item.label}</span>
-                    {item.badge && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                        item.isFuture 
-                          ? 'bg-zinc-800 text-zinc-500 border border-zinc-700/40' 
-                          : 'bg-ghost-200/10 text-ghost-200 border border-ghost-200/25'
-                      }`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectTab(item.id)}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-left group
+                    ${isActive
+                      ? 'bg-academic-50 text-academic font-semibold'
+                      : 'text-gray-600 hover:text-ink hover:bg-gray-50'}`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-academic' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  {!collapsed && (
+                    <div className="flex-1 flex items-center justify-between min-w-0">
+                      <span className="truncate">{item.label}</span>
+                      {item.badge && (
+                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Personal Section */}
+          <div className="space-y-1">
+            {!collapsed && (
+              <p className="px-2 pb-1 text-[11px] font-semibold text-muted/80 tracking-wider uppercase">
+                Personal
+              </p>
+            )}
+            {personalNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectTab(item.id)}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-left group
+                    ${isActive
+                      ? 'bg-academic-50 text-academic font-semibold'
+                      : 'text-gray-600 hover:text-ink hover:bg-gray-50'}`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-academic' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* User Card & Logout */}
-      <div className="p-3 border-t border-white/[0.04] space-y-2">
+      {/* Account Section & Logout */}
+      <div className="p-3 border-t border-border space-y-1.5">
+        {!collapsed && (
+          <p className="px-2 pb-1 text-[11px] font-semibold text-muted/80 tracking-wider uppercase">
+            Account
+          </p>
+        )}
         <button
           type="button"
           onClick={() => onSelectTab('profile')}
-          className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all duration-150 hover:bg-white/[0.02] text-left
-            ${activeTab === 'profile' ? 'bg-[#12161A] border border-ghost-200/20' : ''}`}
+          className={`w-full flex items-center gap-2.5 p-2 rounded-lg transition-colors text-left
+            ${activeTab === 'profile' ? 'bg-academic-50' : 'hover:bg-gray-50'}`}
         >
           <Avatar
             name={userProfile?.full_name || 'Student'}
             src={userProfile?.avatar_url}
-            size="md"
+            size="sm"
           />
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-zinc-200 truncate">
+              <p className="text-xs font-semibold text-ink truncate">
                 {userProfile?.full_name || 'Student'}
               </p>
-              <p className="text-[11px] text-zinc-500 truncate font-mono">
+              <p className="text-[11px] text-muted truncate">
                 {userProfile?.department || 'Academic Member'}
               </p>
             </div>
@@ -134,12 +176,12 @@ export function Sidebar({
         <button
           type="button"
           onClick={onLogout}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-zinc-500 hover:text-red-400 hover:bg-red-950/20 transition-all duration-150
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-gray-500 hover:text-danger hover:bg-danger-50 transition-colors
             ${collapsed ? 'justify-center' : ''}`}
           title="Sign out of platform"
         >
           <LogOut className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>Logout</span>}
         </button>
       </div>
     </aside>

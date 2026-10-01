@@ -6,16 +6,13 @@ import {
   CheckCircle2, 
   Circle, 
   Clock, 
-  TrendingUp, 
   ArrowRight, 
   Plus, 
-  Target, 
-  Sparkles,
-  Users,
-  Compass,
-  Download
+  TrendingUp, 
+  CheckSquare,
+  ArrowUpRight
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, Button, Badge, ProgressBar, ProgressRing } from '../../components/ui';
+import { Card, CardHeader, CardTitle, Button, Badge, ProgressBar } from '../../components/ui';
 import { calculateCumulativeMetrics, DEFAULT_GRADING_SCALES } from '../../services/academic/cgpaEngine';
 
 export function DashboardPage({
@@ -43,346 +40,423 @@ export function DashboardPage({
       : null;
   }, [cumulative]);
 
-  // Collect pending study tasks from active plans
-  const todayTasks = useMemo(() => {
-    const tasks = [];
+  // Previous semester for delta calculation
+  const semesterDelta = useMemo(() => {
+    const list = cumulative.semesterBreakdown;
+    if (list.length < 2) return null;
+    const current = list[list.length - 1].gpa;
+    const previous = list[list.length - 2].gpa;
+    const diff = Number((current - previous).toFixed(2));
+    return diff;
+  }, [cumulative]);
+
+  // Find active subject & topic to "Continue studying"
+  const activeStudyItem = useMemo(() => {
     for (const plan of studyPlans) {
-      if (plan.topics) {
-        for (const topic of plan.topics) {
-          if (!topic.is_completed) {
-            tasks.push({
-              id: topic.id,
-              title: topic.title,
-              subject: plan.subject,
-              deadline: plan.deadline,
-              planId: plan.id
-            });
-          }
+      if (plan.topics && plan.topics.length > 0) {
+        const incomplete = plan.topics.find(t => !t.is_completed);
+        if (incomplete) {
+          const completedCount = plan.topics.filter(t => t.is_completed).length;
+          const progress = Math.round((completedCount / plan.topics.length) * 100);
+          return {
+            planId: plan.id,
+            subject: plan.subject,
+            topic: incomplete,
+            progress,
+            totalTopics: plan.topics.length,
+            completedCount
+          };
         }
       }
     }
-    return tasks.slice(0, 5); // Focus top 5 pending tasks
+    return null;
   }, [studyPlans]);
 
-  // Degree completion progress estimation (assuming ~120 credit units standard)
-  const degreeUnitsTarget = 120;
-  const degreeProgressPercent = Math.min(100, Math.round((cumulative.totalCreditUnits / degreeUnitsTarget) * 100));
+  // All pending study tasks for today's plan
+  const todayTasks = useMemo(() => {
+    const times = ['09:00', '11:30', '14:00', '16:30', '19:00'];
+    const tasks = [];
+    let idx = 0;
+    for (const plan of studyPlans) {
+      if (plan.topics) {
+        for (const topic of plan.topics) {
+          tasks.push({
+            id: topic.id,
+            title: topic.title,
+            subject: plan.subject,
+            deadline: plan.deadline,
+            isCompleted: !!topic.is_completed,
+            planId: plan.id,
+            timeSlot: times[idx % times.length]
+          });
+          idx++;
+        }
+      }
+    }
+    return tasks;
+  }, [studyPlans]);
+
+  const pendingTasks = useMemo(() => todayTasks.filter(t => !t.isCompleted).slice(0, 5), [todayTasks]);
+  const completedTasksCount = useMemo(() => todayTasks.filter(t => t.isCompleted).length, [todayTasks]);
+  const totalTasksCount = todayTasks.length;
+  const completionRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+  // Time of day greeting
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
+
+  const studentFirstName = userProfile?.full_name?.split(' ')[0] || 'Daniel';
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      {/* Hero Welcome & Academic Status */}
-      <div className="neu-card p-6 border-ghost-200/15 relative overflow-hidden bg-gradient-to-br from-[#0B0E12] via-[#07090C] to-[#050505]">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-ghost-200 bg-ghost-200/10 px-2.5 py-0.5 rounded-full border border-ghost-200/25">
-                {userProfile?.academic_level || 'Year 3 (Senior)'}
+    <div className="space-y-8 pb-20 md:pb-8">
+      {/* 1. Header Greeting & Academic Context */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border pb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
+            {greeting}, {studentFirstName}.
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            Your academic progress at a glance.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onNavigateTab('cgpa')}
+            icon={Plus}
+          >
+            Record Course
+          </Button>
+          <Button
+            variant="academic"
+            size="sm"
+            onClick={() => onNavigateTab('study')}
+            icon={BookOpen}
+          >
+            New Study Plan
+          </Button>
+        </div>
+      </div>
+
+      {/* 2. Primary Academic Hero Block: Current CGPA & Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Main CGPA Result Card */}
+        <div className="md:col-span-2 bg-white border border-border rounded-card p-6 shadow-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted tracking-wider uppercase">
+                Current Cumulative CGPA
               </span>
-              <span className="text-xs text-zinc-500 font-mono">
-                {userProfile?.institution || 'Apex Institute of Technology'}
+              <Badge variant="academic">
+                {cumulative.classificationName}
+              </Badge>
+            </div>
+
+            <div className="mt-3 flex items-baseline gap-3">
+              <span className="text-4xl sm:text-5xl font-extrabold text-ink tracking-tight font-sans">
+                {cumulative.cgpa.toFixed(2)}
+              </span>
+              <span className="text-lg sm:text-xl font-medium text-muted">
+                / {activeScale.maxScale.toFixed(2)}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100">
-              Welcome back, {userProfile?.full_name?.split(' ')[0] || 'Alexander'}
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-xl leading-relaxed">
-              Your academic trajectory is on track for <strong className="text-ghost-200 font-medium">{cumulative.classificationName}</strong>. You have {todayTasks.length} study tasks due this week.
+
+            <div className="mt-2 flex items-center gap-3 text-xs">
+              {semesterDelta !== null ? (
+                <span className={`inline-flex items-center font-semibold ${semesterDelta >= 0 ? 'text-academic' : 'text-danger'}`}>
+                  {semesterDelta >= 0 ? `+${semesterDelta.toFixed(2)}` : semesterDelta.toFixed(2)} this semester
+                </span>
+              ) : (
+                <span className="text-muted">First recorded semester</span>
+              )}
+              <span className="text-muted">•</span>
+              <span className="text-muted">{cumulative.totalCreditUnits} total units earned</span>
+              <span className="text-muted">•</span>
+              <span className="text-muted">{semesters.length} semesters</span>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
+            <span className="text-xs text-muted">
+              Scale: <strong className="text-ink">{activeScale.scaleName}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('cgpa')}
+              className="text-xs font-semibold text-academic hover:underline inline-flex items-center gap-1"
+            >
+              Open CGPA Calculator <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Semester GPA Spotlight Card */}
+        <div className="bg-white border border-border rounded-card p-6 shadow-subtle flex flex-col justify-between">
+          <div>
+            <span className="text-xs font-semibold text-muted tracking-wider uppercase">
+              Current Semester GPA
+            </span>
+
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl sm:text-4xl font-bold text-ink tracking-tight font-sans">
+                {currentSemester ? currentSemester.gpa.toFixed(2) : '0.00'}
+              </span>
+              <span className="text-xs text-muted">
+                {currentSemester ? `${currentSemester.academicYear}` : 'No active term'}
+              </span>
+            </div>
+
+            <p className="text-xs text-muted mt-2 leading-relaxed">
+              {currentSemester 
+                ? `${currentSemester.courses.length} courses enrolled (${currentSemester.totalCreditUnits} credit units).`
+                : 'No course grades recorded yet for this term.'}
             </p>
           </div>
 
-          {/* Quick Action Ribbon */}
-          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-            <Button
-              variant="primary"
-              size="sm"
-              icon={Plus}
+          <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
+            <span className="text-xs text-muted">
+              Term: {currentSemester ? currentSemester.semesterName : 'Semester 1'}
+            </span>
+            <button
+              type="button"
               onClick={() => onNavigateTab('cgpa')}
+              className="text-xs font-semibold text-ink hover:text-academic inline-flex items-center gap-1"
             >
-              Record Course
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={BookOpen}
-              onClick={() => onNavigateTab('study')}
-            >
-              Add Study Plan
-            </Button>
+              Details <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Primary KPI Command Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1: Cumulative CGPA */}
-        <Card variant="neu" className="p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Current CGPA</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-ghost-200 font-mono mt-1">
-                {cumulative.cgpa.toFixed(2)}
-              </h3>
-              <p className="text-[11px] text-zinc-500 mt-1 font-mono">
-                Scale: {activeScale.maxScale.toFixed(1)} • {cumulative.classificationName}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-ghost-200/10 border border-ghost-200/20 flex items-center justify-center text-ghost-200 shadow-ghost-glow">
-              <GraduationCap className="w-5 h-5" />
-            </div>
+      {/* 3. Continue Studying Section */}
+      <div className="bg-white border border-border rounded-card p-6 shadow-subtle space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-ink">
+              Continue Studying
+            </h2>
+            <p className="text-xs text-muted">
+              Resume your next pending objective
+            </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-white/[0.04] flex items-center justify-between text-xs">
-            <span className="text-zinc-400 font-mono">{cumulative.totalCreditUnits} Units Earned</span>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('cgpa')}
-              className="text-ghost-200 hover:underline flex items-center gap-1 font-mono text-[11px]"
-            >
-              View Record <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-        </Card>
+          {activeStudyItem && (
+            <Badge variant="neutral">
+              {activeStudyItem.subject}
+            </Badge>
+          )}
+        </div>
 
-        {/* Metric 2: Current Semester GPA */}
-        <Card variant="neu" className="p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Semester GPA</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-zinc-100 font-mono mt-1">
-                {currentSemester ? currentSemester.gpa.toFixed(2) : '0.00'}
+        {activeStudyItem ? (
+          <div className="p-4 rounded-xl bg-canvas border border-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-academic uppercase tracking-wider">
+                  {activeStudyItem.subject}
+                </span>
+                <span className="text-muted text-xs">•</span>
+                <span className="text-xs text-muted">
+                  Topic {activeStudyItem.completedCount + 1} of {activeStudyItem.totalTopics}
+                </span>
+              </div>
+              <h3 className="text-base font-semibold text-ink truncate">
+                {activeStudyItem.topic.title}
               </h3>
-              <p className="text-[11px] text-zinc-500 mt-1 truncate max-w-[140px]">
-                {currentSemester ? `${currentSemester.academicYear} ${currentSemester.semesterName}` : 'No active term'}
-              </p>
+              <div className="w-full max-w-md pt-1">
+                <ProgressBar
+                  value={activeStudyItem.progress}
+                  max={100}
+                  showPercentage={true}
+                  label="Course Syllabus Completion"
+                  size="sm"
+                />
+              </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-950/40 border border-blue-500/20 flex items-center justify-center text-blue-300">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-white/[0.04] flex items-center justify-between text-xs">
-            <span className="text-zinc-400 font-mono">
-              {currentSemester ? `${currentSemester.courses.length} Active Courses` : '0 Courses'}
-            </span>
-            <span className="text-zinc-500 font-mono">
-              {currentSemester ? `${currentSemester.totalCreditUnits} Units` : ''}
-            </span>
-          </div>
-        </Card>
 
-        {/* Metric 3: Study Streak */}
-        <Card variant="neu" className="p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Study Streak</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-orange-400 font-mono mt-1 flex items-center gap-1">
-                {streakData.streak} <span className="text-sm font-normal text-zinc-400">days</span>
-              </h3>
-              <p className="text-[11px] text-zinc-500 mt-1 font-mono">
-                {streakData.totalHours} total study hours logged
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-orange-950/30 border border-orange-500/25 flex items-center justify-center text-orange-400 shadow-ghost-glow">
-              <Flame className="w-5 h-5 fill-orange-400 animate-pulse-subtle" />
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Button
+                variant="academic"
+                size="sm"
+                onClick={() => onToggleTopic(activeStudyItem.topic.id)}
+                icon={CheckSquare}
+              >
+                Mark Complete
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onNavigateTab('study')}
+              >
+                View Plan
+              </Button>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-white/[0.04] flex items-center justify-between text-xs">
-            <span className="text-zinc-400 font-mono">Daily Target: 2h</span>
-            <button
-              type="button"
+        ) : (
+          <div className="p-6 text-center rounded-xl bg-canvas border border-dashed border-border">
+            <CheckCircle2 className="w-8 h-8 text-academic mx-auto mb-2 opacity-90" />
+            <h3 className="text-sm font-semibold text-ink">All planned study topics are completed!</h3>
+            <p className="text-xs text-muted mt-1 max-w-md mx-auto">
+              Create a new study goal or add more chapters to maintain your daily study routine.
+            </p>
+            <Button
+              variant="academic"
+              size="sm"
+              className="mt-3.5"
               onClick={() => onNavigateTab('study')}
-              className="text-orange-300 hover:underline flex items-center gap-1 font-mono text-[11px]"
             >
-              Study Planner <ArrowRight className="w-3 h-3" />
-            </button>
+              Add New Study Plan
+            </Button>
           </div>
-        </Card>
-
-        {/* Metric 4: Degree Progress */}
-        <Card variant="neu" className="p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Degree Completion</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-zinc-100 font-mono mt-1">
-                {degreeProgressPercent}%
-              </h3>
-              <p className="text-[11px] text-zinc-500 mt-1 font-mono">
-                {cumulative.totalCreditUnits} of {degreeUnitsTarget} target units
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-purple-950/40 border border-purple-500/20 flex items-center justify-center text-purple-300">
-              <Target className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <ProgressBar value={cumulative.totalCreditUnits} max={degreeUnitsTarget} showPercentage={false} size="sm" />
-          </div>
-        </Card>
+        )}
       </div>
 
-      {/* Main Two-Column Layout */}
+      {/* 4. Two-Column Layout: Today's Plan & Academic Progress Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column (2 spans): Today's Study Tasks */}
+        {/* Left Column: Today's Plan (2 spans) */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-ghost-200" />
-              Today's Priority Study Objectives
-            </h3>
+            <div>
+              <h2 className="text-base font-semibold text-ink">
+                Today's Plan
+              </h2>
+              <p className="text-xs text-muted">
+                {pendingTasks.length} objectives due for review
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => onNavigateTab('study')}
-              className="text-xs font-mono text-ghost-200 hover:underline"
+              className="text-xs font-semibold text-academic hover:underline inline-flex items-center gap-1"
             >
-              View All ({studyPlans.reduce((acc, p) => acc + (p.topics ? p.topics.length : 0), 0)})
+              All Plans ({studyPlans.length}) <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <Card variant="flat" className="p-5 space-y-3">
-            {todayTasks.length === 0 ? (
-              <div className="text-center py-8">
-                <CheckCircle2 className="w-8 h-8 text-ghost-200 mx-auto mb-2 opacity-80" />
-                <p className="text-sm font-semibold text-zinc-200">All current study topics cleared!</p>
-                <p className="text-xs text-zinc-500 mt-1">
-                  You have no pending tasks. Add new objectives from your study planner.
-                </p>
-                <Button 
-                  variant="primary" 
-                  size="sm" 
-                  className="mt-4" 
-                  onClick={() => onNavigateTab('study')}
-                >
-                  Create New Plan
-                </Button>
+          <div className="bg-white border border-border rounded-card divide-y divide-border shadow-subtle overflow-hidden">
+            {pendingTasks.length === 0 ? (
+              <div className="p-8 text-center text-xs text-muted">
+                No pending tasks scheduled for today.
               </div>
             ) : (
-              todayTasks.map((task) => (
+              pendingTasks.map((task) => (
                 <div
                   key={task.id}
-                  onClick={() => onToggleTopic(task.id, task.subject)}
-                  className="flex items-start justify-between p-3 rounded-xl bg-[#080A0D] border border-white/[0.04] neu-inset hover:border-ghost-200/20 transition-all cursor-pointer group"
+                  className="p-4 flex items-center justify-between gap-3 hover:bg-surface-muted/60 transition-colors"
                 >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <Circle className="w-4 h-4 text-zinc-600 group-hover:text-ghost-200 shrink-0 mt-0.5 transition-colors" />
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTopic(task.id)}
+                      className="text-muted hover:text-academic transition-colors shrink-0"
+                      title="Mark as completed"
+                    >
+                      <Circle className="w-4 h-4" />
+                    </button>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors truncate">
+                      <p className="text-xs sm:text-sm font-semibold text-ink truncate">
                         {task.title}
                       </p>
-                      <p className="text-xs text-zinc-500 font-mono mt-0.5 truncate">
+                      <p className="text-xs text-muted truncate">
                         {task.subject}
                       </p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-mono text-zinc-400 shrink-0 ml-3 bg-white/[0.03] px-2 py-0.5 rounded">
-                    Due {task.deadline}
-                  </span>
+
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <span className="text-[11px] font-mono text-muted bg-gray-100 px-2 py-0.5 rounded">
+                      {task.timeSlot}
+                    </span>
+                    <span className="text-[11px] text-muted hidden sm:inline">
+                      Due {task.deadline}
+                    </span>
+                  </div>
                 </div>
               ))
             )}
-          </Card>
-
-          {/* Current Semester Courses Quick Overview */}
-          {currentSemester && (
-            <Card variant="flat" className="p-5">
-              <div className="flex items-center justify-between pb-3 border-b border-white/[0.04]">
-                <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-ghost-200" />
-                  Active Course Load ({currentSemester.courses.length} courses)
-                </h4>
-                <span className="text-xs font-mono text-ghost-200">
-                  GPA: {currentSemester.gpa.toFixed(2)}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-3">
-                {currentSemester.courses.map((c, i) => (
-                  <div 
-                    key={i} 
-                    className="p-2.5 rounded-xl bg-[#07090C] border border-white/[0.03] flex items-center justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-mono font-semibold text-ghost-200 truncate">
-                        {c.courseCode}
-                      </p>
-                      <p className="text-[11px] text-zinc-400 truncate max-w-[180px]">
-                        {c.courseTitle || 'Course Title'}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-mono font-bold text-zinc-200 bg-white/[0.04] px-1.5 py-0.5 rounded">
-                        Grade {c.letterGrade}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+          </div>
         </div>
 
-        {/* Right Column (1 span): Ecosystem Readiness & Architecture Gateways */}
+        {/* Right Column: Academic Progress (1 span) */}
         <div className="space-y-4">
-          <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-ghost-200" />
-            Learning Ecosystem
-          </h3>
-
-          {/* Milestone 2 Preview Gateway: AI Tutor */}
-          <Card variant="glass" className="border-ghost-200/15">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-xl bg-ghost-200/10 border border-ghost-200/20 flex items-center justify-center text-ghost-200 shadow-ghost-glow">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-zinc-100">AI Academic Tutor</h4>
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Milestone 2 Architecture</p>
-              </div>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Diagnostic-driven AI tutor that contextualizes your courses, weak topics, and upcoming exam deadlines.
+          <div>
+            <h2 className="text-base font-semibold text-ink">
+              Academic Progress
+            </h2>
+            <p className="text-xs text-muted">
+              Consistency and completion metrics
             </p>
-            <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center justify-between">
-              <Badge variant="ghost" size="sm">Interface Ready</Badge>
-              <span className="text-[11px] text-zinc-500 font-mono">Phase 6</span>
-            </div>
-          </Card>
+          </div>
 
-          {/* Milestone 2 Preview Gateway: Tutor Marketplace */}
-          <Card variant="flat" className="p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-950/40 border border-blue-500/20 flex items-center justify-center text-blue-300">
-                <Compass className="w-4 h-4" />
+          <div className="bg-white border border-border rounded-card p-5 shadow-subtle space-y-5">
+            {/* Consistency / Study Streak */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted">Study Consistency</span>
+                <Flame className="w-4 h-4 text-gold-600 fill-gold-600" />
               </div>
-              <div>
-                <h4 className="text-sm font-semibold text-zinc-100">Tutor Marketplace</h4>
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Milestone 2 Architecture</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-ink">
+                  {streakData.streak} days
+                </span>
+                <span className="text-xs text-muted">
+                  streak
+                </span>
               </div>
+              <p className="text-xs text-muted">
+                {streakData.totalHours} total hours logged this term.
+              </p>
             </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Connect with academic subject specialists for 1-on-1 video sessions and exam problem reviews.
-            </p>
-            <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center justify-between">
-              <Badge variant="neutral" size="sm">Interface Ready</Badge>
-              <span className="text-[11px] text-zinc-500 font-mono">Phase 3</span>
-            </div>
-          </Card>
 
-          {/* Milestone 2 Preview Gateway: Study Groups */}
-          <Card variant="flat" className="p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-xl bg-purple-950/40 border border-purple-500/20 flex items-center justify-center text-purple-300">
-                <Users className="w-4 h-4" />
+            <div className="h-px bg-border" />
+
+            {/* Completed Topics */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted">Completed Topics</span>
+                <span className="text-xs font-semibold text-academic">{completionRate}%</span>
               </div>
-              <div>
-                <h4 className="text-sm font-semibold text-zinc-100">Study Groups & Peer Calls</h4>
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Milestone 2 Architecture</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-ink">
+                  {completedTasksCount}
+                </span>
+                <span className="text-xs text-muted">
+                  of {totalTasksCount} topics cleared
+                </span>
               </div>
+              <ProgressBar
+                value={completedTasksCount}
+                max={Math.max(1, totalTasksCount)}
+                showPercentage={false}
+                size="sm"
+              />
             </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Public and private group study halls with shared notes and ZEGOCLOUD-ready audio rooms.
-            </p>
-            <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center justify-between">
-              <Badge variant="neutral" size="sm">Interface Ready</Badge>
-              <span className="text-[11px] text-zinc-500 font-mono">Phase 4</span>
+
+            <div className="h-px bg-border" />
+
+            {/* Credit Units Summary */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted">Degree Credit Units</span>
+                <GraduationCap className="w-4 h-4 text-muted" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-ink">
+                  {cumulative.totalCreditUnits}
+                </span>
+                <span className="text-xs text-muted">
+                  of 120 target units
+                </span>
+              </div>
+              <p className="text-xs text-muted">
+                {Math.round((cumulative.totalCreditUnits / 120) * 100)}% of standard graduation threshold.
+              </p>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>

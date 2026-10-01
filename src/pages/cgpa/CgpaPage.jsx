@@ -15,15 +15,12 @@ import {
 } from 'lucide-react';
 import { 
   Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent, 
   Button, 
   Input, 
   Select, 
   Modal, 
-  Badge 
+  Badge,
+  PageHeader 
 } from '../../components/ui';
 import { 
   calculateCumulativeMetrics, 
@@ -207,68 +204,25 @@ export function CgpaPage({
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      {/* Top Banner: Academic Summary */}
-      <div className="neu-card p-6 border-ghost-200/15 relative overflow-hidden bg-gradient-to-br from-[#0A0D10] to-[#060708]">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="ghost" size="sm">
-                ACTIVE GRADING: {activeScale.name}
-              </Badge>
-              <button
-                type="button"
-                onClick={() => setIsScaleModalOpen(true)}
-                className="text-xs text-zinc-400 hover:text-ghost-200 flex items-center gap-1 font-mono transition-colors"
-              >
-                <Sliders className="w-3 h-3" />
-                Change Scale
-              </button>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 flex items-baseline gap-3">
-              <span className="font-mono text-ghost-200">{cumulative.cgpa.toFixed(2)}</span>
-              <span className="text-sm font-normal text-zinc-400">/ {activeScale.maxScale.toFixed(2)} CGPA</span>
-            </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-xs sm:text-sm font-medium text-ghost-200 bg-ghost-200/10 px-2.5 py-0.5 rounded-full border border-ghost-200/25">
-                {cumulative.classificationName}
-              </span>
-              <span className="text-xs text-zinc-500">• {cumulative.classificationDesc}</span>
-            </div>
-          </div>
-
-          {/* Quick Metrics Grid */}
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 bg-[#07090C] p-3 rounded-2xl border border-white/[0.04] neu-inset w-full lg:w-auto">
-            <div className="text-center px-3">
-              <p className="text-[11px] text-zinc-500 uppercase font-mono tracking-wider">Total Units</p>
-              <p className="text-lg sm:text-xl font-bold text-zinc-100 font-mono mt-0.5">{cumulative.totalCreditUnits}</p>
-            </div>
-            <div className="text-center px-3 border-x border-white/[0.06]">
-              <p className="text-[11px] text-zinc-500 uppercase font-mono tracking-wider">Quality Points</p>
-              <p className="text-lg sm:text-xl font-bold text-ghost-200 font-mono mt-0.5">{cumulative.totalQualityPoints.toFixed(1)}</p>
-            </div>
-            <div className="text-center px-3">
-              <p className="text-[11px] text-zinc-500 uppercase font-mono tracking-wider">Courses</p>
-              <p className="text-lg sm:text-xl font-bold text-zinc-100 font-mono mt-0.5">{cumulative.totalCourses}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Toolbar */}
-        <div className="mt-6 pt-4 border-t border-white/[0.05] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="primary" 
-              size="sm" 
-              icon={Plus} 
-              onClick={() => setIsAddSemesterOpen(true)}
+    <div className="space-y-8 pb-20 md:pb-8">
+      {/* 1. Header */}
+      <PageHeader
+        title="CGPA Calculator"
+        description="Track your academic performance across semesters with precise grade point calculation."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsScaleModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-white text-xs font-semibold text-ink hover:bg-gray-50 transition-colors"
             >
-              Add Semester
-            </Button>
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              icon={Target} 
+              <Sliders className="w-3.5 h-3.5 text-muted" />
+              Scale: {activeScale.scaleName}
+            </button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Target}
               onClick={() => {
                 setTargetCgpa(String(activeScale.maxScale >= 5.0 ? '4.50' : '3.80'));
                 setIsProjectionModalOpen(true);
@@ -276,108 +230,159 @@ export function CgpaPage({
             >
               What-If Projection
             </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Download}
+              onClick={handleExportCSV}
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant="academic"
+              size="sm"
+              icon={Plus}
+              onClick={() => setIsAddSemesterOpen(true)}
+            >
+              Add Semester
+            </Button>
+          </>
+        }
+      />
+
+      {/* 2. Primary Result Banner */}
+      <div className="bg-white border border-border rounded-card p-6 shadow-subtle">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-muted tracking-wider uppercase">
+              Current Cumulative CGPA
+            </span>
+            <div className="flex items-baseline gap-3">
+              <span className="text-4xl sm:text-5xl font-extrabold text-ink font-sans tracking-tight">
+                {cumulative.cgpa.toFixed(2)}
+              </span>
+              <span className="text-xl font-medium text-muted">
+                / {activeScale.maxScale.toFixed(2)}
+              </span>
+              <Badge variant="academic" className="ml-2">
+                {cumulative.classificationName}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted">
+              {cumulative.classificationDesc} • Based on official {activeScale.scaleName} institution parameters.
+            </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            icon={Download} 
-            onClick={handleExportCSV}
-          >
-            Export Academic Record (CSV)
-          </Button>
+
+          {/* Quick Metrics Columns */}
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 bg-canvas p-4 rounded-xl border border-border/70">
+            <div>
+              <p className="text-[11px] text-muted font-medium uppercase tracking-tight">Total Units</p>
+              <p className="text-xl sm:text-2xl font-bold text-ink mt-0.5">{cumulative.totalCreditUnits}</p>
+            </div>
+            <div className="border-x border-border/80 px-4 sm:px-8">
+              <p className="text-[11px] text-muted font-medium uppercase tracking-tight">Quality Points</p>
+              <p className="text-xl sm:text-2xl font-bold text-academic mt-0.5">{cumulative.totalQualityPoints.toFixed(1)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted font-medium uppercase tracking-tight">Courses</p>
+              <p className="text-xl sm:text-2xl font-bold text-ink mt-0.5">{cumulative.totalCourses}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* CGPA Trend Visualizer */}
+      {/* 3. Semester Timeline */}
       {cumulative.trend.length > 0 && (
-        <Card variant="flat" className="p-5">
-          <CardHeader className="p-0 pb-3">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-ghost-200" />
-              Academic Progression & GPA Trajectory
-            </CardTitle>
-            <CardDescription>
-              Progression curve per semester showing individual semester performance versus cumulative CGPA.
-            </CardDescription>
-          </CardHeader>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm sm:text-base font-semibold text-ink flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-academic" />
+              Semester Progression Timeline
+            </h2>
+            <span className="text-xs text-muted">
+              {cumulative.trend.length} terms evaluated
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {cumulative.trend.map((t) => (
               <div 
                 key={t.index} 
-                className="bg-[#08090C] border border-white/[0.04] p-3 rounded-xl neu-inset flex flex-col justify-between"
+                className="bg-white border border-border p-3.5 rounded-xl shadow-subtle flex flex-col justify-between"
               >
                 <div>
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase">{t.label}</span>
+                  <span className="text-[10px] font-semibold text-muted uppercase tracking-tight">{t.label}</span>
                   <div className="flex items-baseline justify-between mt-1">
-                    <span className="text-sm font-bold text-zinc-200 font-mono">{t.semesterGpa.toFixed(2)}</span>
-                    <span className="text-[10px] text-zinc-400 font-mono">GPA</span>
+                    <span className="text-lg font-bold text-ink">{t.semesterGpa.toFixed(2)}</span>
+                    <span className="text-[11px] text-muted font-medium">Term GPA</span>
                   </div>
                 </div>
-                <div className="mt-2 pt-2 border-t border-white/[0.04] flex items-center justify-between text-[11px]">
-                  <span className="text-zinc-500 font-mono">{t.creditUnits} Units</span>
-                  <span className="text-ghost-200 font-mono font-semibold">{t.cumulativeCgpa.toFixed(2)} CGPA</span>
+                <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-xs">
+                  <span className="text-muted">{t.creditUnits} Units</span>
+                  <span className="text-academic font-bold">{t.cumulativeCgpa.toFixed(2)} CGPA</span>
                 </div>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* Multi-Semester List */}
+      {/* 4. Semester Course Records Table */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-base sm:text-lg font-semibold text-zinc-100 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-ghost-200" />
-            Semester Course Records
-          </h3>
-          <span className="text-xs text-zinc-400 font-mono">
+          <h2 className="text-base sm:text-lg font-semibold text-ink flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-academic" />
+            Course Records by Semester
+          </h2>
+          <span className="text-xs text-muted font-medium">
             {cumulative.semesterBreakdown.length} Semesters Recorded
           </span>
         </div>
 
         {cumulative.semesterBreakdown.length === 0 ? (
-          <div className="text-center p-12 border border-dashed border-white/[0.08] rounded-2xl bg-[#07080A]">
-            <GraduationCap className="w-10 h-10 text-ghost-200/40 mx-auto mb-3" />
-            <p className="text-sm font-semibold text-zinc-200">No semesters recorded yet.</p>
-            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto mb-4">
-              Add your first academic semester to start computing your GPA and tracking degree progression.
+          <div className="text-center p-12 border border-dashed border-border rounded-card bg-surface-muted/40">
+            <GraduationCap className="w-10 h-10 text-muted mx-auto mb-3 opacity-60" />
+            <h3 className="text-sm font-semibold text-ink">No semesters recorded yet</h3>
+            <p className="text-xs text-muted mt-1 max-w-sm mx-auto mb-4">
+              Add your first academic term to calculate your GPA and track degree progress.
             </p>
-            <Button variant="primary" size="sm" onClick={() => setIsAddSemesterOpen(true)}>
+            <Button variant="academic" size="sm" onClick={() => setIsAddSemesterOpen(true)}>
               Add First Semester
             </Button>
           </div>
         ) : (
           cumulative.semesterBreakdown.map((sem) => (
-            <Card key={sem.id} variant="neu" className="overflow-visible">
-              {/* Semester Header */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-white/[0.05] gap-3">
+            <div key={sem.id} className="bg-white border border-border rounded-card shadow-subtle overflow-hidden">
+              {/* Semester Header Bar */}
+              <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-border gap-3 bg-surface-muted/30">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-ghost-200/10 border border-ghost-200/20 flex items-center justify-center text-ghost-200 font-mono font-bold text-xs">
+                  <div className="w-8 h-8 rounded-lg bg-academic-100 text-academic font-bold text-xs flex items-center justify-center border border-academic-200">
                     {sem.academicYear.replace(/\D/g, '') || '1'}
                   </div>
                   <div>
-                    <h4 className="text-sm sm:text-base font-semibold text-zinc-100">
+                    <h3 className="text-sm sm:text-base font-semibold text-ink">
                       {sem.academicYear} — {sem.semesterName}
-                    </h4>
-                    <p className="text-xs text-zinc-500 font-mono">
-                      {sem.courses.length} Courses • {sem.totalCreditUnits} Credit Units • {sem.totalQualityPoints.toFixed(1)} Points
+                    </h3>
+                    <p className="text-xs text-muted">
+                      {sem.courses.length} Courses • {sem.totalCreditUnits} Credit Units • {sem.totalQualityPoints.toFixed(1)} Quality Points
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                  <div className="px-3 py-1 bg-[#08090C] rounded-lg border border-white/[0.05] font-mono text-xs">
-                    <span className="text-zinc-500">GPA: </span>
-                    <span className="font-bold text-ghost-200 text-sm">{sem.gpa.toFixed(2)}</span>
+                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="px-3 py-1 bg-white rounded-lg border border-border text-xs flex items-center gap-1.5 shadow-subtle">
+                    <span className="text-muted font-medium">Semester GPA:</span>
+                    <span className="font-bold text-academic text-sm">{sem.gpa.toFixed(2)}</span>
                   </div>
+
                   <div className="flex items-center gap-1">
                     <Button 
                       variant="ghost" 
                       size="icon" 
                       onClick={() => handleDuplicateSemester(sem.id)}
-                      title="Duplicate this semester"
+                      title="Duplicate semester"
                     >
-                      <Copy className="w-4 h-4 text-zinc-400" />
+                      <Copy className="w-4 h-4 text-muted" />
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -385,7 +390,7 @@ export function CgpaPage({
                       onClick={() => handleDeleteSemester(sem.id, `${sem.academicYear} ${sem.semesterName}`)}
                       title="Delete semester"
                     >
-                      <Trash2 className="w-4 h-4 text-red-400/80 hover:text-red-400" />
+                      <Trash2 className="w-4 h-4 text-danger/80 hover:text-danger" />
                     </Button>
                     <Button 
                       variant="secondary" 
@@ -399,61 +404,65 @@ export function CgpaPage({
                 </div>
               </div>
 
-              {/* Courses Table */}
-              <div className="overflow-x-auto mt-4">
+              {/* Course Table (Responsive) */}
+              <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs sm:text-sm">
                   <thead>
-                    <tr className="border-b border-white/[0.04] text-[11px] text-zinc-500 uppercase font-mono">
-                      <th className="pb-2 font-medium">Course Code</th>
-                      <th className="pb-2 font-medium">Course Title</th>
-                      <th className="pb-2 font-medium text-center">Units</th>
-                      <th className="pb-2 font-medium text-center">Grade</th>
-                      <th className="pb-2 font-medium text-center">Grade Point</th>
-                      <th className="pb-2 font-medium text-right">Points</th>
-                      <th className="pb-2 text-right">Actions</th>
+                    <tr className="border-b border-border bg-gray-50/50 text-[11px] text-muted uppercase tracking-tight">
+                      <th className="py-2.5 px-4 font-semibold">Course</th>
+                      <th className="py-2.5 px-4 font-semibold hidden sm:table-cell">Title</th>
+                      <th className="py-2.5 px-4 font-semibold text-center">Unit</th>
+                      <th className="py-2.5 px-4 font-semibold text-center">Grade</th>
+                      <th className="py-2.5 px-4 font-semibold text-center">Point</th>
+                      <th className="py-2.5 px-4 font-semibold text-right">Quality Points</th>
+                      <th className="py-2.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.03]">
+                  <tbody className="divide-y divide-border">
                     {sem.courses.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-6 text-center text-xs text-zinc-500">
-                          No courses in this semester yet. Click "Add Course" above.
+                        <td colSpan={7} className="py-8 text-center text-xs text-muted">
+                          No courses recorded in this semester yet. Click "Add Course" above.
                         </td>
                       </tr>
                     ) : (
                       sem.courses.map((c, idx) => (
-                        <tr key={idx} className="hover:bg-white/[0.01] transition-colors group">
-                          <td className="py-2.5 font-mono font-semibold text-ghost-200">
+                        <tr key={idx} className="hover:bg-gray-50/60 transition-colors">
+                          <td className="py-3 px-4 font-semibold text-ink">
                             {c.courseCode}
+                            {/* Mobile title fallback */}
+                            <span className="block sm:hidden text-xs text-muted font-normal mt-0.5 truncate max-w-[160px]">
+                              {c.courseTitle}
+                            </span>
                           </td>
-                          <td className="py-2.5 text-zinc-300 max-w-xs truncate">
+                          <td className="py-3 px-4 text-muted hidden sm:table-cell max-w-xs truncate">
                             {c.courseTitle || 'Untitled Course'}
                           </td>
-                          <td className="py-2.5 text-center font-mono text-zinc-400">
+                          <td className="py-3 px-4 text-center font-medium text-ink">
                             {c.creditUnits}
                           </td>
-                          <td className="py-2.5 text-center">
-                            <span className={`inline-block w-6 py-0.5 rounded text-xs font-mono font-bold ${
-                              c.letterGrade === 'A' ? 'bg-ghost-200/20 text-ghost-200' :
-                              c.letterGrade === 'B' ? 'bg-blue-950/40 text-blue-300' :
-                              c.letterGrade === 'C' ? 'bg-amber-950/40 text-amber-300' :
-                              'bg-zinc-800 text-zinc-400'
+                          <td className="py-3 px-4 text-center">
+                            <span className={`inline-block min-w-6 py-0.5 px-1.5 rounded text-xs font-bold ${
+                              c.letterGrade === 'A' ? 'bg-academic-100 text-academic' :
+                              c.letterGrade === 'B' ? 'bg-blue-50 text-navy' :
+                              c.letterGrade === 'C' ? 'bg-amber-50 text-warning' :
+                              'bg-gray-100 text-gray-700'
                             }`}>
                               {c.letterGrade}
                             </span>
                           </td>
-                          <td className="py-2.5 text-center font-mono text-zinc-400">
+                          <td className="py-3 px-4 text-center text-muted font-mono">
                             {c.gradePoint.toFixed(1)}
                           </td>
-                          <td className="py-2.5 text-right font-mono font-bold text-zinc-200">
+                          <td className="py-3 px-4 text-right font-bold text-ink font-mono">
                             {c.qualityPoints.toFixed(1)}
                           </td>
-                          <td className="py-2.5 text-right">
-                            <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100">
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
                               <button
                                 type="button"
                                 onClick={() => openCourseModal(sem.id, semesters.find(s => s.id === sem.id)?.courses[idx])}
-                                className="p-1 text-zinc-500 hover:text-ghost-200 transition-colors"
+                                className="p-1 text-muted hover:text-ink transition-colors"
                                 title="Edit course"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
@@ -464,7 +473,7 @@ export function CgpaPage({
                                   const originalCourse = semesters.find(s => s.id === sem.id)?.courses[idx];
                                   if (originalCourse) handleDeleteCourse(originalCourse.id, c.courseCode);
                                 }}
-                                className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
+                                className="p-1 text-muted hover:text-danger transition-colors"
                                 title="Delete course"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -477,7 +486,7 @@ export function CgpaPage({
                   </tbody>
                 </table>
               </div>
-            </Card>
+            </div>
           ))
         )}
       </div>
@@ -487,7 +496,7 @@ export function CgpaPage({
         isOpen={isAddSemesterOpen}
         onClose={() => setIsAddSemesterOpen(false)}
         title="Add Academic Semester"
-        description="Create a new academic term to record coursework and credit units."
+        description="Create an academic term to record coursework and compute your GPA."
       >
         <form onSubmit={handleAddSemester} className="space-y-4">
           <Input
@@ -505,10 +514,10 @@ export function CgpaPage({
             required
           />
           <div className="flex items-center justify-end gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setIsAddSemesterOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsAddSemesterOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="academic">
               Create Semester
             </Button>
           </div>
@@ -520,7 +529,7 @@ export function CgpaPage({
         isOpen={isAddCourseOpen}
         onClose={() => setIsAddCourseOpen(false)}
         title={editingCourseId ? 'Edit Course Record' : 'Add Course Entry'}
-        description="Enter course code, title, credit units, and letter grade."
+        description="Specify course code, optional title, credit units, and letter grade."
       >
         <form onSubmit={handleSaveCourse} className="space-y-4">
           <Input
@@ -557,10 +566,10 @@ export function CgpaPage({
             />
           </div>
           <div className="flex items-center justify-end gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setIsAddCourseOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsAddCourseOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="academic">
               {editingCourseId ? 'Update Course' : 'Save Course'}
             </Button>
           </div>
@@ -572,7 +581,7 @@ export function CgpaPage({
         isOpen={isScaleModalOpen}
         onClose={() => setIsScaleModalOpen(false)}
         title="Select Institution Grading Scale"
-        description="Configure your academic calculation rules. Changes recompute all semesters automatically."
+        description="Choose your institution's grading standard. Calculations update automatically."
       >
         <div className="space-y-3">
           {Object.values(DEFAULT_GRADING_SCALES).map((scale) => {
@@ -581,25 +590,25 @@ export function CgpaPage({
               <div
                 key={scale.id}
                 onClick={() => handleScaleSelect(scale.id)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all duration-150 flex items-start justify-between
+                className={`p-4 rounded-xl border cursor-pointer transition-colors flex items-start justify-between
                   ${isCurrent 
-                    ? 'bg-ghost-200/10 border-ghost-200/40 shadow-ghost-glow' 
-                    : 'bg-[#090B0D] border-white/[0.04] hover:border-ghost-200/20'}`}
+                    ? 'bg-academic-50 border-academic-300' 
+                    : 'bg-white border-border hover:border-gray-300'}`}
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm text-zinc-100">{scale.name}</span>
-                    {isCurrent && <Badge variant="ghost" size="sm">Active</Badge>}
+                    <span className="font-semibold text-sm text-ink">{scale.name}</span>
+                    {isCurrent && <Badge variant="academic" size="sm">Active</Badge>}
                   </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-wrap gap-1.5 mt-2">
                     {scale.grades.map(g => (
-                      <span key={g.letter} className="text-[11px] font-mono text-zinc-400 bg-white/[0.03] px-1.5 py-0.5 rounded">
+                      <span key={g.letter} className="text-[11px] font-mono text-muted bg-gray-100 px-1.5 py-0.5 rounded">
                         {g.letter}={g.points}
                       </span>
                     ))}
                   </div>
                 </div>
-                {isCurrent && <CheckCircle2 className="w-5 h-5 text-ghost-200 shrink-0" />}
+                {isCurrent && <CheckCircle2 className="w-5 h-5 text-academic shrink-0" />}
               </div>
             );
           })}
@@ -611,7 +620,7 @@ export function CgpaPage({
         isOpen={isProjectionModalOpen}
         onClose={() => setIsProjectionModalOpen(false)}
         title="What-If Graduation Target Projection"
-        description="Determine the exact GPA required across your remaining credit units to achieve your target graduation honors."
+        description="Determine the exact GPA required across remaining credit units to achieve target graduation honors."
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -625,7 +634,7 @@ export function CgpaPage({
               onChange={(e) => setTargetCgpa(e.target.value)}
             />
             <Input
-              label="Anticipated Remaining Units"
+              label="Remaining Units"
               type="number"
               min="1"
               max="150"
@@ -634,29 +643,29 @@ export function CgpaPage({
             />
           </div>
 
-          <Button variant="primary" size="md" className="w-full" onClick={handleRunProjection}>
+          <Button variant="academic" size="md" className="w-full" onClick={handleRunProjection}>
             Calculate Required GPA
           </Button>
 
           {projectionResult && (
             <div className={`p-4 rounded-xl border mt-3 ${
               projectionResult.achievable 
-                ? 'bg-emerald-950/20 border-emerald-500/30' 
-                : 'bg-red-950/20 border-red-500/30'
+                ? 'bg-academic-50 border-academic-200' 
+                : 'bg-danger-50 border-danger-100'
             }`}>
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2.5">
                 {projectionResult.achievable ? (
-                  <CheckCircle2 className="w-5 h-5 text-ghost-200 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-academic shrink-0 mt-0.5" />
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
                 )}
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">
+                  <p className="text-sm font-semibold text-ink">
                     {projectionResult.achievable 
                       ? `Required GPA: ${projectionResult.requiredGpa.toFixed(2)}` 
-                      : 'Target Impossible'}
+                      : 'Target Not Achievable'}
                   </p>
-                  <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
                     {projectionResult.message}
                   </p>
                 </div>

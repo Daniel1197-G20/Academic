@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cookie, Shield, Check, Lock, Info, Save } from 'lucide-react';
+import { Cookie, Shield, Lock, Save } from 'lucide-react';
 import { Modal, Button, Badge } from '../ui';
 import { api } from '../../services/api/client';
 
@@ -75,32 +75,32 @@ export function CookieSettingsModal({
       onClose={onClose}
       title="Cookie & Privacy Settings"
       description="Manage non-essential technologies according to your privacy preferences. Strictly necessary technologies remain active to deliver core application services."
-      size="lg"
+      maxWidth="max-w-xl"
     >
-      <div className="space-y-4 text-xs text-zinc-300">
+      <div className="space-y-4 text-xs text-ink">
         {/* Category 1: Strictly Necessary */}
-        <div className="p-4 rounded-xl bg-[#090C0F] border border-white/[0.06] space-y-2">
+        <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-ghost-200" />
-              <span className="font-semibold text-zinc-100 text-sm">Strictly Necessary Technologies</span>
+              <Lock className="w-4 h-4 text-academic" />
+              <span className="font-semibold text-ink text-sm">Strictly Necessary Technologies</span>
             </div>
-            <Badge variant="ghost" size="sm">Always Active</Badge>
+            <Badge variant="academic" size="sm">Always Active</Badge>
           </div>
-          <p className="text-zinc-400 text-xs leading-relaxed">
-            These technologies are strictly required to operate the Student Academic Platform securely. They maintain your authenticated session, store cryptographic HMAC session tokens, prevent CSRF attacks, and enable real-time database synchronization. Because the platform cannot operate without them, they cannot be turned off.
+          <p className="text-muted text-xs leading-relaxed">
+            Required to operate the Academic Platform securely. They maintain authenticated sessions, secure API communications, and enable local calculations. These cannot be disabled.
           </p>
-          <div className="text-[10px] font-mono text-zinc-500 pt-1">
-            Keys: <span className="text-zinc-400">academic_platform_token</span>, <span className="text-zinc-400">auth_token</span>
+          <div className="text-[11px] font-mono text-muted pt-1">
+            Keys: <span className="text-ink">academic_platform_token</span>, <span className="text-ink">auth_token</span>
           </div>
         </div>
 
         {/* Category 2: Analytics Technologies */}
-        <div className="p-4 rounded-xl bg-[#090C0F] border border-white/[0.06] space-y-2">
+        <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-zinc-400" />
-              <span className="font-semibold text-zinc-100 text-sm">Analytics & Diagnostic Technologies</span>
+              <Shield className="w-4 h-4 text-muted" />
+              <span className="font-semibold text-ink text-sm">Diagnostic & Performance Telemetry</span>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -109,20 +109,20 @@ export function CookieSettingsModal({
                 onChange={(e) => setAnalyticsEnabled(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-ghost-200"></div>
+              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-academic"></div>
             </label>
           </div>
-          <p className="text-zinc-400 text-xs leading-relaxed">
-            Optional technologies that assist us in understanding platform performance, measuring screen transition latency, and capturing uncaught exceptions. No personal grades or academic records are transmitted in analytics telemetry.
+          <p className="text-muted text-xs leading-relaxed">
+            Optional anonymous telemetry that helps us identify application crashes, rendering bottlenecks, and response latency. No academic grades or course names are ever transmitted.
           </p>
         </div>
 
         {/* Category 3: Functional Preferences */}
-        <div className="p-4 rounded-xl bg-[#090C0F] border border-white/[0.06] space-y-2">
+        <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Cookie className="w-4 h-4 text-zinc-400" />
-              <span className="font-semibold text-zinc-100 text-sm">Functional & Interface Preferences</span>
+              <Cookie className="w-4 h-4 text-muted" />
+              <span className="font-semibold text-ink text-sm">Interface & Layout Preferences</span>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -131,22 +131,22 @@ export function CookieSettingsModal({
                 onChange={(e) => setFunctionalEnabled(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-ghost-200"></div>
+              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-academic"></div>
             </label>
           </div>
-          <p className="text-zinc-400 text-xs leading-relaxed">
-            Optional technologies that remember your localized user interface states, such as sidebar collapse mode, active dashboard filters, and selected grading scale views.
+          <p className="text-muted text-xs leading-relaxed">
+            Optional technologies that remember user interface states such as sidebar collapse mode, active tabs, and last selected grading scale view.
           </p>
         </div>
 
         {/* Action Controls */}
-        <div className="pt-3 border-t border-white/[0.04] flex items-center justify-between">
-          <span className="text-[11px] font-mono text-zinc-500">
-            Policy Version: 1.0 • No advertising trackers used
+        <div className="pt-3 border-t border-border flex items-center justify-between">
+          <span className="text-[11px] text-muted">
+            Policy Version: 1.0 • No advertising trackers
           </span>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={onClose}
               disabled={saving}
@@ -154,7 +154,7 @@ export function CookieSettingsModal({
               Cancel
             </Button>
             <Button
-              variant="primary"
+              variant="academic"
               size="sm"
               onClick={handleSave}
               loading={saving}

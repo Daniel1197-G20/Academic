@@ -36,25 +36,26 @@ export function ToastProvider({ children }) {
       <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
         {toasts.map((toast) => {
           const icons = {
-            success: <CheckCircle2 className="w-4 h-4 text-ghost-200 shrink-0" />,
-            error: <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />,
-            info: <Info className="w-4 h-4 text-blue-400 shrink-0" />
+            success: <CheckCircle2 className="w-4 h-4 text-academic shrink-0" />,
+            error: <AlertCircle className="w-4 h-4 text-danger shrink-0" />,
+            info: <Info className="w-4 h-4 text-navy-400 shrink-0" />
           };
 
           return (
             <div
               key={toast.id}
-              className="pointer-events-auto liquid-glass border border-ghost-200/20 rounded-xl p-3.5 shadow-2xl flex items-start gap-3 animate-fade-in"
+              className="pointer-events-auto bg-white border border-border rounded-xl p-3.5 shadow-modal flex items-start gap-3 animate-fade-in"
             >
               {icons[toast.type]}
               <div className="flex-1 min-w-0">
-                {toast.title && <p className="text-xs font-semibold text-zinc-100">{toast.title}</p>}
-                <p className="text-xs text-zinc-300 leading-snug">{toast.message}</p>
+                {toast.title && <p className="text-xs font-semibold text-ink">{toast.title}</p>}
+                <p className="text-xs text-muted leading-snug">{toast.message}</p>
               </div>
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                className="text-zinc-500 hover:text-zinc-300 p-0.5"
+                className="text-muted hover:text-ink p-0.5"
+                aria-label="Dismiss toast"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
