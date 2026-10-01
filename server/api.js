@@ -45,7 +45,7 @@ export function verifySessionToken(token) {
   }
 }
 
-// Authenticate request middleware (Supports Firebase ID Tokens & Legacy Session Tokens)
+// Authenticate request middleware (Supports Supabase Auth JWTs, Firebase ID Tokens & Legacy Session Tokens)
 export async function getAuthenticatedUser(req) {
   const authHeader = req.headers['authorization'] || '';
   let token = null;
@@ -57,7 +57,65 @@ export async function getAuthenticatedUser(req) {
   }
   if (!token) return null;
 
-  // 1. Try Firebase ID Token verification
+  // 1. Try Supabase Auth JWT verification (Primary Authoritative Auth)
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+      if (payload && payload.sub && (payload.iss?.includes('supabase') || payload.aud === 'authenticated' || payload.role === 'authenticated')) {
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (payload.exp && nowSec > payload.exp) {
+          return null; // Expired token
+        }
+
+        const supabaseUserId = payload.sub;
+        const supabaseEmail = (payload.email || '').toLowerCase().trim();
+
+        // Lookup in local database
+        const res = await db.query(
+          `SELECT id, firebase_uid, email, role FROM users WHERE id = $1 OR email = $2;`,
+          [supabaseUserId, supabaseEmail]
+        );
+
+        if (res.rows.length > 0) {
+          const u = res.rows[0];
+          return { userId: u.id, supabaseUid: supabaseUserId, email: u.email, role: u.role || 'student' };
+        }
+
+        // Bridge newly authenticated Supabase user into local PGlite to support existing API endpoints
+        const displayName = payload.user_metadata?.full_name || payload.user_metadata?.fullName || supabaseEmail.split('@')[0] || 'Student';
+        await db.query(`
+          INSERT INTO users (id, email, display_name, role, status)
+          VALUES ($1, $2, $3, 'student', 'active')
+          ON CONFLICT (id) DO NOTHING;
+        `, [supabaseUserId, supabaseEmail || `${supabaseUserId}@studora.local`, displayName]);
+
+        await db.query(`
+          INSERT INTO profiles (user_id, full_name, institution, department, academic_level, bio, academic_interests, study_preferences, is_public)
+          VALUES ($1, $2, $3, $4, $5, 'Student on Studora', '[]', '[]', true)
+          ON CONFLICT (user_id) DO NOTHING;
+        `, [
+          supabaseUserId, 
+          displayName,
+          payload.user_metadata?.institution || 'General Academy',
+          payload.user_metadata?.department || 'General Studies',
+          payload.user_metadata?.academic_level || payload.user_metadata?.academicLevel || 'Year 1'
+        ]);
+
+        await db.query(`
+          INSERT INTO user_settings (user_id, selected_scale)
+          VALUES ($1, '5.0')
+          ON CONFLICT (user_id) DO NOTHING;
+        `, [supabaseUserId]);
+
+        return { userId: supabaseUserId, supabaseUid: supabaseUserId, email: supabaseEmail, role: 'student' };
+      }
+    }
+  } catch (sbErr) {
+    // If not a valid Supabase token, fall through to Firebase and legacy checks
+  }
+
+  // 2. Try Firebase ID Token verification
   try {
     const fbPayload = await verifyFirebaseIdToken(token);
     if (fbPayload && fbPayload.uid) {

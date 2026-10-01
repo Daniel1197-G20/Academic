@@ -476,5 +476,20 @@
 
 /* Safe area bottom padding for mobile devices */
 .safe-area-pb {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+.safe-area-pt {
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+}
+
+/* Mobile bottom navigation spacing to prevent content obstruction */
+.mobile-nav-pb {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .mobile-nav-pb {
+    padding-bottom: 2rem;
+  }
 }

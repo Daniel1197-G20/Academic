@@ -29,6 +29,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NotFoundPage } from './components/common/NotFoundPage';
 import { PageLoader } from './components/common/PageLoader';
 import { api } from './services/api/client';
+import { supabase } from './lib/supabase/client';
 import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
 import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, Video, BookOpen } from 'lucide-react';
 import { BillingProvider } from './context/BillingContext';
@@ -169,7 +170,7 @@ function AppContent() {
     }
   };
 
-  // Stable Firebase / API Session Verification with Safety Timeout
+  // Supabase Auth Authoritative Session Verification & Lifecycle Listener
   useEffect(() => {
     let isMounted = true;
 
@@ -181,17 +182,103 @@ function AppContent() {
       }
     }, 4000);
 
-    // Single source of auth listener
-    const unsubscribe = onAuthStateChangedListener(({ user, profile }) => {
+    // 1. Authoritative Supabase Auth State Change Listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
-      setCurrentUser(user);
-      setUserProfile(profile);
-      setAuthChecking(false);
-      setShowSplash(false);
+
+      if (event === 'SIGNED_OUT' || !session) {
+        if (event === 'SIGNED_OUT') {
+          setCurrentUser(null);
+          setUserProfile(null);
+          api.logout();
+          notifyAuthStateChange(null, null);
+          setAuthChecking(false);
+          setShowSplash(false);
+        }
+      } else if (session?.user) {
+        api.setToken(session.access_token);
+
+        let profile = null;
+        let scale = '5.0';
+        try {
+          const [profRes, setRes] = await Promise.all([
+            supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
+            supabase.from('user_settings').select('selected_scale').eq('user_id', session.user.id).maybeSingle()
+          ]);
+          if (profRes.data) profile = profRes.data;
+          if (setRes.data?.selected_scale) scale = setRes.data.selected_scale;
+        } catch (fetchErr) {
+          console.warn('Notice loading Supabase user profile:', fetchErr);
+        }
+
+        const userObj = {
+          id: session.user.id,
+          email: session.user.email,
+          role: 'student'
+        };
+
+        const profObj = profile || {
+          id: session.user.id,
+          full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Student',
+          institution: session.user.user_metadata?.institution || 'General Academy',
+          department: session.user.user_metadata?.department || 'General Studies',
+          academic_level: session.user.user_metadata?.academic_level || 'Year 1'
+        };
+
+        setCurrentUser(userObj);
+        setUserProfile(profObj);
+        setSelectedScale(scale);
+        notifyAuthStateChange(userObj, profObj);
+        setAuthChecking(false);
+        setShowSplash(false);
+      }
     });
 
+    // 2. Initial Session Check (Supabase Auth first, then Legacy API fallback)
     async function checkAuth() {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          api.setToken(session.access_token);
+
+          let profile = null;
+          let scale = '5.0';
+          try {
+            const [profRes, setRes] = await Promise.all([
+              supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
+              supabase.from('user_settings').select('selected_scale').eq('user_id', session.user.id).maybeSingle()
+            ]);
+            if (profRes.data) profile = profRes.data;
+            if (setRes.data?.selected_scale) scale = setRes.data.selected_scale;
+          } catch (fetchErr) {
+            console.warn('Notice loading initial Supabase user details:', fetchErr);
+          }
+
+          if (isMounted) {
+            const userObj = {
+              id: session.user.id,
+              email: session.user.email,
+              role: 'student'
+            };
+            const profObj = profile || {
+              id: session.user.id,
+              full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Student',
+              institution: session.user.user_metadata?.institution || 'General Academy',
+              department: session.user.user_metadata?.department || 'General Studies',
+              academic_level: session.user.user_metadata?.academic_level || 'Year 1'
+            };
+
+            setCurrentUser(userObj);
+            setUserProfile(profObj);
+            setSelectedScale(scale);
+            notifyAuthStateChange(userObj, profObj);
+            setAuthChecking(false);
+            setShowSplash(false);
+          }
+          return;
+        }
+
+        // Fallback: Legacy Session Token check (for sandbox demo account)
         const token = api.getToken();
         if (!token) {
           if (isMounted) {
@@ -202,6 +289,7 @@ function AppContent() {
           }
           return;
         }
+
         const me = await api.getMe();
         if (isMounted) {
           setCurrentUser(me.user);
@@ -211,7 +299,7 @@ function AppContent() {
           setShowSplash(false);
         }
       } catch (err) {
-        console.warn('Session expired or invalid, logging out', err);
+        console.warn('Session expired or invalid, clearing session', err);
         api.logout();
         if (isMounted) {
           setCurrentUser(null);
@@ -227,7 +315,7 @@ function AppContent() {
     return () => {
       isMounted = false;
       clearTimeout(safetyTimeout);
-      unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -315,7 +403,12 @@ function AppContent() {
   };
 
   // Handle Logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Supabase signOut notice:', e);
+    }
     api.logout();
     setCurrentUser(null);
     setUserProfile(null);

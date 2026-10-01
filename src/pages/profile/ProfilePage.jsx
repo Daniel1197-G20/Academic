@@ -14,7 +14,9 @@ import {
   Cookie, 
   Mail, 
   AlertTriangle,
-  CreditCard 
+  CreditCard,
+  LogOut,
+  ChevronRight
 } from 'lucide-react';
 import { Button, Input, Badge, Modal, Avatar, PageHeader, Tabs } from '../../components/ui';
 import { api } from '../../services/api/client';
@@ -27,9 +29,10 @@ export function ProfilePage({
   onOpenCookieSettings, 
   onNavigateLegal,
   onNavigatePricing,
+  onLogout,
   showToast 
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('academic'); // 'academic' | 'subscription' | 'privacy'
+  const [activeSubTab, setActiveSubTab] = useState('academic'); // 'academic' | 'subscription' | 'privacy' | 'account'
 
   // Academic Form States
   const [fullName, setFullName] = useState(userProfile?.full_name || '');
@@ -57,12 +60,30 @@ export function ProfilePage({
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // Account Logout Modal States
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
   // Account Deletion Modal States
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  const handleConfirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      if (onLogout) {
+        await onLogout();
+      }
+    } catch (err) {
+      if (showToast) showToast({ type: 'error', title: 'Logout Notice', message: err.message });
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutModal(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();

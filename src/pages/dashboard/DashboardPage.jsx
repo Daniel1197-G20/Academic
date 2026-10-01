@@ -9,7 +9,8 @@ import {
   CheckSquare,
   ArrowUpRight,
   TrendingUp,
-  Clock
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import { 
   Card, 
@@ -118,19 +119,19 @@ export function DashboardPage({
   const studentFirstName = userProfile?.full_name?.split(' ')[0] || 'Daniel';
 
   return (
-    <div className="space-y-8 pb-20 md:pb-8">
+    <div className="space-y-6 sm:space-y-8 pb-4">
       {/* 1. Header Greeting & Academic Context (Stage 1) */}
-      <div className="staged-1 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border pb-6">
+      <div className="staged-1 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border pb-5 sm:pb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
             {greeting}, {studentFirstName}.
           </h1>
-          <p className="text-sm text-muted mt-1">
+          <p className="text-xs sm:text-sm text-muted mt-0.5 sm:mt-1">
             Your academic progress at a glance.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="hidden sm:flex items-center gap-2.5">
           <Button
             variant="secondary"
             size="sm"
@@ -150,6 +151,268 @@ export function DashboardPage({
         </div>
       </div>
 
+      {/* =================================================================== */}
+      {/* MOBILE RECOMPOSED DASHBOARD HIERARCHY (< lg)                        */}
+      {/* =================================================================== */}
+      <div className="lg:hidden space-y-5">
+        {/* Mobile Snapshot (Level 2 Raised Card) */}
+        <div className="bg-white border border-border rounded-hero p-4 shadow-tactile-raised space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider font-mono">
+              Academic Snapshot
+            </span>
+            <Badge variant="academic" size="sm">
+              {cumulative.classificationName || 'Honors'}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            {/* CGPA */}
+            <div 
+              onClick={() => onNavigateTab('cgpa')}
+              className="p-2.5 rounded-xl bg-canvas border border-border/80 shadow-tactile-surface flex flex-col justify-between cursor-pointer active:translate-y-[1px] transition-all"
+            >
+              <span className="text-[10px] font-semibold text-muted uppercase">CGPA</span>
+              <div className="my-1">
+                <span className="text-lg sm:text-xl font-extrabold text-ink font-mono tracking-tight">
+                  {cumulative.cgpa.toFixed(2)}
+                </span>
+                <span className="text-[10px] text-muted font-mono block">/{activeScale.maxScale.toFixed(1)}</span>
+              </div>
+              <span className="text-[10px] text-academic font-medium truncate">
+                {semesterDelta !== null ? (semesterDelta >= 0 ? `+${semesterDelta.toFixed(2)}` : `${semesterDelta.toFixed(2)}`) : 'Active'}
+              </span>
+            </div>
+
+            {/* Current Semester */}
+            <div 
+              onClick={() => onNavigateTab('cgpa')}
+              className="p-2.5 rounded-xl bg-canvas border border-border/80 shadow-tactile-surface flex flex-col justify-between cursor-pointer active:translate-y-[1px] transition-all"
+            >
+              <span className="text-[10px] font-semibold text-muted uppercase">Semester</span>
+              <div className="my-1">
+                <span className="text-xs font-bold text-ink truncate block">
+                  {currentSemester ? currentSemester.semesterName : 'Semester 1'}
+                </span>
+                <span className="text-[10px] text-muted font-mono block">
+                  {cumulative.totalCreditUnits} Units
+                </span>
+              </div>
+              <span className="text-[10px] text-muted font-medium truncate">
+                {currentSemester ? currentSemester.academicYear : 'Year 1'}
+              </span>
+            </div>
+
+            {/* Study Streak */}
+            <div 
+              onClick={() => onNavigateTab('study')}
+              className="p-2.5 rounded-xl bg-canvas border border-border/80 shadow-tactile-surface flex flex-col justify-between cursor-pointer active:translate-y-[1px] transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-muted uppercase">Streak</span>
+                <Flame className="w-3 h-3 text-gold-600 fill-gold-600 shrink-0 streak-breathing" />
+              </div>
+              <div className="my-1">
+                <span className="text-lg sm:text-xl font-extrabold text-gold-700 font-mono tracking-tight">
+                  {streakData.streak}d
+                </span>
+                <span className="text-[10px] text-muted block">Active</span>
+              </div>
+              <span className="text-[10px] text-muted font-medium truncate">
+                {streakData.totalHours}h study
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Continue Studying (Level 2 Raised Card) */}
+        <div className="bg-white border border-border rounded-hero p-4 shadow-tactile-raised space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider font-mono">
+              Continue Studying
+            </span>
+            {activeStudyItem && (
+              <Badge variant="neutral" size="sm">{activeStudyItem.subject}</Badge>
+            )}
+          </div>
+          {activeStudyItem ? (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-bold text-ink truncate">
+                  {activeStudyItem.subject}
+                </h3>
+                <p className="text-xs text-muted mt-0.5 truncate">
+                  Topic {activeStudyItem.completedCount + 1} of {activeStudyItem.totalTopics}: <span className="text-ink font-medium">{activeStudyItem.topic.title}</span>
+                </p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs text-muted">
+                  <span>Course Progress</span>
+                  <span className="font-mono font-semibold text-ink">{activeStudyItem.progress}%</span>
+                </div>
+                <div className="w-full tactile-track h-2">
+                  <div className="h-full bg-academic rounded-track transition-all duration-300" style={{ width: `${activeStudyItem.progress}%` }} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onNavigateTab('study')}
+                  className="flex-1 min-h-[40px]"
+                >
+                  View Plan
+                </Button>
+                <Button
+                  variant="academic"
+                  size="sm"
+                  onClick={() => onToggleTopic(activeStudyItem.topic.id)}
+                  icon={CheckSquare}
+                  className="flex-1 min-h-[40px]"
+                >
+                  Mark Complete
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-3 text-center space-y-2">
+              <CheckCircle2 className="w-6 h-6 text-academic mx-auto" />
+              <p className="text-xs text-muted">All planned topics completed!</p>
+              <Button variant="academic" size="sm" onClick={() => onNavigateTab('study')} icon={Plus} className="min-h-[40px]">
+                Create Plan
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Today's Progress (Level 2 Raised Card) */}
+        <div className="bg-white border border-border rounded-hero p-4 shadow-tactile-raised space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider font-mono">
+              Today's Progress
+            </span>
+            <span className="text-xs font-mono font-semibold text-academic">{completionRate}% Completed</span>
+          </div>
+          <div className="w-full tactile-track h-2">
+            <div className="h-full bg-academic rounded-track transition-all duration-300" style={{ width: `${completionRate}%` }} />
+          </div>
+          <p className="text-xs text-muted">
+            <strong className="text-ink font-mono">{completedTasksCount}</strong> of <strong className="text-ink font-mono">{totalTasksCount}</strong> syllabus topics completed.
+          </p>
+        </div>
+
+        {/* Upcoming Tasks */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider font-mono">
+              Upcoming Schedule
+            </span>
+            <button 
+              type="button" 
+              onClick={() => onNavigateTab('study')} 
+              className="text-xs font-semibold text-academic flex items-center gap-1"
+            >
+              All ({todayTasks.length}) <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="bg-white border border-border rounded-card divide-y divide-border shadow-tactile-raised overflow-hidden">
+            {todayTasks.length === 0 ? (
+              <div className="p-4 text-center text-xs text-muted">No scheduled tasks today.</div>
+            ) : (
+              todayTasks.slice(0, 4).map((task) => (
+                <div key={task.id} className="p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <TactileCheckbox
+                      checked={task.isCompleted}
+                      onChange={() => onToggleTopic(task.id)}
+                      aria-label={`Mark ${task.title} as completed`}
+                    />
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold truncate ${task.isCompleted ? 'line-through text-muted' : 'text-ink'}`}>
+                        {task.title}
+                      </p>
+                      <p className="text-[11px] text-muted truncate">
+                        {task.timeSlot} • {task.subject}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={task.isCompleted ? 'neutral' : 'academic'} size="sm">
+                    {task.isCompleted ? 'Done' : 'Pending'}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Quick Actions (Level 3 Tactile Controls) */}
+        <div className="space-y-2.5 pt-1">
+          <span className="text-[11px] font-bold text-muted uppercase tracking-wider font-mono">
+            Quick Actions
+          </span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => onNavigateTab('cgpa')}
+              className="p-3 rounded-xl bg-white border border-border shadow-tactile-surface hover:shadow-tactile-raised active:translate-y-[1px] transition-all text-left flex items-center gap-2.5 select-none min-h-[48px]"
+            >
+              <div className="w-8 h-8 rounded-lg bg-academic-50 border border-academic-200 text-academic flex items-center justify-center shrink-0">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-ink block truncate">CGPA</span>
+                <span className="text-[10px] text-muted block truncate">Calculate grades</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('study')}
+              className="p-3 rounded-xl bg-white border border-border shadow-tactile-surface hover:shadow-tactile-raised active:translate-y-[1px] transition-all text-left flex items-center gap-2.5 select-none min-h-[48px]"
+            >
+              <div className="w-8 h-8 rounded-lg bg-navy-50 border border-navy-200 text-navy flex items-center justify-center shrink-0">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-ink block truncate">Study Plan</span>
+                <span className="text-[10px] text-muted block truncate">Daily syllabus</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('test-prep')}
+              className="p-3 rounded-xl bg-white border border-border shadow-tactile-surface hover:shadow-tactile-raised active:translate-y-[1px] transition-all text-left flex items-center gap-2.5 select-none min-h-[48px]"
+            >
+              <div className="w-8 h-8 rounded-lg bg-warning-50 border border-warning-200 text-warning-700 flex items-center justify-center shrink-0">
+                <CheckSquare className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-ink block truncate">Test Prep</span>
+                <span className="text-[10px] text-muted block truncate">Exam drills</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('ai')}
+              className="p-3 rounded-xl bg-white border border-border shadow-tactile-surface hover:shadow-tactile-raised active:translate-y-[1px] transition-all text-left flex items-center gap-2.5 select-none min-h-[48px]"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gold-50 border border-gold-200 text-gold-700 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-ink block truncate">AI Tutor</span>
+                <span className="text-[10px] text-muted block truncate">Course assistance</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* =================================================================== */}
+      {/* DESKTOP SIGNATURE COMMAND CENTER (hidden on < lg)                   */}
+      {/* =================================================================== */}
+      <div className="hidden lg:block space-y-8">
       {/* 2. Command Center Hero: CURRENT CGPA | CONTINUE STUDYING (Stage 2) */}
       <div className="staged-2 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* CURRENT CGPA — SIGNATURE ELEMENT (Level 2 Raised Hero) */}
@@ -443,6 +706,7 @@ export function DashboardPage({
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

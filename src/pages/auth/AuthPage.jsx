@@ -149,39 +149,219 @@ export function AuthPage({
     e.preventDefault();
     setError('');
 
-    if (isRegistering && !termsAccepted) {
-      setError('You must agree to the Terms & Conditions and acknowledge the Privacy Policy to create an account.');
-      return;
-    }
+    const trimmedEmail = email.toLowerCase().trim();
 
-    setLoading(true);
-
-    try {
-      const endpoint = isRegistering ? '/api/auth/register' : '/api/auth/login';
-      const body = isRegistering
-        ? { email, password, fullName, institution, department, academicLevel, termsAccepted, analyticsConsent }
-        : { email, password };
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed');
+    if (isRegistering) {
+      if (!termsAccepted) {
+        setError('You must agree to the Terms & Conditions and acknowledge the Privacy Policy to create an account.');
+        return;
+      }
+      if (!fullName.trim()) {
+        setError('Please enter your full name.');
+        return;
+      }
+      if (!password || password.length < 6) {
+        setError('Password must be at least 6 characters.');
+        return;
       }
 
-      if (data.token) {
-        api.setToken(data.token);
-      }
+      setLoading(true);
 
-      onLoginSuccess(data);
-    } catch (err) {
-      setError(err.message || 'An error occurred during authentication.');
-    } finally {
-      setLoading(false);
+      try {
+        // Supabase Auth signUp
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password,
+          options: {
+            data: {
+              fullName: fullName.trim(),
+              full_name: fullName.trim(),
+              institution: institution.trim() || 'General Academy',
+              department: department.trim() || 'General Studies',
+              academicLevel: academicLevel || 'Year 1',
+              academic_level: academicLevel || 'Year 1'
+            }
+          }
+        });
+
+        if (signUpError) {
+          throw new Error(signUpError.message || 'Registration failed.');
+        }
+
+        const user = authData.user;
+        if (!user) {
+          throw new Error('Registration failed. Please try again.');
+        }
+
+        // STEP 10: Legal Consent Records (associated with authenticated Supabase user)
+        try {
+          const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'browser';
+          const consentPayload = [
+            {
+              id: `c_${Date.now()}_terms`,
+              user_id: user.id,
+              consent_type: 'terms_and_conditions',
+              consent_status: 'granted',
+              policy_version: '1.0',
+              context: 'registration',
+              user_agent: userAgent
+            },
+            {
+              id: `c_${Date.now()}_privacy`,
+              user_id: user.id,
+              consent_type: 'privacy_policy',
+              consent_status: 'granted',
+              policy_version: '1.0',
+              context: 'registration',
+              user_agent: userAgent
+            }
+          ];
+
+          // Record optional analytics consent only if explicitly opted in
+          if (analyticsConsent) {
+            consentPayload.push({
+              id: `c_${Date.now()}_analytics`,
+              user_id: user.id,
+              consent_type: 'analytics_cookies',
+              consent_status: 'granted',
+              policy_version: '1.0',
+              context: 'registration',
+              user_agent: userAgent
+            });
+          }
+
+          await supabase.from('consent_records').insert(consentPayload);
+        } catch (consentErr) {
+          console.warn('Consent recording notice:', consentErr.message);
+        }
+
+        // Fetch user profile provisioned by database trigger
+        let profile = null;
+        let selectedScale = '5.0';
+        try {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+          profile = prof;
+
+          const { data: settings } = await supabase
+            .from('user_settings')
+            .select('selected_scale')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (settings?.selected_scale) {
+            selectedScale = settings.selected_scale;
+          }
+        } catch (fetchErr) {
+          console.warn('Profile fetch notice:', fetchErr.message);
+        }
+
+        if (!profile) {
+          profile = {
+            id: user.id,
+            full_name: fullName.trim(),
+            institution: institution.trim() || 'General Academy',
+            department: department.trim() || 'General Studies',
+            academic_level: academicLevel || 'Year 1'
+          };
+        }
+
+        const session = authData.session;
+        if (session?.access_token) {
+          api.setToken(session.access_token);
+        }
+
+        onLoginSuccess({
+          token: session?.access_token,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: 'student'
+          },
+          profile,
+          selectedScale
+        });
+      } catch (err) {
+        setError(err.message || 'An error occurred during registration.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Login Mode
+      setLoading(true);
+
+      try {
+        // Authoritative: Authenticate against Supabase Auth
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password
+        });
+
+        if (signInError) {
+          // If this is the development demo account, allow fallback to local API sandbox
+          if (trimmedEmail === 'alexander.vance@tech-academy.edu') {
+            const response = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: trimmedEmail, password })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || 'Authentication failed');
+            }
+            if (data.token) {
+              api.setToken(data.token);
+            }
+            onLoginSuccess(data);
+            return;
+          }
+
+          throw new Error(signInError.message || 'Invalid email or password.');
+        }
+
+        const user = authData.user;
+        const session = authData.session;
+
+        if (session?.access_token) {
+          api.setToken(session.access_token);
+        }
+
+        // Fetch user profile and settings from authoritative Supabase database
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const { data: settings } = await supabase
+          .from('user_settings')
+          .select('selected_scale')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        onLoginSuccess({
+          token: session?.access_token,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: 'student'
+          },
+          profile: profile || {
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+            institution: 'General Academy',
+            department: 'General Studies',
+            academic_level: 'Year 1'
+          },
+          selectedScale: settings?.selected_scale || '5.0'
+        });
+      } catch (err) {
+        setError(err.message || 'Invalid email or password.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
