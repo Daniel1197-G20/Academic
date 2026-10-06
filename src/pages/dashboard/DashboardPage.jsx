@@ -10,7 +10,9 @@ import {
   ArrowUpRight,
   TrendingUp,
   Clock,
-  Sparkles
+  Sparkles,
+  Compass,
+  Award
 } from 'lucide-react';
 import { 
   Card, 
@@ -378,6 +380,21 @@ export function DashboardPage({
               </div>
             </button>
 
+            {/* Find a Tutor — primary marketplace CTA */}
+            <button
+              type="button"
+              onClick={() => onNavigateTab('tutors')}
+              className="p-3 rounded-xl bg-white border border-border shadow-tactile-surface hover:shadow-tactile-raised active:translate-y-[1px] transition-all text-left flex items-center gap-2.5 select-none min-h-[48px]"
+            >
+              <div className="w-8 h-8 rounded-lg bg-academic-50 border border-academic-200 text-academic flex items-center justify-center shrink-0">
+                <Compass className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-ink block truncate">Find a Tutor</span>
+                <span className="text-[10px] text-muted block truncate">Marketplace</span>
+              </div>
+            </button>
+
             <button
               type="button"
               onClick={() => onNavigateTab('test-prep')}
@@ -405,6 +422,23 @@ export function DashboardPage({
                 <span className="text-[10px] text-muted block truncate">Course assistance</span>
               </div>
             </button>
+
+            {/* Become a Tutor — only shown to students, distinct from Find a Tutor */}
+            {(!userProfile?.role || userProfile.role === 'student') && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('become-tutor')}
+                className="p-3 rounded-xl bg-white border border-border shadow-tactile-surface hover:shadow-tactile-raised active:translate-y-[1px] transition-all text-left flex items-center gap-2.5 select-none min-h-[48px]"
+              >
+                <div className="w-8 h-8 rounded-lg bg-navy-50 border border-navy-200 text-navy-700 flex items-center justify-center shrink-0">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-ink block truncate">Become Tutor</span>
+                  <span className="text-[10px] text-muted block truncate">Apply & earn</span>
+                </div>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -717,6 +751,89 @@ export function DashboardPage({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 5. Tutor Marketplace CTAs — Find a Tutor vs Become a Tutor */}
+      <div className="staged-5 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-ink">Tutoring</h2>
+          <p className="text-xs text-muted">Two separate journeys — find help, or start teaching</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Find a Tutor */}
+          <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-academic-100 border border-academic-200 flex items-center justify-center text-academic shrink-0 shadow-tactile-surface">
+              <Compass className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-ink">Find a Tutor</h3>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Browse verified Studora tutors, filter by subject, and book a session to get the help you need.
+              </p>
+              <div className="mt-3">
+                <Button
+                  variant="academic"
+                  size="sm"
+                  onClick={() => onNavigateTab('tutors')}
+                  icon={ArrowRight}
+                  className="shadow-tactile-btn"
+                >
+                  Browse Tutors
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Become a Tutor — only for students */}
+          {(!userProfile?.role || userProfile.role === 'student') && (
+            <div className="bg-canvas border border-border rounded-card p-6 shadow-tactile-surface flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-navy-50 border border-navy-200 flex items-center justify-center text-navy-700 shrink-0 shadow-tactile-surface">
+                <Award className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-ink">Become a Tutor</h3>
+                <p className="text-xs text-muted mt-1 leading-relaxed">
+                  Apply to join the Studora tutor marketplace. Complete onboarding, pass the assessment, and start teaching.
+                </p>
+                <div className="mt-3">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onNavigateTab('become-tutor')}
+                    icon={ArrowRight}
+                  >
+                    Apply to Teach
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tutor dashboard shortcut — only for approved tutors */}
+          {userProfile?.role === 'tutor' && (
+            <div className="bg-academic-50 border border-academic-200 rounded-card p-6 shadow-tactile-surface flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-academic-100 border border-academic-200 flex items-center justify-center text-academic shrink-0 shadow-tactile-surface">
+                <Award className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-ink">Tutor Workspace</h3>
+                <p className="text-xs text-muted mt-1 leading-relaxed">
+                  You are an approved Studora tutor. Manage your profile, subjects, availability, and bookings.
+                </p>
+                <div className="mt-3">
+                  <Button
+                    variant="academic"
+                    size="sm"
+                    onClick={() => onNavigateTab('become-tutor')}
+                    icon={ArrowRight}
+                  >
+                    Open Tutor Dashboard
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       </div>

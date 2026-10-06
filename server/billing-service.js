@@ -6,10 +6,19 @@ import { db } from './db.js';
 // Server-side Paystack Configuration (NEVER exposed to frontend)
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_academic_platform_mock_key_2026';
 const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_academic_platform_mock_key_2026';
-const PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET || PAYSTACK_SECRET_KEY;
 const PAYSTACK_BASE_URL = process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
 
 export const IS_TEST_MODE = PAYSTACK_SECRET_KEY.startsWith('sk_test_') || PAYSTACK_SECRET_KEY.includes('mock');
+
+// PAYSTACK_WEBHOOK_SECRET must be explicitly configured.
+// It must NOT fall back to PAYSTACK_SECRET_KEY because that key is present
+// in the public repository as a dev placeholder — any fallback would make
+// webhook signatures trivially forgeable in a production deploy.
+if (!process.env.PAYSTACK_WEBHOOK_SECRET && !IS_TEST_MODE) {
+  throw new Error('[server/billing-service.js] Missing required environment variable: PAYSTACK_WEBHOOK_SECRET');
+}
+// In test/dev mode a missing secret is tolerated — live webhooks are not expected.
+const PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET || null;
 
 /**
  * Helper to make HTTPS requests to Paystack API

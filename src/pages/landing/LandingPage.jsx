@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Card, TactileCheckbox, ProgressBar, AnimatedNumber } from '../../components/ui';
 import { useBilling } from '../../context/BillingContext';
+import { useTutorMarketplace } from '../../hooks/useTutorMarketplace';
 import { api } from '../../services/api/client';
 
 export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) {
@@ -245,58 +246,83 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answerSubmitted, setAnswerSubmitted] = useState(false);
 
-  // Interactive Demo State: Tutor filters
+  // Interactive Demo State: Tutor marketplace preview
+  // Fetches live approved tutors from Supabase tutor_profiles via useTutorMarketplace
+  const { tutors: liveTutors } = useTutorMarketplace();
   const [tutorSubjectFilter, setTutorSubjectFilter] = useState('All');
+
   const demoTutors = [
     {
       id: 'tut_1',
-      name: 'Dr. Elena Rostova',
-      title: 'Senior Fellow • Algorithms & Distributed Systems',
-      department: 'Computer Science',
+      name: 'Elena R.',
+      title: 'Verified Studora Tutor',
       subject: 'Algorithms',
-      level: 'Advanced / Honours',
-      availability: 'Today 16:30',
-      rating: '4.9',
+      level: 'Advanced',
+      teachingMode: 'Virtual & In-Person',
       verified: true
     },
     {
       id: 'tut_2',
-      name: 'Marcus Chen',
-      title: 'Teaching Fellow • Computer Systems & OS',
-      department: 'Computer Science',
+      name: 'Marcus C.',
+      title: 'Verified Studora Tutor',
       subject: 'Operating Systems',
       level: 'Intermediate',
-      availability: 'Thursday 18:00',
-      rating: '4.8',
+      teachingMode: 'Virtual',
       verified: true
     },
     {
       id: 'tut_3',
-      name: 'Amara Okafor',
-      title: 'Graduate Researcher • Statistics & Linear Algebra',
-      department: 'Mathematics',
+      name: 'Amara O.',
+      title: 'Verified Studora Tutor',
       subject: 'Mathematics',
       level: 'All Levels',
-      availability: 'Tomorrow 14:00',
-      rating: '4.9',
+      teachingMode: 'Virtual & In-Person',
       verified: true
     },
     {
       id: 'tut_4',
-      name: 'David Kim',
-      title: 'Senior Tutor • Data Communication & Protocols',
-      department: 'Electrical Engineering',
+      name: 'David K.',
+      title: 'Verified Studora Tutor',
       subject: 'Networks',
       level: 'Undergraduate',
-      availability: 'Friday 15:00',
-      rating: '4.7',
+      teachingMode: 'In-Person',
       verified: true
     }
   ];
 
-  const filteredTutors = tutorSubjectFilter === 'All' 
-    ? demoTutors 
-    : demoTutors.filter(t => t.subject.toLowerCase() === tutorSubjectFilter.toLowerCase());
+  // Dynamic live tutors if available in Supabase, else fallback to preview array
+  const availableTutors = useMemo(() => {
+    if (liveTutors && liveTutors.length > 0) {
+      return liveTutors.map((t) => ({
+        id: t.tutorId,
+        name: t.fullName,
+        title: t.title || 'Verified Studora Tutor',
+        subject: t.subjectNames?.[0] || 'General Studies',
+        subjectNames: t.subjectNames || [],
+        level: t.academicLevel || 'Undergraduate',
+        teachingMode: 'Virtual & In-Person',
+        verified: t.isVerified,
+      }));
+    }
+    return demoTutors;
+  }, [liveTutors]);
+
+  const availableSubjects = useMemo(() => {
+    const set = new Set();
+    availableTutors.forEach(t => {
+      if (t.subject) set.add(t.subject);
+      (t.subjectNames || []).forEach(s => set.add(s));
+    });
+    return ['All', ...Array.from(set)];
+  }, [availableTutors]);
+
+  const filteredTutors = useMemo(() => {
+    if (tutorSubjectFilter === 'All') return availableTutors;
+    return availableTutors.filter(t =>
+      t.subject.toLowerCase() === tutorSubjectFilter.toLowerCase() ||
+      (t.subjectNames && t.subjectNames.some(s => s.toLowerCase() === tutorSubjectFilter.toLowerCase()))
+    );
+  }, [availableTutors, tutorSubjectFilter]);
 
   // Interactive FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
@@ -304,7 +330,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
   const faqs = [
     {
       q: 'What is the Basic plan?',
-      a: 'The Basic plan is our free forever academic tier. It provides core CGPA calculation across multiple grading scales, study planning for up to two active courses, 3 practice test drills per month, directory browsing of accredited campus tutors, and 10 monthly AI Tutor queries.'
+      a: 'The Basic plan is our free forever academic tier. It provides core CGPA calculation across multiple grading scales, study planning for up to two active courses, 3 practice test drills per month, Studora tutor marketplace browsing, and 10 monthly AI Tutor queries.'
     },
     {
       q: 'Can I use the platform without paying?',
@@ -359,7 +385,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
     { name: 'Test Prep Simulation', basic: '3 Tests / mo', student: '15 Tests / mo', pro: 'Unlimited', premium: 'Unlimited' },
     { name: 'AI Tutor Queries', basic: '10 / mo', student: '100 / mo', pro: '300 / mo', premium: '1,000 / mo' },
     { name: 'Multi-Mode AI Problem Solver', basic: '—', student: '—', pro: 'Included', premium: 'Included' },
-    { name: 'Tutor Directory Browsing', basic: 'Included', student: 'Included', pro: 'Included', premium: 'Included' },
+    { name: 'Tutor Marketplace Browsing', basic: 'Included', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Verified Tutor Booking', basic: '—', student: '5 Bookings / mo', pro: 'Unlimited', premium: 'Unlimited' },
     { name: 'Private Cohort Study Groups', basic: '—', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Live Video Tutoring (ZEGOCLOUD)', basic: '—', student: '—', pro: '10 hrs / mo', premium: 'Unlimited' },
@@ -1254,17 +1280,17 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
         <div className="max-w-7xl mx-auto space-y-12">
           
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <Badge variant="academic">Verified University Directory</Badge>
+            <Badge variant="academic">Studora Tutor Marketplace</Badge>
             <h2 className="text-2xl sm:text-4xl font-serif text-ink tracking-tight">
-              When you need a human perspective.
+              Find a Tutor
             </h2>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Find tutors, book academic sessions, and learn directly from people who can help you understand the subject.
+              Connect with verified Studora tutors who can help you learn, prepare, practice, and make progress — online or in person.
             </p>
 
             {/* Subject Filters */}
             <div className="flex flex-wrap items-center justify-center gap-2 pt-3">
-              {['All', 'Algorithms', 'Operating Systems', 'Mathematics', 'Networks'].map(subj => (
+              {availableSubjects.map(subj => (
                 <button
                   key={subj}
                   onClick={() => setTutorSubjectFilter(subj)}
@@ -1279,7 +1305,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             </div>
           </div>
 
-          {/* Tutor Cards Grid */}
+          {/* Tutor Cards Grid — illustrative preview for the public landing page only */}
+          {/* The real marketplace fetches live data from approved tutor_profiles in Supabase */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredTutors.map(tutor => (
               <div 
@@ -1291,18 +1318,24 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                     <div className="w-10 h-10 rounded-full bg-academic-100 border border-academic-200 text-academic font-bold text-sm flex items-center justify-center">
                       {tutor.name.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-white border border-border text-academic">
-                      ★ {tutor.rating}
-                    </span>
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-border text-academic text-xs font-mono font-semibold">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>Verified</span>
+                    </div>
                   </div>
 
                   <h3 className="text-sm font-bold text-ink">{tutor.name}</h3>
                   <p className="text-xs text-muted mt-0.5 leading-snug">{tutor.title}</p>
 
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-academic-50 border border-academic-200 text-academic font-medium">
+                      {tutor.subject}
+                    </span>
+                  </div>
+
                   <div className="mt-4 pt-3 border-t border-border/80 space-y-1.5 text-[11px] text-muted font-mono">
-                    <p>Dept: <span className="text-ink">{tutor.department}</span></p>
                     <p>Level: <span className="text-ink">{tutor.level}</span></p>
-                    <p>Next: <span className="text-academic font-medium">{tutor.availability}</span></p>
+                    <p>Mode: <span className="text-ink">{tutor.teachingMode}</span></p>
                   </div>
                 </div>
 
@@ -1320,7 +1353,10 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             ))}
           </div>
 
-          <div className="text-center pt-2">
+          <div className="text-center pt-2 space-y-2">
+            <p className="text-xs text-muted">
+              All tutors go through application, assessment, and admin approval before appearing in the marketplace.
+            </p>
             <Button
               variant="academic"
               size="md"
@@ -1332,6 +1368,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
           </div>
         </div>
       </section>
+
 
       {/* ========================================================================= */}
       {/* SECTION 10 — GROUPS / COMMUNITY                                           */}

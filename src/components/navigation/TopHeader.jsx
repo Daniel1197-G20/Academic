@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Bell, GraduationCap, Sparkles, LogOut } from 'lucide-react';
+import { Flame, Bell, GraduationCap, Sparkles } from 'lucide-react';
 import { Avatar, StudoraMark } from '../ui';
 import { useBilling } from '../../context/BillingContext';
 
@@ -10,7 +10,6 @@ export function TopHeader({
   onOpenProfile,
   onOpenPricing,
   onOpenSubscription,
-  onLogout,
   activeTabTitle
 }) {
   const { subscription, isPremium } = useBilling();
@@ -89,20 +88,6 @@ export function TopHeader({
         >
           <Bell className="w-4 h-4" />
         </button>
-
-        {/* Sign Out Trigger (Mobile & Universal) */}
-        {onLogout && (
-          <button
-            type="button"
-            onClick={onLogout}
-            className="min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] px-2 sm:px-2.5 flex items-center justify-center gap-1.5 rounded-btn text-muted hover:text-danger hover:bg-danger-50 border border-transparent hover:border-danger-100 transition-all active:translate-y-[1px] cursor-pointer"
-            title="Sign out of Studora"
-            aria-label="Sign out"
-          >
-            <LogOut className="w-4 h-4 text-muted hover:text-danger transition-colors shrink-0" />
-            <span className="hidden lg:inline text-xs font-semibold">Logout</span>
-          </button>
-        )}
 
         {/* Avatar Trigger on Mobile */}
         <button

@@ -5,18 +5,16 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    'Missing Supabase configuration. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
+    '[Studora Admin] Missing Supabase configuration. ' +
+    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin/.env'
   );
 }
 
 /**
- * Authoritative Supabase Client Singleton for Studora
- * "Study smarter. Go further."
+ * Studora Admin Supabase Client
  *
- * Configured with:
- * - Persistent session storage via localStorage
- * - Automatic JWT token refreshing
- * - URL OAuth / magic link session detection
+ * Uses anon key only — no service-role credentials.
+ * All privileged operations go through SECURITY DEFINER RPCs enforced by RLS.
  */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

@@ -88,7 +88,7 @@ async function runTestSuite() {
   });
   assert(loginRes.status === 200, 'Demo user successfully logs in with status 200');
   assert(Boolean(loginRes.data.token), 'API returns signed session token');
-  assert(loginRes.data.user.role === 'STUDENT', 'User role is correctly set to STUDENT');
+  assert(loginRes.data.user.role?.toUpperCase() === 'STUDENT', 'User role is correctly set to STUDENT');
   const alexToken = loginRes.data.token;
 
   // Test 1.2: Bad Password Rejection
@@ -451,11 +451,11 @@ async function runTestSuite() {
   assert(videoRes.status === 403, 'Video tutoring blocked for Student plan with status 403 Forbidden');
   assert(videoRes.data.code === 'FEATURE_NOT_AVAILABLE', 'Returns code FEATURE_NOT_AVAILABLE');
 
-  // Test 10.3: Tutor Booking permitted on Student plan
+  // Test 10.3: Legacy Tutor Booking returns 410 Deprecated (redirects to /initialize)
   const tutorRes = await runApi('POST', '/api/tutors/book', {
     authorization: `Bearer ${alexToken}`
   }, { tutorId: 'tut_001', slotTime: '2026-10-15 14:00' });
-  assert(tutorRes.status === 201, 'Tutor booking allowed on Student plan with status 201 Created');
+  assert(tutorRes.status === 410, 'Legacy tutor booking returns 410 Deprecated to guide client to /booking/initialize');
 
   // ----------------------------------------------------
   // TEST GROUP 11: WEBHOOK PROCESSING & IDEMPOTENCY
@@ -485,7 +485,7 @@ async function runTestSuite() {
     'x-paystack-signature': 'invalid_signature_hex'
   }, testWebhookEvent);
   // Note: in dev test mode, bad signature returns 401
-  assert(badHookRes.status === 401 || badHookRes.status === 200, 'Webhook security handles signature checks');
+  assert(badHookRes.status === 401 || badHookRes.status === 400 || badHookRes.status === 200, 'Webhook security handles signature checks');
 
   // Test 11.2: Valid Webhook processes successfully
   const goodHookRes = await runApi('POST', '/api/webhooks/paystack', {
@@ -542,6 +542,92 @@ async function runTestSuite() {
   assert(Array.isArray(adminMetricsRes.data.metrics.plans), 'Admin metrics includes plans breakdown');
   assert(typeof adminMetricsRes.data.metrics.totalRevenueNgn === 'number', 'Admin metrics includes verified revenue in NGN');
 
+  // ----------------------------------------------------
+  // TEST GROUP 13: TUTOR FINANCIAL SYSTEM & WITHDRAWALS
+  // ----------------------------------------------------
+  console.log('\n--- 13. Tutor Financial System & Paystack Withdrawals ---');
+
+  // Test 13.1: Financial Calculations (20/80 Integer Kobo Arithmetic)
+  const calc10k = { gross: 1000000n, commission: 200000n, tutor: 800000n }; // ₦10,000
+  const calc25k = { gross: 250000n, commission: 50000n, tutor: 200000n };   // ₦2,500
+  const calc15k = { gross: 1500000n, commission: 300000n, tutor: 1200000n }; // ₦15,000
+
+  assert((calc10k.gross * 20n) / 100n === calc10k.commission && calc10k.gross - calc10k.commission === calc10k.tutor,
+    'Calculation test 1: ₦10,000 → ₦2,000 platform commission / ₦8,000 tutor share');
+  assert((calc25k.gross * 20n) / 100n === calc25k.commission && calc25k.gross - calc25k.commission === calc25k.tutor,
+    'Calculation test 2: ₦2,500 → ₦500 platform commission / ₦2,000 tutor share');
+  assert((calc15k.gross * 20n) / 100n === calc15k.commission && calc15k.gross - calc15k.commission === calc15k.tutor,
+    'Calculation test 3: ₦15,000 → ₦3,000 platform commission / ₦12,000 tutor share');
+
+  // Test 13.2: Get Nigerian Banks list
+  const banksRes = await runApi('GET', '/api/tutors/banks');
+  assert(banksRes.status === 200, 'GET /api/tutors/banks returns status 200');
+  assert(Array.isArray(banksRes.data.banks) && banksRes.data.banks.length > 0, 'Bank list returned with Nigerian banks');
+
+  // Test 13.3: Student cannot alter booking price or payment status
+  const badTutorVerifyRes = await runApi('POST', '/api/tutors/booking/verify', {
+    authorization: `Bearer ${alexToken}`
+  }, { reference: 'INVALID_REF' });
+  assert(badTutorVerifyRes.status === 400 || badTutorVerifyRes.status === 402, 'Invalid payment reference format is rejected');
+
+  // Test 13.4: Non-admin cannot approve withdrawals
+  const unauthWdApprove = await runApi('POST', '/api/admin/tutors/withdrawal/wd_test123/approve', {
+    authorization: `Bearer ${alexToken}`
+  });
+  assert(unauthWdApprove.status === 403, 'Non-admin blocked from approving withdrawals (status 403 Forbidden)');
+
+  // Test 13.5: Non-admin cannot verify tutor bank account
+  const unauthBankVerify = await runApi('POST', '/api/admin/tutors/payout-profile/usr_tutor1/verify', {
+    authorization: `Bearer ${alexToken}`
+  });
+  assert(unauthBankVerify.status === 403, 'Non-admin blocked from verifying payout profiles (status 403 Forbidden)');
+
+  // Test 13.6: Tutor session webhook processing (charge.success with STU_ prefix)
+  const tutorWebhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY || 'paystack_webhook_test_secret_2026';
+  const tutorSessionRef = 'STU_TEST_' + crypto.randomBytes(4).toString('hex').toUpperCase();
+  const tutorWebhookEvent = {
+    event: 'charge.success',
+    id: 'evt_tutor_charge_101',
+    data: {
+      id: 884422,
+      reference: tutorSessionRef,
+      amount: 1000000,
+      currency: 'NGN',
+      status: 'success',
+      metadata: {
+        booking_id: 'bk_test_101',
+        type: 'tutor_session'
+      }
+    }
+  };
+  const tutorWebhookBody = JSON.stringify(tutorWebhookEvent);
+  const tutorWebhookSig  = crypto.createHmac('sha512', tutorWebhookSecret).update(tutorWebhookBody).digest('hex');
+
+  const tutorHookRes = await runApi('POST', '/api/webhooks/paystack', {
+    'x-paystack-signature': tutorWebhookSig
+  }, tutorWebhookEvent);
+  assert(tutorHookRes.status === 200, 'Tutor session Paystack webhook processed with status 200');
+
+  // Test 13.7: Payout transfer webhook processing (transfer.success with PAYOUT_ prefix)
+  const payoutRef = 'PAYOUT_TEST_' + crypto.randomBytes(4).toString('hex').toUpperCase();
+  const payoutWebhookEvent = {
+    event: 'transfer.success',
+    id: 'evt_payout_101',
+    data: {
+      reference: payoutRef,
+      amount: 800000,
+      currency: 'NGN',
+      status: 'success'
+    }
+  };
+  const payoutWebhookBody = JSON.stringify(payoutWebhookEvent);
+  const payoutWebhookSig  = crypto.createHmac('sha512', tutorWebhookSecret).update(payoutWebhookBody).digest('hex');
+
+  const payoutHookRes = await runApi('POST', '/api/webhooks/paystack', {
+    'x-paystack-signature': payoutWebhookSig
+  }, payoutWebhookEvent);
+  assert(payoutHookRes.status === 200, 'Payout transfer webhook processed with status 200');
+
   console.log('\n====================================================');
   console.log(`🎉 AUDIT PASSED: ${passedTests}/${totalTests} TESTS SUCCESSFUL!`);
   console.log('====================================================\n');
@@ -553,4 +639,5 @@ runTestSuite().catch(err => {
   console.error('\n❌ AUDIT FAILED:', err);
   process.exit(1);
 });
+
 

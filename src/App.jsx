@@ -38,6 +38,11 @@ import { BillingCallbackPage } from './pages/billing/BillingCallbackPage';
 import { SubscriptionPage } from './pages/billing/SubscriptionPage';
 import { LandingPage } from './pages/landing/LandingPage';
 import { FeatureGate } from './components/billing/FeatureGate';
+import { BecomeTutorPage } from './pages/tutor/BecomeTutorPage';
+import { TutorDashboardPage } from './pages/tutor/TutorDashboardPage';
+
+import { TutorMarketplacePage } from './pages/tutor/TutorMarketplacePage';
+import { AiTutorPage } from './pages/study/AiTutorPage';
 
 // Canonical route sets
 const PUBLIC_ROUTES = new Set([
@@ -71,7 +76,8 @@ const PROTECTED_ROUTES = new Set([
   'settings-subscription',
   'billing-callback',
   'billing/callback',
-  'ai'
+  'ai',
+  'become-tutor',
 ]);
 
 export function normalizeRoute(path) {
@@ -95,6 +101,7 @@ export function normalizeRoute(path) {
   if (clean === 'terms') return 'terms';
   if (clean === 'cookie-settings') return 'cookie-settings';
   if (clean === 'privacy-settings') return 'privacy-settings';
+  if (clean === 'become-tutor') return 'become-tutor';
   return '404';
 }
 
@@ -136,12 +143,7 @@ function AppContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showCookieModal, setShowCookieModal] = useState(false);
 
-  // AI Academic Assistant State
-  const [aiQuery, setAiQuery] = useState('');
-  const [aiResponse, setAiResponse] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState(null);
-  const [copiedAiResponse, setCopiedAiResponse] = useState(false);
+
 
   // Handle URL Path / Hash routing via popstate (browser back/forward buttons)
   useEffect(() => {
@@ -177,35 +179,7 @@ function AppContent() {
     }
   };
 
-  const handleAiQuerySubmit = async (overridePrompt) => {
-    const promptToSubmit = (overridePrompt ?? aiQuery ?? '').trim();
-    if (!promptToSubmit) {
-      addToast({ type: 'warning', title: 'Empty Query', message: 'Please enter a coursework question or select a prompt.' });
-      return;
-    }
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const res = await api.request('/api/ai/query', { 
-        method: 'POST', 
-        body: JSON.stringify({ prompt: promptToSubmit }) 
-      });
-      if (res && res.answer) {
-        setAiResponse({
-          prompt: promptToSubmit,
-          answer: res.answer,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
-      } else {
-        throw new Error('No analytical response received from AI Tutor.');
-      }
-    } catch (err) {
-      setAiError(err.message || 'AI query limit reached or server unavailable.');
-      addToast({ type: 'error', title: 'AI Limit Reached', message: err.message });
-    } finally {
-      setAiLoading(false);
-    }
-  };
+
 
   // Supabase Auth Authoritative Session Verification & Lifecycle Listener
   useEffect(() => {
@@ -248,10 +222,15 @@ function AppContent() {
           console.warn('Notice loading Supabase user profile:', fetchErr);
         }
 
+        // SEC-001 FIX: Use actual role from profiles table.
+        // Role is for UI routing only — database RLS is the real authorization boundary.
+        // Fail safely: unknown/missing profile defaults to 'student', never 'admin'.
+        const resolvedRole = profile?.role || 'student';
+
         const userObj = {
           id: session.user.id,
           email: session.user.email,
-          role: 'student'
+          role: resolvedRole
         };
 
         const profObj = profile || {
@@ -292,10 +271,15 @@ function AppContent() {
           }
 
           if (isMounted) {
+            // SEC-001 FIX: Use actual role from profiles table.
+            // Role is for UI routing only — database RLS is the real authorization boundary.
+            // Fail safely: unknown/missing profile defaults to 'student', never 'admin'.
+            const resolvedRole = profile?.role || 'student';
+
             const userObj = {
               id: session.user.id,
               email: session.user.email,
-              role: 'student'
+              role: resolvedRole
             };
             const profObj = profile || {
               id: session.user.id,
@@ -640,6 +624,7 @@ function AppContent() {
     'cookie-settings': 'Cookie Settings',
     'privacy-settings': 'Privacy & Data Rights Settings',
     landing: 'Home',
+    'become-tutor': currentUser?.role === 'tutor' ? 'Tutor Workspace' : 'Become a Tutor',
     404: 'Page Not Found'
   };
 
@@ -666,7 +651,6 @@ function AppContent() {
             onOpenProfile={() => navigateRoute('profile')}
             onOpenPricing={() => navigateRoute('pricing')}
             onOpenSubscription={() => navigateRoute('settings/subscription')}
-            onLogout={handleLogout}
             activeTabTitle={tabTitles[activeTab] || 'Overview'}
           />
 
@@ -779,6 +763,23 @@ function AppContent() {
                   />
                 )}
 
+                {activeTab === 'become-tutor' && (
+                  currentUser?.role === 'tutor' ? (
+                    <TutorDashboardPage
+                      userProfile={userProfile}
+                      onNavigate={navigateRoute}
+                      showToast={addToast}
+                    />
+                  ) : (
+                    <BecomeTutorPage
+                      userProfile={userProfile}
+                      onNavigateDashboard={() => navigateRoute('dashboard')}
+                      showToast={addToast}
+                    />
+                  )
+                )}
+
+
             {/* Test Prep Drills */}
             {(activeTab === 'test-prep' || activeTab === 'prep') && (
               <div className="max-w-4xl mx-auto space-y-6">
@@ -854,94 +855,16 @@ function AppContent() {
               </div>
             )}
 
-            {/* Tutor Marketplace */}
+
+            {/* Tutor Marketplace — sourced from approved Supabase tutor_profiles */}
             {activeTab === 'tutors' && (
-              <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-ink">Verified Tutor Marketplace</h2>
-                    <p className="text-xs sm:text-sm text-muted">Browse accredited department tutors and book 1-on-1 tutoring sessions.</p>
-                  </div>
-                  <Badge variant="academic">Verified University Directory</Badge>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-base font-bold text-ink">Dr. Elena Rostova</h3>
-                        <p className="text-xs text-muted">Senior Fellow • Algorithms & Distributed Systems</p>
-                      </div>
-                      <span className="text-xs font-mono font-semibold text-academic bg-academic-50 border border-academic-200 px-2 py-0.5 rounded">4.9 ★</span>
-                    </div>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Personalized exam review on dynamic programming, graph algorithms, and formal proofs.
-                    </p>
-                    <FeatureGate
-                      feature="TUTOR_BOOKING"
-                      featureTitle="Verified Tutor Booking"
-                      description="Book 1-on-1 sessions with Dr. Elena Rostova. Requires Student or Pro plan."
-                      requiredPlan="Student"
-                      requiredPlanCode="student"
-                      onUpgrade={() => navigateRoute('pricing')}
-                    >
-                      <Button
-                        variant="academic"
-                        size="sm"
-                        className="w-full shadow-tactile-btn"
-                        onClick={async () => {
-                          try {
-                            const res = await api.request('/api/tutors/book', { method: 'POST', body: JSON.stringify({ tutorId: 'tut_elena', slotTime: 'Tomorrow 16:30' }) });
-                            addToast({ type: 'success', title: 'Booking Confirmed', message: `1-on-1 session booked with Dr. Elena (Booking ID: ${res.bookingId}).` });
-                          } catch (err) {
-                            addToast({ type: 'error', title: 'Booking Error', message: err.message });
-                          }
-                        }}
-                      >
-                        Book 1-on-1 Session (Tomorrow 16:30)
-                      </Button>
-                    </FeatureGate>
-                  </div>
-
-                  <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-base font-bold text-ink">Marcus Chen</h3>
-                        <p className="text-xs text-muted">Teaching Assistant • Networks & Operating Systems</p>
-                      </div>
-                      <span className="text-xs font-mono font-semibold text-academic bg-academic-50 border border-academic-200 px-2 py-0.5 rounded">4.8 ★</span>
-                    </div>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Practical packet-level debugging, concurrency primitives, and kernel memory management.
-                    </p>
-                    <FeatureGate
-                      feature="TUTOR_BOOKING"
-                      featureTitle="Verified Tutor Booking"
-                      description="Book 1-on-1 sessions with Marcus Chen. Requires Student or Pro plan."
-                      requiredPlan="Student"
-                      requiredPlanCode="student"
-                      onUpgrade={() => navigateRoute('pricing')}
-                    >
-                      <Button
-                        variant="academic"
-                        size="sm"
-                        className="w-full shadow-tactile-btn"
-                        onClick={async () => {
-                          try {
-                            const res = await api.request('/api/tutors/book', { method: 'POST', body: JSON.stringify({ tutorId: 'tut_marcus', slotTime: 'Thursday 18:00' }) });
-                            addToast({ type: 'success', title: 'Booking Confirmed', message: `1-on-1 session booked with Marcus Chen (Booking ID: ${res.bookingId}).` });
-                          } catch (err) {
-                            addToast({ type: 'error', title: 'Booking Error', message: err.message });
-                          }
-                        }}
-                      >
-                        Book 1-on-1 Session (Thursday 18:00)
-                      </Button>
-                    </FeatureGate>
-                  </div>
-                </div>
-              </div>
+              <TutorMarketplacePage
+                currentUser={currentUser}
+                onNavigate={navigateRoute}
+                showToast={addToast}
+              />
             )}
+
 
             {/* Community & ZEGOCLOUD Video Tutoring */}
             {(activeTab === 'messages' || activeTab === 'community') && (
@@ -1032,197 +955,12 @@ function AppContent() {
               </div>
             )}
 
-            {/* AI Academic Assistant */}
+            {/* AI Academic Tutor */}
             {activeTab === 'ai' && (
-              <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-ink">AI Academic Assistant</h2>
-                    <p className="text-xs sm:text-sm text-muted">Contextual coursework explanations and step-by-step problem solver.</p>
-                  </div>
-                  <Badge variant="academic">Academic Model</Badge>
-                </div>
-
-                <FeatureGate
-                  feature="AI_TUTOR"
-                  featureTitle="AI Academic Assistant"
-                  description="Get step-by-step guidance on complex coursework and exam topics."
-                  showRemaining={true}
-                  onUpgrade={() => navigateRoute('pricing')}
-                >
-                  <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                    <div className="space-y-2">
-                      <label htmlFor="aiQueryInput" className="text-xs font-semibold text-ink">
-                        Ask AI Tutor a coursework question:
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="e.g. Prove why the 0/1 knapsack problem cannot be solved greedily..."
-                          id="aiQueryInput"
-                          value={aiQuery}
-                          onChange={(e) => setAiQuery(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !aiLoading) {
-                              e.preventDefault();
-                              handleAiQuerySubmit();
-                            }
-                          }}
-                          className="flex-1 bg-canvas border border-border rounded-btn px-3 py-2 text-xs text-ink focus:outline-none focus:border-academic"
-                        />
-                        <Button
-                          variant="academic"
-                          size="sm"
-                          disabled={aiLoading}
-                          onClick={() => handleAiQuerySubmit()}
-                        >
-                          {aiLoading ? (
-                            <span className="flex items-center gap-1.5">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              <span>Analyzing...</span>
-                            </span>
-                          ) : (
-                            'Submit Query'
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-btn bg-canvas/40 border border-border text-xs text-muted space-y-2">
-                      <p className="font-semibold text-ink">Quick Academic Prompts:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {['Derive Master Theorem Case 2', 'Explain TCP Congestion Window', 'Differentiate LALR(1) vs LR(1)', 'Calculate Subnet Masks for /27'].map((prompt, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => {
-                              setAiQuery(prompt);
-                              handleAiQuerySubmit(prompt);
-                            }}
-                            className="px-2.5 py-1 rounded-btn bg-white border border-border text-[11px] text-ink hover:border-academic shadow-tactile-surface transition-colors cursor-pointer"
-                          >
-                            {prompt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* In-page Response Card rendering the full AI coursework answer */}
-                    {aiLoading && (
-                      <div className="p-5 rounded-card bg-canvas/40 border border-border/80 animate-pulse space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 text-academic animate-spin" />
-                          <span className="text-xs font-semibold text-ink">AI Academic Assistant is synthesizing coursework answer...</span>
-                        </div>
-                        <div className="h-3.5 bg-muted/20 rounded w-3/4" />
-                        <div className="h-3.5 bg-muted/20 rounded w-5/6" />
-                        <div className="h-3.5 bg-muted/20 rounded w-2/3" />
-                      </div>
-                    )}
-
-                    {aiError && !aiLoading && (
-                      <div className="p-4 rounded-btn bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-bold">Query Notice</p>
-                          <p className="mt-0.5">{aiError}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setAiError(null)}
-                          className="text-rose-600 hover:text-rose-900 text-xs font-semibold cursor-pointer"
-                        >
-                          Dismiss
-                        </button>
-                      </div>
-                    )}
-
-                    {aiResponse && !aiLoading && (
-                      <div className="mt-4 pt-4 border-t border-border space-y-4">
-                        <div className="bg-canvas/30 border border-border/80 rounded-card p-5 sm:p-6 space-y-4 shadow-tactile-surface">
-                          {/* Response Card Header */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-academic-100 border border-academic-200 flex items-center justify-center text-academic">
-                                <Sparkles className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
-                                  Coursework Analysis & Solution
-                                </h4>
-                                <span className="text-[10px] text-muted font-mono">
-                                  Generated at {aiResponse.timestamp}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="academic" size="sm">
-                                Full Explanation
-                              </Badge>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (aiResponse?.answer) {
-                                    navigator.clipboard?.writeText(aiResponse.answer);
-                                    setCopiedAiResponse(true);
-                                    setTimeout(() => setCopiedAiResponse(false), 2000);
-                                  }
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-btn bg-white border border-border text-[11px] font-medium text-ink hover:border-academic transition-colors shadow-tactile-surface cursor-pointer"
-                                title="Copy answer"
-                              >
-                                {copiedAiResponse ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span className="text-emerald-700 font-semibold">Copied</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3.5 h-3.5 text-muted" />
-                                    <span>Copy</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Query Prompt */}
-                          <div className="px-3.5 py-2.5 rounded-btn bg-white border border-border text-xs">
-                            <span className="font-semibold text-muted uppercase tracking-wide text-[10px] block mb-0.5">
-                              Coursework Topic / Question
-                            </span>
-                            <span className="text-ink font-medium">"{aiResponse.prompt}"</span>
-                          </div>
-
-                          {/* Render Full AI Coursework Answer */}
-                          <div className="space-y-2">
-                            <span className="font-semibold text-muted uppercase tracking-wide text-[10px] block">
-                              AI Academic Solution
-                            </span>
-                            <div className="p-4 rounded-btn bg-white border border-border text-ink text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                              {aiResponse.answer}
-                            </div>
-                          </div>
-
-                          {/* Footer */}
-                          <div className="flex items-center justify-between pt-1 text-xs text-muted">
-                            <span className="text-[11px]">Academic Tutor Entitlement Active</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setAiResponse(null);
-                                setAiQuery('');
-                              }}
-                              className="text-xs font-semibold text-slate-500 hover:text-ink transition-colors cursor-pointer"
-                            >
-                              Clear Solution
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </FeatureGate>
-              </div>
+              <AiTutorPage
+                onNavigate={navigateRoute}
+                showToast={addToast}
+              />
             )}
               </Suspense>
             </ErrorBoundary>

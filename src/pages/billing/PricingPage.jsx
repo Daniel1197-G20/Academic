@@ -56,7 +56,7 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
       'Up to 2 active study plans',
       '3 test prep practice tests / month',
       '10 AI Tutor queries / month',
-      'Browse tutor directory',
+      'Browse Studora tutor marketplace',
       'Standard student academic profile'
     ],
     student: [
@@ -65,7 +65,7 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
       'Unlimited concurrent study plans',
       '15 test prep practice tests / month',
       '100 AI Tutor queries / month',
-      'Book verified campus tutors (up to 5/mo)',
+      'Book verified Studora tutors (up to 5/mo)',
       'Access to private peer study groups',
       'Curated academic past question vault'
     ],
@@ -82,7 +82,7 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
       'Everything in Pro, plus:',
       '1,000 AI Tutor queries / month',
       'Unlimited ZEGOCLOUD video tutoring sessions',
-      'Priority university tutor matching',
+      'Priority Studora tutor matching',
       'Priority platform customer support',
       'Early access to new academic modules'
     ]
@@ -96,7 +96,7 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
     { name: 'Test Prep Simulation', basic: '3 Tests / mo', student: '15 Tests / mo', pro: 'Unlimited', premium: 'Unlimited' },
     { name: 'AI Tutor Queries', basic: '10 / mo', student: '100 / mo', pro: '300 / mo', premium: '1,000 / mo' },
     { name: 'Multi-Mode AI Problem Solver', basic: '—', student: '—', pro: 'Included', premium: 'Included' },
-    { name: 'Tutor Directory Browsing', basic: 'Included', student: 'Included', pro: 'Included', premium: 'Included' },
+    { name: 'Tutor Marketplace Browsing', basic: 'Included', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Verified Tutor Booking', basic: '—', student: '5 Bookings / mo', pro: 'Unlimited', premium: 'Unlimited' },
     { name: 'Private Cohort Study Groups', basic: '—', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Live Video Tutoring (ZEGOCLOUD)', basic: '—', student: '—', pro: '10 hrs / mo', premium: 'Unlimited' },
@@ -108,8 +108,9 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
   const faqs = [
     {
       q: 'What is the Basic plan?',
-      a: 'The Basic plan is our free forever academic tier. It provides core CGPA calculation across multiple grading scales, study planning for up to two active courses, 3 practice test drills per month, directory browsing of accredited campus tutors, and 10 monthly AI Tutor queries.'
+      a: 'The Basic plan is our free forever academic tier. It provides core CGPA calculation across multiple grading scales, study planning for up to two active courses, 3 practice test drills per month, Studora tutor marketplace browsing, and 10 monthly AI Tutor queries.'
     },
+
     {
       q: 'Can I use the platform without paying?',
       a: 'Yes. University students can use the Basic plan at no cost. There are no mandatory trials, no required credit cards, and your academic records are never locked behind a paywall.'

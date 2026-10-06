@@ -14,10 +14,27 @@ import {
   getBillingHistory,
   getAdminBillingMetrics
 } from './billing-service.js';
+import {
+  initializeBookingPayment,
+  verifyAndConfirmTutorPayment,
+  executeTutorPayout,
+  adminVerifyPayoutProfile,
+  getTutorEarningsSummary,
+  requestWithdrawal,
+  getNigerianBanks,
+  handleTutorPaystackWebhook
+} from './tutor-financial-service.js';
+import { generateAiTutorResponse } from './ai-tutor-service.js';
 
-const JWT_SECRET = process.env.APP_SECRET || 'academic-platform-secret-key-2026-ghost-green';
+if (!process.env.APP_SECRET) {
+  throw new Error('[server/api.js] Missing required environment variable: APP_SECRET');
+}
+const JWT_SECRET = process.env.APP_SECRET;
 const ZEGO_APP_ID = Number(process.env.ZEGOCLOUD_APP_ID || process.env.VITE_ZEGOCLOUD_APP_ID || 1234567890);
-const ZEGO_SERVER_SECRET = process.env.ZEGOCLOUD_SERVER_SECRET || 'studora_zego_server_secret_2026';
+if (!process.env.ZEGOCLOUD_SERVER_SECRET) {
+  throw new Error('[server/api.js] Missing required environment variable: ZEGOCLOUD_SERVER_SECRET');
+}
+const ZEGO_SERVER_SECRET = process.env.ZEGOCLOUD_SERVER_SECRET;
 
 // Create a signed HMAC-SHA256 session token
 export function createSessionToken(payload) {
@@ -927,16 +944,45 @@ export async function handleApiRequest(req, res) {
       return sendJson(res, 200, { history });
     }
 
+
     if (pathname === '/api/webhooks/paystack' && method === 'POST') {
       await parseJsonBody(req);
       const signature = req.headers['x-paystack-signature'] || '';
+      const rawBody   = req.rawBody || '';
+
+      // Parse event type to route to appropriate handler
+      let eventType = null;
+      let reference = null;
       try {
-        const result = await handlePaystackWebhook(req.rawBody, signature);
+        const parsed = JSON.parse(rawBody);
+        eventType    = parsed.event;
+        reference    = parsed.data?.reference || '';
+      } catch (_) {}
+
+      // Route tutor session events (charge.success with STU_ prefix, transfer events with PAYOUT_ prefix)
+      const isTutorSessionEvent =
+        (eventType === 'charge.success' && reference.startsWith('STU_')) ||
+        ((eventType === 'transfer.success' || eventType === 'transfer.failed' || eventType === 'transfer.reversed') && reference.startsWith('PAYOUT_'));
+
+      if (isTutorSessionEvent) {
+        try {
+          const result = await handleTutorPaystackWebhook(rawBody, signature);
+          return sendJson(res, 200, result);
+        } catch (err) {
+          return sendJson(res, err.statusCode || 400, { error: err.message, code: 'TUTOR_WEBHOOK_ERROR' });
+        }
+      }
+
+      // Default: billing/subscription events handled by billing-service
+      try {
+        const result = await handlePaystackWebhook(rawBody, signature);
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, err.statusCode || 400, { error: err.message, code: err.code });
       }
     }
+
+
 
     if (pathname === '/api/admin/billing' && method === 'GET') {
       const authUser = await getAuthenticatedUser(req);
@@ -949,6 +995,8 @@ export async function handleApiRequest(req, res) {
     }
 
     // --- 6. FEATURE-GATED ENDPOINTS (Real backend authorization & usage enforcement) ---
+
+    // Single query endpoint (legacy compat)
     if (pathname === '/api/ai/query' && method === 'POST') {
       const authUser = await getAuthenticatedUser(req);
       if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
@@ -957,16 +1005,139 @@ export async function handleApiRequest(req, res) {
       if (!prompt) return sendJson(res, 400, { error: 'Prompt is required.' });
 
       try {
-        // Enforce AI_TUTOR entitlement and atomically increment monthly usage
         const usage = await atomicIncrementUsage(authUser.userId, 'AI_TUTOR');
+        const aiResult = await generateAiTutorResponse([{ role: 'user', content: prompt }]);
         return sendJson(res, 200, {
           success: true,
-          answer: `[AI Academic Tutor] Detailed analytical response for: "${prompt.slice(0, 80)}"`,
+          answer: aiResult.answer,
+          model: aiResult.model,
+          provider: aiResult.provider,
           usage
         });
       } catch (err) {
         return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
       }
+    }
+
+    // POST /api/ai/chat — multi-turn chat endpoint with Grok API + DB persistence
+    if (pathname === '/api/ai/chat' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const body = await parseJsonBody(req);
+      const { prompt, conversationId, history } = body;
+
+      if (!prompt || !prompt.trim()) {
+        return sendJson(res, 400, { error: 'Prompt is required.' });
+      }
+
+      try {
+        // Enforce AI_TUTOR entitlement and atomically increment monthly usage
+        const usage = await atomicIncrementUsage(authUser.userId, 'AI_TUTOR');
+
+        let convId = conversationId;
+        let convTitle = '';
+
+        // Create or fetch conversation
+        if (!convId) {
+          convId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+          convTitle = prompt.trim().slice(0, 32) + (prompt.length > 32 ? '…' : '');
+          await db.query(`
+            INSERT INTO ai_chat_conversations (id, user_id, title)
+            VALUES ($1, $2, $3);
+          `, [convId, authUser.userId, convTitle]);
+        } else {
+          const check = await db.query(`SELECT title FROM ai_chat_conversations WHERE id = $1 AND user_id = $2;`, [convId, authUser.userId]);
+          if (check.rows.length === 0) {
+            return sendJson(res, 404, { error: 'Conversation not found.' });
+          }
+          convTitle = check.rows[0].title;
+        }
+
+        // Save user message
+        const userMsgId = 'msg_' + Date.now() + '_user';
+        await db.query(`
+          INSERT INTO ai_chat_messages (id, conversation_id, user_id, sender, content)
+          VALUES ($1, $2, $3, 'user', $4);
+        `, [userMsgId, convId, authUser.userId, prompt.trim()]);
+
+        // Build multi-turn context
+        let msgHistory = Array.isArray(history) ? history : [];
+        if (msgHistory.length === 0) {
+          msgHistory = [{ role: 'user', content: prompt.trim() }];
+        }
+
+        // Call AI Service (Grok API or Academic Fallback)
+        const aiResult = await generateAiTutorResponse(msgHistory);
+
+        // Save AI response message
+        const aiMsgId = 'msg_' + Date.now() + '_ai';
+        await db.query(`
+          INSERT INTO ai_chat_messages (id, conversation_id, user_id, sender, content)
+          VALUES ($1, $2, $3, 'assistant', $4);
+        `, [aiMsgId, convId, authUser.userId, aiResult.answer]);
+
+        // Touch conversation updated_at timestamp
+        await db.query(`UPDATE ai_chat_conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1;`, [convId]);
+
+        return sendJson(res, 200, {
+          success: true,
+          conversationId: convId,
+          title: convTitle,
+          message: {
+            id: aiMsgId,
+            sender: 'assistant',
+            content: aiResult.answer,
+            created_at: new Date().toISOString()
+          },
+          provider: aiResult.provider,
+          model: aiResult.model,
+          usage
+        });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
+      }
+    }
+
+    // GET /api/ai/conversations — list user's chat history
+    if (pathname === '/api/ai/conversations' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const convs = await db.query(`
+        SELECT id, title, created_at, updated_at
+        FROM ai_chat_conversations
+        WHERE user_id = $1
+        ORDER BY updated_at DESC;
+      `, [authUser.userId]);
+
+      return sendJson(res, 200, { conversations: convs.rows });
+    }
+
+    // GET /api/ai/conversations/:id/messages — load messages for a chat
+    if (pathname.startsWith('/api/ai/conversations/') && pathname.endsWith('/messages') && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const convId = pathname.replace('/api/ai/conversations/', '').replace('/messages', '');
+      const msgs = await db.query(`
+        SELECT id, sender, content, created_at
+        FROM ai_chat_messages
+        WHERE conversation_id = $1 AND user_id = $2
+        ORDER BY created_at ASC;
+      `, [convId, authUser.userId]);
+
+      return sendJson(res, 200, { messages: msgs.rows });
+    }
+
+    // DELETE /api/ai/conversations/:id — delete a chat
+    if (pathname.startsWith('/api/ai/conversations/') && method === 'DELETE' && !pathname.endsWith('/messages')) {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const convId = pathname.replace('/api/ai/conversations/', '');
+      await db.query(`DELETE FROM ai_chat_conversations WHERE id = $1 AND user_id = $2;`, [convId, authUser.userId]);
+      return sendJson(res, 200, { success: true });
     }
 
     if (pathname === '/api/prep/start' && method === 'POST') {
@@ -988,25 +1159,176 @@ export async function handleApiRequest(req, res) {
       }
     }
 
-    if (pathname === '/api/tutors/book' && method === 'POST') {
+    // ── TUTOR FINANCIAL SYSTEM API ────────────────────────────────────────────
+
+    // GET /api/tutors/banks — list Nigerian banks (for payout profile setup)
+    if (pathname === '/api/tutors/banks' && method === 'GET') {
+      try {
+        const banks = await getNigerianBanks();
+        return sendJson(res, 200, { banks });
+      } catch (err) {
+        return sendJson(res, 500, { error: 'Failed to load bank list', code: 'BANKS_ERROR' });
+      }
+    }
+
+    // POST /api/tutors/booking/initialize — student initiates booking + Paystack payment
+    if (pathname === '/api/tutors/booking/initialize' && method === 'POST') {
       const authUser = await getAuthenticatedUser(req);
       if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
 
-      const { tutorId, slotTime } = await parseJsonBody(req);
+      const body = await parseJsonBody(req);
+      const { tutorId, subject, slotTime, mode, notes } = body;
+
+      if (!tutorId || !subject || !slotTime) {
+        return sendJson(res, 400, { error: 'tutorId, subject, and slotTime are required.' });
+      }
+
       try {
-        // Enforce TUTOR_BOOKING entitlement
-        const usage = await atomicIncrementUsage(authUser.userId, 'TUTOR_BOOKING');
-        return sendJson(res, 201, {
-          success: true,
-          bookingId: 'book_' + Date.now(),
-          tutorId,
-          slotTime,
-          usage
-        });
+        // Enforce TUTOR_BOOKING entitlement (checks subscription tier)
+        await atomicIncrementUsage(authUser.userId, 'TUTOR_BOOKING');
       } catch (err) {
         return sendJson(res, err.statusCode || 403, { error: err.message, code: err.code });
       }
+
+      // Retrieve the Supabase JWT from the Authorization header (needed for RPC)
+      const authHeader = req.headers['authorization'] || '';
+      const supabaseJwt = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+
+      if (!supabaseJwt) {
+        return sendJson(res, 401, { error: 'Supabase JWT required for booking.' });
+      }
+
+      try {
+        const result = await initializeBookingPayment(supabaseJwt, {
+          tutorId,
+          subject,
+          slotTime,
+          mode:         mode || 'virtual',
+          notes:        notes || null,
+          studentEmail: authUser.email
+        });
+        return sendJson(res, 201, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
     }
+
+    // POST /api/tutors/booking/verify — server verifies Paystack payment (never trust frontend)
+    if (pathname === '/api/tutors/booking/verify' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      const { reference } = await parseJsonBody(req);
+      if (!reference) return sendJson(res, 400, { error: 'Payment reference is required.' });
+
+      try {
+        const result = await verifyAndConfirmTutorPayment(reference);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // GET /api/tutors/earnings — tutor's earnings summary (calls Supabase RPC)
+    if (pathname === '/api/tutors/earnings' && method === 'GET') {
+      const authHeader = req.headers['authorization'] || '';
+      const supabaseJwt = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+      if (!supabaseJwt) return sendJson(res, 401, { error: 'Supabase JWT required.' });
+
+      try {
+        const summary = await getTutorEarningsSummary(supabaseJwt);
+        return sendJson(res, 200, { summary });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // POST /api/tutors/withdrawal/request — tutor requests a payout withdrawal
+    if (pathname === '/api/tutors/withdrawal/request' && method === 'POST') {
+      const authHeader = req.headers['authorization'] || '';
+      const supabaseJwt = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+      if (!supabaseJwt) return sendJson(res, 401, { error: 'Supabase JWT required.' });
+
+      const { amountKobo } = await parseJsonBody(req);
+      const amount = Number(amountKobo);
+      if (!Number.isInteger(amount) || amount <= 0) {
+        return sendJson(res, 400, { error: 'amountKobo must be a positive integer.' });
+      }
+
+      try {
+        const result = await requestWithdrawal(supabaseJwt, amount);
+        return sendJson(res, 201, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // POST /api/admin/tutors/withdrawal/:id/approve — admin approves and initiates transfer
+    if (pathname.startsWith('/api/admin/tutors/withdrawal/') && pathname.endsWith('/approve') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || authUser.role !== 'admin' && authUser.role !== 'ADMIN') {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      const withdrawalId = pathname
+        .replace('/api/admin/tutors/withdrawal/', '')
+        .replace('/approve', '');
+
+      const authHeader  = req.headers['authorization'] || '';
+      const supabaseJwt = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+
+      try {
+        // Step 1: Admin approve in DB via RPC (sets status = admin_approved)
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseUrl     = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+        const client = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: { autoRefreshToken: false, persistSession: false }
+        });
+        const { error: approveErr } = await client.rpc('admin_approve_withdrawal', {
+          p_withdrawal_id: withdrawalId,
+          p_admin_notes:   null
+        }, { headers: { Authorization: `Bearer ${supabaseJwt}` } });
+
+        if (approveErr) throw new Error(approveErr.message);
+
+        // Step 2: Initiate Paystack transfer
+        const result = await executeTutorPayout(withdrawalId, supabaseJwt);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // POST /api/admin/tutors/payout-profile/:tutorId/verify — admin verifies bank account
+    if (pathname.startsWith('/api/admin/tutors/payout-profile/') && pathname.endsWith('/verify') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || authUser.role !== 'admin' && authUser.role !== 'ADMIN') {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      const tutorId     = pathname.replace('/api/admin/tutors/payout-profile/', '').replace('/verify', '');
+      const authHeader  = req.headers['authorization'] || '';
+      const supabaseJwt = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+
+      try {
+        const result = await adminVerifyPayoutProfile(tutorId, supabaseJwt);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // Legacy /api/tutors/book — redirect to new endpoint (backward compat)
+    if (pathname === '/api/tutors/book' && method === 'POST') {
+      return sendJson(res, 410, {
+        error: 'This endpoint has been superseded.',
+        message: 'Please use POST /api/tutors/booking/initialize instead.',
+        code: 'ENDPOINT_DEPRECATED'
+      });
+    }
+
+
 
     if (pathname === '/api/video/token' && method === 'POST') {
       const authUser = await getAuthenticatedUser(req);

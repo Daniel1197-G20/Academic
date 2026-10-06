@@ -16,7 +16,28 @@ try {
 }
 
 const DB_PATH = process.env.DB_PATH || (process.env.NODE_ENV === 'test' ? undefined : path.join(DATA_DIR, 'academic-platform.db'));
-export const db = new PGlite(DB_PATH);
+
+// Attempt to open the persistent DB. If the WASM runtime aborts (corrupt data
+// directory), wipe the directory and fall back to an in-memory DB so the dev
+// server never crashes. The next `npm run dev` will recreate a clean DB.
+function createDB(dbPath) {
+  try {
+    return new PGlite(dbPath);
+  } catch (e) {
+    console.error('[DB] PGlite failed to open persistent DB, attempting recovery:', e.message);
+    if (dbPath && fs.existsSync(dbPath)) {
+      try {
+        fs.rmSync(dbPath, { recursive: true, force: true });
+        console.warn('[DB] Corrupt DB directory removed. Using in-memory DB for this session. Restart dev server to get a fresh persistent DB.');
+      } catch (rmErr) {
+        console.error('[DB] Could not remove corrupt DB directory:', rmErr.message);
+      }
+    }
+    return new PGlite(); // in-memory fallback
+  }
+}
+
+export const db = createDB(DB_PATH);
 
 // Helper for hashing passwords securely
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -95,6 +116,28 @@ export async function initializeDatabase() {
       selected_scale TEXT NOT NULL DEFAULT '5.0',
       custom_scale_rules TEXT
     );
+
+    -- AI CHAT CONVERSATIONS
+    CREATE TABLE IF NOT EXISTS ai_chat_conversations (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL DEFAULT 'New Chat',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- AI CHAT MESSAGES
+    CREATE TABLE IF NOT EXISTS ai_chat_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES ai_chat_conversations(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sender TEXT NOT NULL CHECK (sender IN ('user', 'assistant')),
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ai_conv_user ON ai_chat_conversations(user_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_ai_msg_conv  ON ai_chat_messages(conversation_id, created_at ASC);
 
     -- SEMESTERS
     CREATE TABLE IF NOT EXISTS semesters (

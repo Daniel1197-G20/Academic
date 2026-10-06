@@ -13,7 +13,8 @@ import {
   ChevronRight,
   LogOut,
   CreditCard,
-  Sparkles
+  Sparkles,
+  Award,
 } from 'lucide-react';
 import { Avatar, StudoraMark } from '../ui';
 
@@ -26,6 +27,10 @@ export function Sidebar({
   onLogout,
   className = ''
 }) {
+  // Nav label is role-aware: approved tutors see "Tutor Workspace", students see "Become a Tutor"
+  const isTutor = userProfile?.role === 'tutor';
+  const isStudent = !userProfile?.role || userProfile.role === 'student';
+
   const mainNav = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'cgpa', label: 'CGPA', icon: GraduationCap },
@@ -33,6 +38,12 @@ export function Sidebar({
     { id: 'test-prep', label: 'Test Prep', icon: FileCheck2 },
     { id: 'tutors', label: 'Tutors', icon: Compass },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
+    // Role-aware tutoring nav item
+    ...(isTutor
+      ? [{ id: 'become-tutor', label: 'Tutor Workspace', icon: Award }]
+      : isStudent
+      ? [{ id: 'become-tutor', label: 'Become a Tutor', icon: Award }]
+      : []),
   ];
 
   const personalNav = [
@@ -90,6 +101,7 @@ export function Sidebar({
               const isActive = (item.id === 'dashboard' && (activeTab === 'dashboard' || activeTab === 'overview'))
                 || (item.id === 'test-prep' && (activeTab === 'test-prep' || activeTab === 'prep'))
                 || (item.id === 'messages' && (activeTab === 'messages' || activeTab === 'community'))
+                || (item.id === 'become-tutor' && activeTab === 'become-tutor')
                 || activeTab === item.id;
 
               return (
