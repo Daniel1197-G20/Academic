@@ -1,17 +1,37 @@
-// Unified API client for Studora with session token persistence
 const TOKEN_KEY = 'academic_platform_token';
+const memoryTokenStore = new Map();
 
 class ApiClient {
   constructor() {
-    this.token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+    let token = null;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        token = localStorage.getItem(TOKEN_KEY);
+      }
+    } catch (err) {
+      console.warn('LocalStorage token read failed, using memory fallback:', err);
+    }
+    this.token = token || memoryTokenStore.get(TOKEN_KEY) || null;
   }
 
   setToken(token) {
     this.token = token;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        if (token) {
+          localStorage.setItem(TOKEN_KEY, token);
+        } else {
+          localStorage.removeItem(TOKEN_KEY);
+        }
+        return;
+      }
+    } catch (err) {
+      console.warn('LocalStorage token write failed, using memory fallback:', err);
+    }
     if (token) {
-      localStorage.setItem(TOKEN_KEY, token);
+      memoryTokenStore.set(TOKEN_KEY, token);
     } else {
-      localStorage.removeItem(TOKEN_KEY);
+      memoryTokenStore.delete(TOKEN_KEY);
     }
   }
 

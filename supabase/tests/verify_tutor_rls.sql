@@ -6,7 +6,6 @@ DO $$
 DECLARE
   v_user_a UUID := 'b8e974c9-a9fd-45df-a361-f1986b6cefab'; -- Security Test Student
   v_user_b UUID := '6cb83e1e-a936-4457-9302-764403dfb688'; -- Amara Okafor
-  v_admin  UUID := 'c0000000-0000-0000-0000-000000000003'; -- Studora Administrator
   v_app_id UUID;
   v_count INT;
   v_assessment_res JSONB;

@@ -9,12 +9,54 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Safe storage abstraction for restrictive mobile environments/WebViews
+const createSafeStorage = () => {
+  const inMemoryStorage = new Map();
+
+  return {
+    getItem(key) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return window.localStorage.getItem(key);
+        }
+      } catch (err) {
+        console.warn('LocalStorage read access restricted or blocked, falling back to memory:', err);
+      }
+      return inMemoryStorage.get(key) || null;
+    },
+    setItem(key, value) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value);
+          return;
+        }
+      } catch (err) {
+        console.warn('LocalStorage write access restricted or blocked, falling back to memory:', err);
+      }
+      inMemoryStorage.set(key, String(value));
+    },
+    removeItem(key) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem(key);
+          return;
+        }
+      } catch (err) {
+        console.warn('LocalStorage remove access restricted or blocked, falling back to memory:', err);
+      }
+      inMemoryStorage.delete(key);
+    }
+  };
+};
+
+export const safeStorage = createSafeStorage();
+
 /**
  * Authoritative Supabase Client Singleton for Studora
  * "Study smarter. Go further."
  *
  * Configured with:
- * - Persistent session storage via localStorage
+ * - Safe persistent session storage with memory fallback
  * - Automatic JWT token refreshing
  * - URL OAuth / magic link session detection
  */
@@ -23,7 +65,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storage: safeStorage,
   },
 });
 

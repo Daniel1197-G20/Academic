@@ -1,27 +1,7 @@
-/**
- * STUDORA — PHASE 5.1 TEST ACCOUNT PROVISIONER
- * Creates the student and admin test accounts needed for runtime verification.
- *
- * Student: phase51.student@studora-test.dev (role: student — default)
- * Admin:   phase51.admin@studora-test.dev   (role: admin — must be set via service role)
- *
- * NOTE: Setting role='admin' requires the service role key because
- * the protect_profile_role() trigger blocks client-side role changes.
- * We use the Management API / service role to set the admin role safely.
- */
+
 
 import { createClient } from '@supabase/supabase-js';
 
-// ── Credentials from environment — never hardcoded ────────────────────────────
-// Required environment variables:
-//   VITE_SUPABASE_URL              (or set SUPABASE_URL)
-//   VITE_SUPABASE_ANON_KEY         (or set SUPABASE_ANON_KEY)
-//   STUDORA_TEST_STUDENT_EMAIL     e.g. phase51.student@studora-test.dev
-//   STUDORA_TEST_STUDENT_PASSWORD
-//   STUDORA_TEST_ADMIN_EMAIL       e.g. phase51.admin@studora-test.dev
-//   STUDORA_TEST_ADMIN_PASSWORD
-//
-// Example: copy .env.test.example to .env.test and source it before running.
 
 const REQUIRED_VARS = [
   'STUDORA_TEST_STUDENT_EMAIL',
@@ -36,7 +16,7 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-const SUPABASE_URL  = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON) {
@@ -45,9 +25,9 @@ if (!SUPABASE_URL || !SUPABASE_ANON) {
 }
 
 const STUDENT_EMAIL = process.env.STUDORA_TEST_STUDENT_EMAIL;
-const STUDENT_PASS  = process.env.STUDORA_TEST_STUDENT_PASSWORD;
-const ADMIN_EMAIL   = process.env.STUDORA_TEST_ADMIN_EMAIL;
-const ADMIN_PASS    = process.env.STUDORA_TEST_ADMIN_PASSWORD;
+const STUDENT_PASS = process.env.STUDORA_TEST_STUDENT_PASSWORD;
+const ADMIN_EMAIL = process.env.STUDORA_TEST_ADMIN_EMAIL;
+const ADMIN_PASS = process.env.STUDORA_TEST_ADMIN_PASSWORD;
 
 function client(key = SUPABASE_ANON) {
   return createClient(SUPABASE_URL, key, {
@@ -167,7 +147,7 @@ async function main() {
   console.log('══════════════════════════════════════════════════════════════════════');
 
   const studentId = await provisionStudent();
-  const adminId   = await provisionAdmin();
+  const adminId = await provisionAdmin();
 
   console.log('\n── Summary ─────────────────────────────────────────────────────────');
   console.log(`Student: ${studentId ?? 'FAILED'} (${STUDENT_EMAIL})`);

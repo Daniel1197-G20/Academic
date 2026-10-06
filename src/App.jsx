@@ -193,62 +193,68 @@ function AppContent() {
       }
     }, 4000);
 
+    let subscription = null;
+
     // 1. Authoritative Supabase Auth State Change Listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) return;
+    try {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!isMounted) return;
 
-      if (event === 'SIGNED_OUT' || !session) {
-        if (event === 'SIGNED_OUT') {
-          setCurrentUser(null);
-          setUserProfile(null);
-          api.logout();
-          notifyAuthStateChange(null, null);
-          setAuthChecking(false);
-          setShowSplash(false);
+        if (event === 'SIGNED_OUT' || !session) {
+          if (event === 'SIGNED_OUT') {
+            setCurrentUser(null);
+            setUserProfile(null);
+            api.logout();
+            notifyAuthStateChange(null, null);
+            setAuthChecking(false);
+            setShowSplash(false);
+          }
+        } else if (session?.user) {
+          api.setToken(session.access_token);
+
+          let profile = null;
+          let scale = '5.0';
+          try {
+            const [profRes, setRes] = await Promise.all([
+              supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
+              supabase.from('user_settings').select('selected_scale').eq('user_id', session.user.id).maybeSingle()
+            ]);
+            if (profRes.data) profile = profRes.data;
+            if (setRes.data?.selected_scale) scale = setRes.data.selected_scale;
+          } catch (fetchErr) {
+            console.warn('Notice loading Supabase user profile:', fetchErr);
+          }
+
+          if (isMounted) {
+            const resolvedRole = profile?.role || 'student';
+
+            const userObj = {
+              id: session.user.id,
+              email: session.user.email,
+              role: resolvedRole
+            };
+
+            const profObj = profile || {
+              id: session.user.id,
+              full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Student',
+              institution: session.user.user_metadata?.institution || 'General Academy',
+              department: session.user.user_metadata?.department || 'General Studies',
+              academic_level: session.user.user_metadata?.academic_level || 'Year 1'
+            };
+
+            setCurrentUser(userObj);
+            setUserProfile(profObj);
+            setSelectedScale(scale);
+            notifyAuthStateChange(userObj, profObj);
+            setAuthChecking(false);
+            setShowSplash(false);
+          }
         }
-      } else if (session?.user) {
-        api.setToken(session.access_token);
-
-        let profile = null;
-        let scale = '5.0';
-        try {
-          const [profRes, setRes] = await Promise.all([
-            supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
-            supabase.from('user_settings').select('selected_scale').eq('user_id', session.user.id).maybeSingle()
-          ]);
-          if (profRes.data) profile = profRes.data;
-          if (setRes.data?.selected_scale) scale = setRes.data.selected_scale;
-        } catch (fetchErr) {
-          console.warn('Notice loading Supabase user profile:', fetchErr);
-        }
-
-        // SEC-001 FIX: Use actual role from profiles table.
-        // Role is for UI routing only — database RLS is the real authorization boundary.
-        // Fail safely: unknown/missing profile defaults to 'student', never 'admin'.
-        const resolvedRole = profile?.role || 'student';
-
-        const userObj = {
-          id: session.user.id,
-          email: session.user.email,
-          role: resolvedRole
-        };
-
-        const profObj = profile || {
-          id: session.user.id,
-          full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Student',
-          institution: session.user.user_metadata?.institution || 'General Academy',
-          department: session.user.user_metadata?.department || 'General Studies',
-          academic_level: session.user.user_metadata?.academic_level || 'Year 1'
-        };
-
-        setCurrentUser(userObj);
-        setUserProfile(profObj);
-        setSelectedScale(scale);
-        notifyAuthStateChange(userObj, profObj);
-        setAuthChecking(false);
-        setShowSplash(false);
-      }
-    });
+      });
+      subscription = data?.subscription;
+    } catch (listenerErr) {
+      console.warn('Supabase onAuthStateChange initialization notice:', listenerErr);
+    }
 
     // 2. Initial Session Check (Supabase Auth first, then Legacy API fallback)
     async function checkAuth() {
@@ -271,9 +277,6 @@ function AppContent() {
           }
 
           if (isMounted) {
-            // SEC-001 FIX: Use actual role from profiles table.
-            // Role is for UI routing only — database RLS is the real authorization boundary.
-            // Fail safely: unknown/missing profile defaults to 'student', never 'admin'.
             const resolvedRole = profile?.role || 'student';
 
             const userObj = {
@@ -293,8 +296,6 @@ function AppContent() {
             setUserProfile(profObj);
             setSelectedScale(scale);
             notifyAuthStateChange(userObj, profObj);
-            setAuthChecking(false);
-            setShowSplash(false);
           }
           return;
         }
@@ -305,8 +306,6 @@ function AppContent() {
           if (isMounted) {
             setCurrentUser(null);
             setUserProfile(null);
-            setAuthChecking(false);
-            setShowSplash(false);
           }
           return;
         }
@@ -316,8 +315,6 @@ function AppContent() {
           setCurrentUser(me.user);
           setUserProfile(me.profile);
           if (me.selectedScale) setSelectedScale(me.selectedScale);
-          setAuthChecking(false);
-          setShowSplash(false);
         }
       } catch (err) {
         console.warn('Session expired or invalid, clearing session', err);
@@ -325,6 +322,9 @@ function AppContent() {
         if (isMounted) {
           setCurrentUser(null);
           setUserProfile(null);
+        }
+      } finally {
+        if (isMounted) {
           setAuthChecking(false);
           setShowSplash(false);
         }
