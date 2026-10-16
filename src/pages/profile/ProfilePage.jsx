@@ -1,36 +1,41 @@
-import React, { useState } from 'react';
-import { 
-  User, 
-  School, 
-  BookMarked, 
-  ShieldCheck, 
-  Save, 
-  Tag, 
-  Shield, 
-  Download, 
-  Trash2, 
-  Lock, 
-  FileText, 
-  Cookie, 
-  Mail, 
+import React, { useState, useRef } from 'react';
+import {
+  User,
+  School,
+  BookMarked,
+  ShieldCheck,
+  Save,
+  Tag,
+  Shield,
+  Download,
+  Trash2,
+  Lock,
+  FileText,
+  Cookie,
+  Mail,
   AlertTriangle,
   CreditCard,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Camera,
+  Upload,
+  Loader2,
+  X
 } from 'lucide-react';
 import { Button, Input, Badge, Modal, Avatar, PageHeader, Tabs } from '../../components/ui';
 import { api } from '../../services/api/client';
+import { supabase } from '../../lib/supabase/client';
 import { SubscriptionSettingsSection } from '../billing/SubscriptionSettingsSection';
 
-export function ProfilePage({ 
-  userProfile, 
-  onProfileUpdated, 
-  onAccountDeleted, 
-  onOpenCookieSettings, 
+export function ProfilePage({
+  userProfile,
+  onProfileUpdated,
+  onAccountDeleted,
+  onOpenCookieSettings,
   onNavigateLegal,
   onNavigatePricing,
   onLogout,
-  showToast 
+  showToast
 }) {
   const [activeSubTab, setActiveSubTab] = useState('academic'); // 'academic' | 'subscription' | 'privacy' | 'account'
 
@@ -43,7 +48,7 @@ export function ProfilePage({
   const [matricNumber, setMatricNumber] = useState(userProfile?.matric_number || '');
   const [bio, setBio] = useState(userProfile?.bio || '');
   const [interests, setInterests] = useState(
-    Array.isArray(userProfile?.academic_interests) 
+    Array.isArray(userProfile?.academic_interests)
       ? userProfile.academic_interests.join(', ')
       : typeof userProfile?.academic_interests === 'string'
         ? (JSON.parse(userProfile.academic_interests || '[]')).join(', ')
@@ -60,6 +65,10 @@ export function ProfilePage({
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // Avatar Upload States
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef(null);
+
   // Account Logout Modal States
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -70,6 +79,113 @@ export function ProfilePage({
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Handle Avatar Image File Upload
+  const handleAvatarFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Client-side file type validation
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      showToast({
+        type: 'error',
+        title: 'Invalid Image Format',
+        message: 'Please select a JPEG, PNG, or WebP image file.'
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Client-side 5MB max size validation
+    const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE_BYTES) {
+      showToast({
+        type: 'error',
+        title: 'File Too Large',
+        message: 'Profile picture must be under 5 MB in size.'
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Get authoritative session user ID
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || userProfile?.id;
+      if (!userId) {
+        throw new Error('Authentication required to upload profile avatar.');
+      }
+
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `${userId}/profile.${fileExt}`;
+
+      // Upload file directly to Supabase Storage `avatars` bucket
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL for uploaded avatar
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const publicUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+
+      // Update backend profile record
+      const res = await api.updateProfile({ avatarUrl: publicUrl });
+
+      setAvatarUrl(publicUrl);
+      if (onProfileUpdated) onProfileUpdated(res.profile || { ...userProfile, avatar_url: publicUrl });
+
+      showToast({
+        type: 'success',
+        title: 'Photo Updated',
+        message: 'Your profile picture has been updated successfully.'
+      });
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Upload Failed',
+        message: err.message || 'Could not upload profile picture.'
+      });
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle Remove Avatar
+  const handleRemoveAvatar = async () => {
+    setUploadingAvatar(true);
+    try {
+      const res = await api.updateProfile({ avatarUrl: '' });
+      setAvatarUrl('');
+      if (onProfileUpdated) onProfileUpdated(res.profile || { ...userProfile, avatar_url: '' });
+
+      showToast({
+        type: 'info',
+        title: 'Photo Removed',
+        message: 'Your profile picture has been removed.'
+      });
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Action Failed',
+        message: err.message || 'Could not remove profile picture.'
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleConfirmLogout = async () => {
     setLoggingOut(true);
@@ -164,6 +280,16 @@ export function ProfilePage({
 
   return (
     <div className="max-w-4xl space-y-8 pb-20 md:pb-8">
+      {/* Hidden Native File Input with Camera Support for Mobile */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleAvatarFileSelect}
+        accept="image/jpeg,image/png,image/webp,image/jpg"
+        className="hidden"
+        aria-label="Upload profile photo"
+      />
+
       {/* 1. Header */}
       <PageHeader
         title="Student Profile & Settings"
@@ -174,11 +300,30 @@ export function ProfilePage({
       <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 flex-1 min-w-0">
-            <Avatar
-              name={fullName || 'Student'}
-              src={avatarUrl}
-              size="xl"
-            />
+            {/* Avatar Avatar Container with Camera Overlay */}
+            <div className="relative group shrink-0">
+              <Avatar
+                name={fullName || 'Student'}
+                src={avatarUrl}
+                size="xl"
+              />
+              {uploadingAvatar ? (
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center text-white">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 p-1.5 rounded-full bg-academic text-white shadow-md hover:bg-academic-600 transition-transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-academic"
+                  title="Upload profile picture"
+                  aria-label="Upload profile picture"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
             <div className="space-y-1 flex-1 min-w-0">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                 <h2 className="text-xl sm:text-2xl font-bold text-ink truncate">{fullName}</h2>
@@ -190,6 +335,23 @@ export function ProfilePage({
               <p className="text-xs text-muted">
                 ID / Matric: <strong className="text-ink font-mono font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
               </p>
+
+              {/* Upload & Remove Picture Action Row */}
+              <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+
+                {avatarUrl && (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={handleRemoveAvatar}
+                    disabled={uploadingAvatar}
+                    icon={Trash2}
+                    className="text-muted hover:text-danger"
+                  >
+                    Remove Photo
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
           {onLogout && (
@@ -232,12 +394,7 @@ export function ProfilePage({
                 onChange={(e) => setFullName(e.target.value)}
                 required
               />
-              <Input
-                label="Avatar Image URL (Optional)"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="Leave blank to use initials avatar"
-              />
+
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

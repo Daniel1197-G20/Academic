@@ -1,29 +1,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  GraduationCap, 
-  BookOpen, 
-  Sparkles, 
-  CheckCircle2, 
-  Calendar, 
-  Clock, 
-  ArrowRight, 
-  Video, 
-  Users, 
-  FileCheck2, 
-  TrendingUp, 
-  ShieldCheck, 
-  Check, 
-  HelpCircle, 
-  ChevronDown, 
-  Menu, 
-  X, 
-  Search, 
-  Layers, 
-  BarChart3, 
-  Compass, 
-  ArrowUpRight, 
-  Flame, 
-  Zap, 
+import {
+  GraduationCap,
+  BookOpen,
+  Sparkles,
+  CheckCircle2,
+  Calendar,
+  Clock,
+  ArrowRight,
+  Video,
+  Users,
+  FileCheck2,
+  TrendingUp,
+  ShieldCheck,
+  Check,
+  HelpCircle,
+  ChevronDown,
+  Menu,
+  X,
+  Search,
+  Layers,
+  BarChart3,
+  Compass,
+  ArrowUpRight,
+  Flame,
+  Zap,
   Lock,
   ExternalLink,
   MessageSquare
@@ -158,9 +158,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
   // Interactive Demo State: CGPA Scale switcher
   const [selectedDemoScale, setSelectedDemoScale] = useState('5.0');
   const demoCgpaValues = {
-    '5.0': { cgpa: '3.82', max: '5.00', delta: '+0.18', classification: 'Second Class Upper (2:1)' },
-    '4.0': { cgpa: '3.52', max: '4.00', delta: '+0.14', classification: 'Magna Cum Laude' },
-    '7.0': { cgpa: '5.35', max: '7.00', delta: '+0.25', classification: 'Second Class Upper' }
+    '5.0': { cgpa: '3.82', max: '5.00', delta: '+0.18', classification: 'First  Class  (2:1)' },
+    '4.0': { cgpa: '3.52', max: '4.00', delta: '+0.14', classification: 'Second class' },
   };
 
   // Interactive Demo State: Study Tasks toggle
@@ -404,15 +403,15 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
   return (
     <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans selection:bg-academic-100 selection:text-academic">
-      
+
       {/* ========================================================================= */}
       {/* SECTION 1 — NAVIGATION                                                    */}
       {/* ========================================================================= */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          
+
           {/* Logo & Product Name */}
-          <div 
+          <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-3 cursor-pointer select-none"
           >
@@ -470,31 +469,31 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-border px-4 py-6 space-y-4 shadow-tactile-raised animate-fade-in">
             <div className="flex flex-col space-y-3 text-sm font-medium text-ink">
-              <button 
+              <button
                 onClick={() => scrollToSection('features')}
                 className="text-left py-1.5 text-muted hover:text-ink"
               >
                 Features
               </button>
-              <button 
+              <button
                 onClick={() => scrollToSection('how-it-works')}
                 className="text-left py-1.5 text-muted hover:text-ink"
               >
                 How It Works
               </button>
-              <button 
+              <button
                 onClick={() => scrollToSection('tutors')}
                 className="text-left py-1.5 text-muted hover:text-ink"
               >
                 Tutors
               </button>
-              <button 
+              <button
                 onClick={() => scrollToSection('ai-tutor')}
                 className="text-left py-1.5 text-muted hover:text-ink"
               >
                 AI Tutor
               </button>
-              <button 
+              <button
                 onClick={() => scrollToSection('pricing')}
                 className="text-left py-1.5 text-muted hover:text-ink"
               >
@@ -529,9 +528,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section className="pt-12 sm:pt-16 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-3xl mx-auto space-y-5">
-          
+
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-academic-50 border border-academic-200 text-academic text-xs font-semibold select-none shadow-tactile-surface">
-            <span className="w-1.5 h-1.5 rounded-full bg-academic" />
             <span>The Academic Operating Ecosystem</span>
           </div>
 
@@ -540,7 +538,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
           </h1>
 
           <p className="text-sm sm:text-base text-muted max-w-2xl mx-auto leading-relaxed">
-            Plan your semester, track your CGPA, prepare for tests, learn with AI, and connect with tutors — all in one academic platform.
+            Plan your semester, track your CGPA, prepare for tests, learn with AI, and connect with tutors all in one academic platform.
           </p>
 
           <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -571,7 +569,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
         {/* HERO VISUAL — REALISTIC PRODUCT INTERFACE COMPOSITION                   */}
         {/* ======================================================================= */}
         <div className="mt-12 sm:mt-16 bg-white border border-border rounded-hero p-4 sm:p-7 shadow-tactile-hero relative select-none">
-          
+
           {/* Interface Window Chrome */}
           <div className="flex items-center justify-between pb-4 mb-5 border-b border-border text-xs text-muted">
             <div className="flex items-center gap-2">
@@ -585,7 +583,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-academic-100 text-academic border border-academic-200 font-semibold">
-                ● Live Demo Workspace
+                Live Demo Workspace
               </span>
               <span className="text-[11px] text-muted hidden md:inline">Apex Institute of Technology</span>
             </div>
@@ -593,7 +591,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
           {/* Dashboard Preview Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            
+
             {/* 1. CGPA Instrument (Left) */}
             <div className="lg:col-span-4 bg-canvas/40 border border-border rounded-card p-5 space-y-4 shadow-tactile-surface">
               <div className="flex items-center justify-between">
@@ -613,7 +611,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-semibold text-academic">↑ +0.18</span>
                 <span className="text-muted">Current Semester</span>
-                <span className="text-muted">•</span>
+                <span className="text-muted"></span>
                 <span className="font-mono text-muted">102 Units</span>
               </div>
 
@@ -632,8 +630,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                   </span>
                   <p className="text-xs font-bold text-ink mt-0.5">Monday Study Agenda</p>
                 </div>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-gold-50 border border-gold-200 text-gold-700 text-xs font-mono">
-                  <Flame className="w-3.5 h-3.5 text-gold-600 fill-gold-600" />
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded  text-xs font-mono">
                   <span>8d Streak</span>
                 </div>
               </div>
@@ -645,8 +642,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                     key={task.id}
                     onClick={() => toggleDemoTask(task.id)}
                     className={`p-2.5 rounded-btn border flex items-center justify-between gap-3 cursor-pointer transition-all duration-150
-                      ${task.completed 
-                        ? 'bg-white/80 border-border/80 text-muted' 
+                      ${task.completed
+                        ? 'bg-white/80 border-border/80 text-muted'
                         : 'bg-white border-border text-ink shadow-tactile-surface hover:border-academic/40'}`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -674,7 +671,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                   <span className="text-academic font-semibold">{demoProgressPercent}%</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-border overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-academic transition-all duration-300"
                     style={{ width: `${demoProgressPercent}%` }}
                   />
@@ -684,7 +681,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
             {/* 3. AI Tutor & Upcoming Exam (Right) */}
             <div className="lg:col-span-3 space-y-4">
-              
+
               {/* Mini Upcoming Test card */}
               <div className="bg-canvas/40 border border-border rounded-card p-4 space-y-2 shadow-tactile-surface">
                 <div className="flex items-center justify-between">
@@ -739,7 +736,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             ].map((item, idx) => {
               const Icon = item.icon;
               return (
-                <div 
+                <div
                   key={idx}
                   className="bg-canvas border border-border/80 rounded-card p-4 flex flex-col justify-between hover:shadow-tactile-surface transition-all select-none"
                 >
@@ -782,8 +779,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 key={idx}
                 onClick={() => setActiveJourneyStep(idx)}
                 className={`bg-white border rounded-card p-5 cursor-pointer flex flex-col justify-between transition-all duration-200 select-none relative
-                  ${isActive 
-                    ? 'border-academic ring-2 ring-academic/10 shadow-tactile-raised' 
+                  ${isActive
+                    ? 'border-academic ring-2 ring-academic/10 shadow-tactile-raised'
                     : 'border-border shadow-tactile-surface hover:shadow-tactile-raised'}`}
               >
                 <div>
@@ -818,7 +815,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section id="features" className="py-16 sm:py-24 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Editorial Copy */}
           <div className="lg:col-span-5 space-y-5">
             <Badge variant="academic">Academic Measurement</Badge>
@@ -859,7 +856,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
           {/* Right Tactile Instrument Visual */}
           <div className="lg:col-span-7 bg-canvas/40 border border-border rounded-hero p-6 sm:p-8 shadow-tactile-raised space-y-6">
-            
+
             {/* Multi-Scale Interactive Toggle */}
             <div className="flex items-center justify-between pb-4 border-b border-border">
               <span className="text-xs font-semibold text-muted font-mono">PREVIEW SCALING SYSTEM</span>
@@ -946,7 +943,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Interactive Task Planner */}
           <div className="lg:col-span-7 bg-white border border-border rounded-hero p-6 sm:p-8 shadow-tactile-raised space-y-6 order-2 lg:order-1">
             <div className="flex items-center justify-between pb-4 border-b border-border">
@@ -967,8 +964,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                   key={task.id}
                   onClick={() => toggleDemoTask(task.id)}
                   className={`p-3.5 rounded-card border flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 select-none
-                    ${task.completed 
-                      ? 'bg-canvas/50 border-border/70 text-muted shadow-sm' 
+                    ${task.completed
+                      ? 'bg-canvas/50 border-border/70 text-muted shadow-sm'
                       : 'bg-white border-border text-ink shadow-tactile-surface hover:shadow-tactile-raised hover:border-academic/40'}`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -1051,7 +1048,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section id="ai-tutor" className="py-16 sm:py-24 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Copy */}
           <div className="lg:col-span-5 space-y-5">
             <Badge variant="academic">Coursework Assistance</Badge>
@@ -1092,7 +1089,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
           {/* Right Conversation UI Visual */}
           <div className="lg:col-span-7 bg-canvas/40 border border-border rounded-hero p-6 sm:p-8 shadow-tactile-raised space-y-5">
-            
+
             {/* Conversation Window Header */}
             <div className="flex items-center justify-between pb-4 border-b border-border">
               <div className="flex items-center gap-2.5">
@@ -1166,7 +1163,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Test Prep Preview Visual */}
           <div className="lg:col-span-7 bg-white border border-border rounded-hero p-6 sm:p-8 shadow-tactile-raised space-y-5 order-2 lg:order-1">
             <div className="flex items-center justify-between pb-4 border-b border-border">
@@ -1199,8 +1196,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                     onClick={() => { setSelectedAnswer(opt.id); setAnswerSubmitted(true); }}
                     className={`w-full p-3 rounded-btn border text-left text-xs transition-all flex items-center justify-between gap-3 select-none
                       ${selectedAnswer === opt.id
-                        ? opt.isCorrect 
-                          ? 'bg-academic-50 border-academic text-academic font-medium' 
+                        ? opt.isCorrect
+                          ? 'bg-academic-50 border-academic text-academic font-medium'
                           : 'bg-danger-50 border-danger text-danger'
                         : 'bg-canvas/50 border-border text-ink hover:bg-white hover:border-academic/40'}`}
                   >
@@ -1278,7 +1275,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section id="tutors" className="py-16 sm:py-24 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-12">
-          
+
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <Badge variant="academic">Studora Tutor Marketplace</Badge>
             <h2 className="text-2xl sm:text-4xl font-serif text-ink tracking-tight">
@@ -1295,8 +1292,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                   key={subj}
                   onClick={() => setTutorSubjectFilter(subj)}
                   className={`px-3 py-1.5 rounded-btn text-xs font-medium transition-all
-                    ${tutorSubjectFilter === subj 
-                      ? 'bg-academic text-white shadow-tactile-btn' 
+                    ${tutorSubjectFilter === subj
+                      ? 'bg-academic text-white shadow-tactile-btn'
                       : 'bg-canvas border border-border text-muted hover:text-ink'}`}
                 >
                   {subj}
@@ -1309,7 +1306,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
           {/* The real marketplace fetches live data from approved tutor_profiles in Supabase */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredTutors.map(tutor => (
-              <div 
+              <div
                 key={tutor.id}
                 className="bg-canvas/40 border border-border rounded-card p-6 flex flex-col justify-between shadow-tactile-surface hover:shadow-tactile-raised transition-all select-none"
               >
@@ -1375,7 +1372,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Copy */}
           <div className="lg:col-span-5 space-y-5">
             <Badge variant="academic">Collaborative Learning</Badge>
@@ -1470,7 +1467,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section className="py-16 sm:py-24 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Visual Room Window */}
           <div className="lg:col-span-7 bg-navy text-white rounded-hero p-6 sm:p-8 shadow-tactile-hero space-y-6 order-2 lg:order-1">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
@@ -1569,7 +1566,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Copy */}
           <div className="lg:col-span-5 space-y-5">
             <Badge variant="academic">Performance Intelligence</Badge>
@@ -1626,7 +1623,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 ].map((item, idx) => (
                   <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
                     <span className="text-[10px] font-mono font-semibold text-ink">{item.val.toFixed(2)}</span>
-                    <div 
+                    <div
                       className={`w-full rounded-t-btn transition-all duration-300
                         ${item.active ? 'bg-academic shadow-tactile-btn' : 'bg-canvas border border-border'}`}
                       style={{ height: item.height }}
@@ -1651,7 +1648,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section id="pricing" className="py-20 sm:py-28 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-12">
-          
+
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <Badge variant="academic" size="md">Transparent Academic Pricing</Badge>
             <h2 className="text-2xl sm:text-4xl font-serif text-ink tracking-tight">
@@ -1671,8 +1668,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 <div
                   key={plan.code}
                   className={`bg-white border rounded-hero p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 relative select-none
-                    ${isPopular 
-                      ? 'border-academic ring-2 ring-academic/15 shadow-tactile-raised' 
+                    ${isPopular
+                      ? 'border-academic ring-2 ring-academic/15 shadow-tactile-raised'
                       : 'border-border shadow-tactile-surface hover:shadow-tactile-raised'}`}
                 >
                   {isPopular && (
@@ -1853,7 +1850,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               const isOpen = openFaqIndex === idx;
 
               return (
-                <div 
+                <div
                   key={idx}
                   className="border border-border rounded-card overflow-hidden bg-canvas/30 shadow-tactile-surface transition-all select-none"
                 >
@@ -1883,7 +1880,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="bg-white border border-border rounded-hero p-8 sm:p-14 text-center max-w-4xl mx-auto shadow-tactile-hero space-y-5 select-none relative overflow-hidden">
-          
+
           <div className="w-12 h-12 rounded-xl bg-academic-100 border border-academic-200 text-academic flex items-center justify-center mx-auto shadow-tactile-surface">
             <GraduationCap className="w-6 h-6" />
           </div>
@@ -1922,7 +1919,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       {/* ========================================================================= */}
       <footer className="border-t border-border bg-white pt-14 pb-12 px-4 sm:px-6 lg:px-8 text-xs">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-          
+
           {/* Brand info */}
           <div className="col-span-2 space-y-3">
             <div className="flex items-center gap-2.5">

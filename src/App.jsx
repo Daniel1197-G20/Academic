@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
-import { 
-  Sidebar, 
-  BottomNav, 
-  TopHeader 
+import {
+  Sidebar,
+  BottomNav,
+  TopHeader
 } from './components/navigation';
-import { 
-  ToastProvider, 
-  useToast, 
-  LoadingSpinner, 
-  Card, 
+import {
+  ToastProvider,
+  useToast,
+  LoadingSpinner,
+  Card,
   Badge,
-  Button, 
-  AppSplashScreen 
+  Button,
+  AppSplashScreen
 } from './components/ui';
 import { AuthPage } from './pages/auth/AuthPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
@@ -340,8 +340,7 @@ function AppContent() {
     };
   }, []);
 
-  // Route guard effect: redirects unauthenticated users from protected routes,
-  // and authenticated users from login/register routes
+
   useEffect(() => {
     if (authChecking) return; // Wait until authentication state is resolved
 
@@ -356,7 +355,7 @@ function AppContent() {
       return;
     }
 
-    // Scenario 2: Auth route accessed while already authenticated -> redirect to /dashboard
+
     if (AUTH_ROUTES.has(normalized) && currentUser) {
       setActiveTab('dashboard');
       if (window.location.pathname !== '/dashboard') {
@@ -470,10 +469,10 @@ function AppContent() {
 
   if (showSplash) {
     return (
-      <AppSplashScreen 
-        isFading={splashFading} 
-        message="Loading Studora..." 
-        subMessage="Study smarter. Go further." 
+      <AppSplashScreen
+        isFading={splashFading}
+        message="Loading Studora..."
+        subMessage="Study smarter. Go further."
       />
     );
   }
@@ -516,13 +515,13 @@ function AppContent() {
     if (activeTab === 'privacy-settings') {
       return (
         <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
-          <PrivacySettingsPage 
+          <PrivacySettingsPage
             currentUser={currentUser}
-            onBack={() => navigateRoute('landing')} 
+            onBack={() => navigateRoute('landing')}
             onOpenCookieSettings={() => setShowCookieModal(true)}
             onNavigate={navigateRoute}
             onAccountDeleted={handleAccountDeleted}
-            showToast={addToast} 
+            showToast={addToast}
           />
           <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
           <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -536,10 +535,10 @@ function AppContent() {
         <BillingProvider currentUser={null} showToast={addToast}>
           <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
             <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-              <PricingPage 
-                onBack={() => navigateRoute('landing')} 
-                onSelectPlan={handleLandingSelectPlan} 
-                showToast={addToast} 
+              <PricingPage
+                onBack={() => navigateRoute('landing')}
+                onSelectPlan={handleLandingSelectPlan}
+                showToast={addToast}
               />
             </div>
             <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
@@ -553,7 +552,7 @@ function AppContent() {
     if (activeTab === 'login' || activeTab === 'register' || activeTab === 'auth') {
       return (
         <>
-          <AuthPage 
+          <AuthPage
             initialMode={activeTab === 'register' ? 'register' : 'login'}
             onLoginSuccess={handleLoginSuccess}
             onNavigateLegal={navigateRoute}
@@ -780,188 +779,188 @@ function AppContent() {
                 )}
 
 
-            {/* Test Prep Drills */}
-            {(activeTab === 'test-prep' || activeTab === 'prep') && (
-              <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-ink">Test Preparation & Exam Simulation</h2>
-                    <p className="text-xs sm:text-sm text-muted">Diagnostic question drills and real-time algorithmic assessments.</p>
-                  </div>
-                  <Badge variant="academic">Active Simulator</Badge>
-                </div>
-
-                <FeatureGate
-                  feature="TEST_PREP_BASIC"
-                  featureTitle="Practice Test Drills"
-                  description="Simulate exam scenarios with timed test drills and diagnostic topic breakdowns."
-                  showRemaining={true}
-                  onUpgrade={() => navigateRoute('pricing')}
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-academic-100 text-academic">CSC301</span>
-                        <span className="text-xs text-muted font-mono">25 Questions • 45 Mins</span>
-                      </div>
+                {/* Test Prep Drills */}
+                {(activeTab === 'test-prep' || activeTab === 'prep') && (
+                  <div className="max-w-4xl mx-auto space-y-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
-                        <h3 className="text-base font-bold text-ink">Algorithms & Complexity Drill</h3>
-                        <p className="text-xs text-muted mt-1">Master theorem, dynamic programming, recurrence relations, and NP proofs.</p>
+                        <h2 className="text-xl sm:text-2xl font-bold text-ink">Test Preparation & Exam Simulation</h2>
+                        <p className="text-xs sm:text-sm text-muted">Diagnostic question drills and real-time algorithmic assessments.</p>
                       </div>
-                      <Button
-                        variant="academic"
-                        size="sm"
-                        className="w-full shadow-tactile-btn"
-                        onClick={async () => {
-                          try {
-                            const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'CSC301: Algorithms' }) });
-                            addToast({ type: 'success', title: 'Drill Session Initialized', message: `Exam drill session ${res.examSessionId} started (${res.usage.usageCount} tests recorded).` });
-                          } catch (err) {
-                            addToast({ type: 'error', title: 'Test Limit Notice', message: err.message });
-                          }
-                        }}
-                      >
-                        Start Algorithmic Drill
-                      </Button>
+                      <Badge variant="academic">Active Simulator</Badge>
                     </div>
 
-                    <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-gold-100 text-gold-800">CSC307</span>
-                        <span className="text-xs text-muted font-mono">30 Questions • 50 Mins</span>
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-ink">Computer Networks Simulation</h3>
-                        <p className="text-xs text-muted mt-1">OSI model, TCP/IP flow control, CIDR subnetting, and BGP routing protocols.</p>
-                      </div>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="w-full shadow-tactile-btn"
-                        onClick={async () => {
-                          try {
-                            const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'CSC307: Networks' }) });
-                            addToast({ type: 'success', title: 'Drill Session Initialized', message: `Exam drill session ${res.examSessionId} started (${res.usage.usageCount} tests recorded).` });
-                          } catch (err) {
-                            addToast({ type: 'error', title: 'Test Limit Notice', message: err.message });
-                          }
-                        }}
-                      >
-                        Start Networks Drill
-                      </Button>
-                    </div>
-                  </div>
-                </FeatureGate>
-              </div>
-            )}
-
-
-            {/* Tutor Marketplace — sourced from approved Supabase tutor_profiles */}
-            {activeTab === 'tutors' && (
-              <TutorMarketplacePage
-                currentUser={currentUser}
-                onNavigate={navigateRoute}
-                showToast={addToast}
-              />
-            )}
-
-
-            {/* Community & ZEGOCLOUD Video Tutoring */}
-            {(activeTab === 'messages' || activeTab === 'community') && (
-              <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-ink">Study Groups & Video Tutoring</h2>
-                    <p className="text-xs sm:text-sm text-muted">Live HD video tutoring halls and private peer cohort study channels.</p>
-                  </div>
-                  <Badge variant="academic">ZEGOCLOUD Ready</Badge>
-                </div>
-
-                {/* ZEGOCLOUD Video Tutoring Session Gating */}
-                <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-academic-100 text-academic flex items-center justify-center shrink-0 border border-academic-200">
-                      <Video className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-ink">Live HD Video Tutoring Room</h3>
-                      <p className="text-xs text-muted">Low-latency live video, interactive whiteboard, and screen sharing</p>
-                    </div>
-                  </div>
-
-                  <FeatureGate
-                    feature="VIDEO_TUTORING"
-                    featureTitle="ZEGOCLOUD Live Video Tutoring"
-                    description="Live 1-on-1 and cohort video tutoring is reserved for Pro and Premium plans."
-                    requiredPlan="Pro"
-                    requiredPlanCode="pro"
-                    onUpgrade={() => navigateRoute('pricing')}
-                  >
-                    <div className="p-4 rounded-btn bg-canvas border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-semibold text-ink">Room: ZEGO-ROOM-301-ALGORITHMS</p>
-                        <p className="text-[11px] text-muted">Authenticated session with encrypted real-time audio/video</p>
-                      </div>
-                      <Button
-                        variant="academic"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            const res = await api.request('/api/video/token', { method: 'POST', body: JSON.stringify({ roomCode: 'ZEGO-ROOM-301-ALGORITHMS' }) });
-                            addToast({ type: 'success', title: 'Video Room Active', message: `Connected to ZEGOCLOUD room ${res.roomCode}. Token verified.` });
-                          } catch (err) {
-                            addToast({ type: 'error', title: 'Access Denied', message: err.message });
-                          }
-                        }}
-                      >
-                        Join Live Video Room
-                      </Button>
-                    </div>
-                  </FeatureGate>
-                </div>
-
-                {/* Private Study Groups Gating */}
-                <FeatureGate
-                  feature="PRIVATE_GROUPS"
-                  featureTitle="Private Study Groups"
-                  description="Create and join private department and cohort study groups."
-                  requiredPlan="Student"
-                  requiredPlanCode="student"
-                  onUpgrade={() => navigateRoute('pricing')}
-                >
-                  <div className="bg-white border border-border rounded-card p-6 shadow-tactile-surface space-y-4">
-                    <h3 className="text-base font-bold text-ink">Active Cohort Study Groups</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-4 rounded-btn border border-border bg-canvas/30 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-ink">Junior CS Honours Cohort</span>
-                          <span className="text-[10px] font-mono text-muted">18 Members</span>
+                    <FeatureGate
+                      feature="TEST_PREP_BASIC"
+                      featureTitle="Practice Test Drills"
+                      description="Simulate exam scenarios with timed test drills and diagnostic topic breakdowns."
+                      showRemaining={true}
+                      onUpgrade={() => navigateRoute('pricing')}
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-academic-100 text-academic">CSC301</span>
+                            <span className="text-xs text-muted font-mono">25 Questions • 45 Mins</span>
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-ink">Algorithms & Complexity Drill</h3>
+                            <p className="text-xs text-muted mt-1">Master theorem, dynamic programming, recurrence relations, and NP proofs.</p>
+                          </div>
+                          <Button
+                            variant="academic"
+                            size="sm"
+                            className="w-full shadow-tactile-btn"
+                            onClick={async () => {
+                              try {
+                                const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'CSC301: Algorithms' }) });
+                                addToast({ type: 'success', title: 'Drill Session Initialized', message: `Exam drill session ${res.examSessionId} started (${res.usage.usageCount} tests recorded).` });
+                              } catch (err) {
+                                addToast({ type: 'error', title: 'Test Limit Notice', message: err.message });
+                              }
+                            }}
+                          >
+                            Start Algorithmic Drill
+                          </Button>
                         </div>
-                        <p className="text-[11px] text-muted">Daily review of algorithm proofs and compiler construction projects.</p>
-                        <Badge variant="academic" size="sm">Active Discussion</Badge>
-                      </div>
 
-                      <div className="p-4 rounded-btn border border-border bg-canvas/30 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-ink">Networks & Security Study Hall</span>
-                          <span className="text-[10px] font-mono text-muted">24 Members</span>
+                        <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-gold-100 text-gold-800">CSC307</span>
+                            <span className="text-xs text-muted font-mono">30 Questions • 50 Mins</span>
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-ink">Computer Networks Simulation</h3>
+                            <p className="text-xs text-muted mt-1">OSI model, TCP/IP flow control, CIDR subnetting, and BGP routing protocols.</p>
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-full shadow-tactile-btn"
+                            onClick={async () => {
+                              try {
+                                const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'CSC307: Networks' }) });
+                                addToast({ type: 'success', title: 'Drill Session Initialized', message: `Exam drill session ${res.examSessionId} started (${res.usage.usageCount} tests recorded).` });
+                              } catch (err) {
+                                addToast({ type: 'error', title: 'Test Limit Notice', message: err.message });
+                              }
+                            }}
+                          >
+                            Start Networks Drill
+                          </Button>
                         </div>
-                        <p className="text-[11px] text-muted">Wireshark packet tracing and socket programming exercises.</p>
-                        <Badge variant="academic" size="sm">Active Discussion</Badge>
                       </div>
-                    </div>
+                    </FeatureGate>
                   </div>
-                </FeatureGate>
-              </div>
-            )}
+                )}
 
-            {/* AI Academic Tutor */}
-            {activeTab === 'ai' && (
-              <AiTutorPage
-                onNavigate={navigateRoute}
-                showToast={addToast}
-              />
-            )}
+
+                {/* Tutor Marketplace — sourced from approved Supabase tutor_profiles */}
+                {activeTab === 'tutors' && (
+                  <TutorMarketplacePage
+                    currentUser={currentUser}
+                    onNavigate={navigateRoute}
+                    showToast={addToast}
+                  />
+                )}
+
+
+                {/* Community & ZEGOCLOUD Video Tutoring */}
+                {(activeTab === 'messages' || activeTab === 'community') && (
+                  <div className="max-w-4xl mx-auto space-y-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-xl sm:text-2xl font-bold text-ink">Study Groups & Video Tutoring</h2>
+                        <p className="text-xs sm:text-sm text-muted">Live HD video tutoring halls and private peer cohort study channels.</p>
+                      </div>
+                      <Badge variant="academic">ZEGOCLOUD Ready</Badge>
+                    </div>
+
+                    {/* ZEGOCLOUD Video Tutoring Session Gating */}
+                    <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-academic-100 text-academic flex items-center justify-center shrink-0 border border-academic-200">
+                          <Video className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-ink">Live HD Video Tutoring Room</h3>
+                          <p className="text-xs text-muted">Low-latency live video, interactive whiteboard, and screen sharing</p>
+                        </div>
+                      </div>
+
+                      <FeatureGate
+                        feature="VIDEO_TUTORING"
+                        featureTitle="ZEGOCLOUD Live Video Tutoring"
+                        description="Live 1-on-1 and cohort video tutoring is reserved for Pro and Premium plans."
+                        requiredPlan="Pro"
+                        requiredPlanCode="pro"
+                        onUpgrade={() => navigateRoute('pricing')}
+                      >
+                        <div className="p-4 rounded-btn bg-canvas border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div>
+                            <p className="text-xs font-semibold text-ink">Room: ZEGO-ROOM-301-ALGORITHMS</p>
+                            <p className="text-[11px] text-muted">Authenticated session with encrypted real-time audio/video</p>
+                          </div>
+                          <Button
+                            variant="academic"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const res = await api.request('/api/video/token', { method: 'POST', body: JSON.stringify({ roomCode: 'ZEGO-ROOM-301-ALGORITHMS' }) });
+                                addToast({ type: 'success', title: 'Video Room Active', message: `Connected to ZEGOCLOUD room ${res.roomCode}. Token verified.` });
+                              } catch (err) {
+                                addToast({ type: 'error', title: 'Access Denied', message: err.message });
+                              }
+                            }}
+                          >
+                            Join Live Video Room
+                          </Button>
+                        </div>
+                      </FeatureGate>
+                    </div>
+
+                    {/* Private Study Groups Gating */}
+                    <FeatureGate
+                      feature="PRIVATE_GROUPS"
+                      featureTitle="Private Study Groups"
+                      description="Create and join private department and cohort study groups."
+                      requiredPlan="Student"
+                      requiredPlanCode="student"
+                      onUpgrade={() => navigateRoute('pricing')}
+                    >
+                      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-surface space-y-4">
+                        <h3 className="text-base font-bold text-ink">Active Cohort Study Groups</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="p-4 rounded-btn border border-border bg-canvas/30 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-ink">Junior CS Honours Cohort</span>
+                              <span className="text-[10px] font-mono text-muted">18 Members</span>
+                            </div>
+                            <p className="text-[11px] text-muted">Daily review of algorithm proofs and compiler construction projects.</p>
+                            <Badge variant="academic" size="sm">Active Discussion</Badge>
+                          </div>
+
+                          <div className="p-4 rounded-btn border border-border bg-canvas/30 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-ink">Networks & Security Study Hall</span>
+                              <span className="text-[10px] font-mono text-muted">24 Members</span>
+                            </div>
+                            <p className="text-[11px] text-muted">Wireshark packet tracing and socket programming exercises.</p>
+                            <Badge variant="academic" size="sm">Active Discussion</Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </FeatureGate>
+                  </div>
+                )}
+
+                {/* AI Academic Tutor */}
+                {activeTab === 'ai' && (
+                  <AiTutorPage
+                    onNavigate={navigateRoute}
+                    showToast={addToast}
+                  />
+                )}
               </Suspense>
             </ErrorBoundary>
           </main>
