@@ -1,10 +1,4 @@
-/**
- * BookingModal.jsx
- *
- * Real student booking modal for the Studora Tutor Marketplace.
- * Displays tutor price, session mode options, fee breakdown, and initializes
- * server-side Paystack payment for tutor sessions.
- */
+
 
 import React, { useState } from 'react';
 import {
@@ -166,11 +160,10 @@ export function BookingModal({ tutor, isOpen, onClose, onPaymentInitialized, sho
             <button
               type="button"
               onClick={() => setMode('virtual')}
-              className={`p-2.5 rounded-btn border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-                mode === 'virtual'
+              className={`p-2.5 rounded-btn border text-xs font-medium flex items-center justify-center gap-2 transition-all ${mode === 'virtual'
                   ? 'bg-academic-50 border-academic-300 text-academic font-bold shadow-tactile-surface'
                   : 'bg-white border-border text-muted hover:text-ink'
-              }`}
+                }`}
             >
               <Video className="w-4 h-4" />
               Virtual (Online Video)
@@ -178,11 +171,10 @@ export function BookingModal({ tutor, isOpen, onClose, onPaymentInitialized, sho
             <button
               type="button"
               onClick={() => setMode('physical')}
-              className={`p-2.5 rounded-btn border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-                mode === 'physical'
+              className={`p-2.5 rounded-btn border text-xs font-medium flex items-center justify-center gap-2 transition-all ${mode === 'physical'
                   ? 'bg-academic-50 border-academic-300 text-academic font-bold shadow-tactile-surface'
                   : 'bg-white border-border text-muted hover:text-ink'
-              }`}
+                }`}
             >
               <MapPin className="w-4 h-4" />
               Physical (In-Person)

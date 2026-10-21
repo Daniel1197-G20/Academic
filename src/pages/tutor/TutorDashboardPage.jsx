@@ -206,7 +206,15 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
           </div>
         </div>
 
-        <div className="shrink-0">
+        <div className="shrink-0 flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onNavigate('messages')}
+            icon={MessageSquare}
+          >
+            Messages & Chat
+          </Button>
           <Button
             variant="academic"
             size="sm"

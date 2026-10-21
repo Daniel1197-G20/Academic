@@ -310,6 +310,20 @@ class ApiClient {
   async getAdminBillingMetrics() {
     return this.request('/api/admin/billing');
   }
+
+  // --- Real-time Communication (GetStream) ---
+  async getStreamToken() {
+    return this.request('/api/stream/token', {
+      method: 'POST'
+    });
+  }
+
+  async getOrCreateStreamConversation({ tutorId, recipientId, bookingId, subject, channelName } = {}) {
+    return this.request('/api/stream/conversation', {
+      method: 'POST',
+      body: JSON.stringify({ tutorId, recipientId, bookingId, subject, channelName })
+    });
+  }
 }
 
 export const api = new ApiClient();

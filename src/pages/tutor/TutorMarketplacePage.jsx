@@ -35,6 +35,8 @@ import { Button, Badge, Avatar, PageHeader, EmptyState } from '../../components/
 import { useTutorMarketplace } from '../../hooks/useTutorMarketplace';
 import { FeatureGate } from '../../components/billing/FeatureGate';
 import { BookingModal } from '../../components/tutor/BookingModal';
+import { api } from '../../services/api/client';
+import { MessageSquare } from 'lucide-react';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -138,7 +140,7 @@ function TutorCard({ tutor, onBook, onNavigate }) {
       </div>
 
       {/* CTA Footer */}
-      <div className="px-5 pb-5">
+      <div className="px-5 pb-5 space-y-2">
         <FeatureGate
           feature="TUTOR_BOOKING"
           featureTitle="Book a Verified Tutor"
@@ -156,6 +158,26 @@ function TutorCard({ tutor, onBook, onNavigate }) {
             Book a Session ({priceFormatted})
           </Button>
         </FeatureGate>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full text-xs"
+          icon={MessageSquare}
+          onClick={async () => {
+            try {
+              await api.getOrCreateStreamConversation({
+                tutorId: tutor.tutorId,
+                subject: tutor.subjectNames?.[0] || 'General Tutoring'
+              });
+              onNavigate('messages');
+            } catch (err) {
+              onNavigate('messages');
+            }
+          }}
+        >
+          Message Tutor
+        </Button>
       </div>
     </div>
   );

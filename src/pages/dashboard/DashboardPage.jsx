@@ -12,7 +12,8 @@ import {
   Clock,
   Sparkles,
   Compass,
-  Award
+  Award,
+  MessageSquare
 } from 'lucide-react';
 import { 
   Card, 
@@ -377,6 +378,22 @@ export function DashboardPage({
               <div className="min-w-0">
                 <span className="text-xs font-bold text-ink block truncate">Study Plan</span>
                 <span className="text-[10px] text-muted block truncate">Daily syllabus</span>
+              </div>
+            </button>
+
+            {/* Messages / Chat — fast direct communication with students & tutors */}
+            <button
+              type="button"
+              onClick={() => onNavigateTab('messages')}
+              className="p-3 rounded-xl bg-white border border-border shadow-tactile-surface hover:shadow-tactile-raised active:translate-y-[1px] transition-all text-left flex items-center gap-2.5 select-none min-h-[48px]"
+              aria-label="Messages: Chat with students and tutors"
+            >
+              <div className="w-8 h-8 rounded-lg bg-academic-50 border border-academic-200 text-academic flex items-center justify-center shrink-0">
+                <MessageSquare className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-ink block truncate">Messages</span>
+                <span className="text-[10px] text-muted block truncate">Chat & study</span>
               </div>
             </button>
 

@@ -18,8 +18,11 @@ export const clientConfig = Object.freeze({
     isDev: (typeof import.meta !== 'undefined' && import.meta.env?.DEV) ?? true,
   }),
   supabase: Object.freeze({
-    url: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || 'https://ermkkjkkxlqjrgpinrjt.supabase.co',
-    anonKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybWtramtreGxxanJncGlucmp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NzMxOTcsImV4cCI6MjEwNjQ0OTE5N30.9E5v8_sMfNPAX6NolyU9rzJXkKvmk4WMhW1MX_IGVVw',
+    // These values must be provided via VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment
+    // variables. No hardcoded fallbacks: missing configuration surfaces immediately at startup
+    // rather than silently connecting to a stale or shared project.
+    url: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '',
+    anonKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '',
   }),
   // Transitional legacy references (non-authoritative during Phase 1)
   firebase: Object.freeze({
@@ -37,8 +40,19 @@ export const clientConfig = Object.freeze({
     appId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ZEGOCLOUD_APP_ID)
       ? Number(import.meta.env.VITE_ZEGOCLOUD_APP_ID)
       : null,
+  }),
+  stream: Object.freeze({
+    apiKey: (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_STREAM_API_KEY || import.meta.env?.STREAM_API_KEY)) || '',
   })
 });
+
+/**
+ * Validates whether Stream credentials have been configured in frontend
+ */
+export function isStreamConfigured() {
+  const key = clientConfig.stream?.apiKey;
+  return Boolean(key && key.trim().length > 0);
+}
 
 /**
  * Validates whether Supabase credentials have been configured

@@ -33,6 +33,7 @@ import { useBilling } from '../../context/BillingContext';
 import { useTutorMarketplace } from '../../hooks/useTutorMarketplace';
 import { api } from '../../services/api/client';
 
+
 export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) {
   // Mobile drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -158,8 +159,9 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
   // Interactive Demo State: CGPA Scale switcher
   const [selectedDemoScale, setSelectedDemoScale] = useState('5.0');
   const demoCgpaValues = {
-    '5.0': { cgpa: '3.82', max: '5.00', delta: '+0.18', classification: 'First  Class  (2:1)' },
-    '4.0': { cgpa: '3.52', max: '4.00', delta: '+0.14', classification: 'Second class' },
+    '5.0': { cgpa: '3.82', max: '5.00', delta: '+0.18', classification: 'First Class Honours' },
+    '4.0': { cgpa: '3.52', max: '4.00', delta: '+0.14', classification: 'Second Class Upper' },
+    '7.0': { cgpa: '5.85', max: '7.00', delta: '+0.25', classification: 'First Class Honours' },
   };
 
   // Interactive Demo State: Study Tasks toggle
@@ -181,46 +183,48 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
   const [activeJourneyStep, setActiveJourneyStep] = useState(0);
   const journeySteps = [
     {
-      label: 'Measure',
-      tagline: 'Know where you stand.',
-      description: 'Continuous multi-scale CGPA modeling, semester credit units, and classification tracking.',
+      stepNumber: 'Step 1',
+      stage: 'FOUNDATION',
+      title: 'Measure your starting point',
+      description: 'Understand your current academic standing and identify what you want to improve.',
       icon: GraduationCap,
-      accent: 'border-academic text-academic bg-academic-50'
+      tier: 'primary',
+      badge: 'Start with CGPA',
+      route: 'cgpa',
+      actionLabel: 'Calculate baseline'
     },
     {
-      label: 'Plan',
-      tagline: 'Build a realistic study routine.',
-      description: 'Convert heavy semester syllabi into daily schedules, topic checklists, and study streaks.',
+      stepNumber: 'Step 2',
+      stage: 'PLANNING',
+      title: 'Plan your next move',
+      description: 'Organize your courses, priorities, and study sessions into a realistic routine.',
       icon: Calendar,
-      accent: 'border-gold text-gold-700 bg-gold-50'
+      tier: 'secondary',
+      badge: 'Semester Schedule',
+      route: 'study',
+      actionLabel: 'Build routine'
     },
     {
-      label: 'Learn',
-      tagline: 'Use AI and learning resources.',
-      description: 'Academic AI assistance tailored specifically to your university syllabus and tricky course concepts.',
+      stepNumber: 'Step 3',
+      stage: 'EXECUTION',
+      title: 'Learn and practise',
+      description: 'Use AI learning resources and practice drills to strengthen your conceptual understanding.',
       icon: Sparkles,
-      accent: 'border-navy text-navy-800 bg-navy-50'
+      tier: 'secondary',
+      badge: 'Active Study',
+      route: 'ai',
+      actionLabel: 'Explore learning'
     },
     {
-      label: 'Practice',
-      tagline: 'Prepare with tests and questions.',
-      description: 'Timed exam drills, question banks, and instant diagnostic feedback on weak topics.',
-      icon: FileCheck2,
-      accent: 'border-academic text-academic bg-academic-50'
-    },
-    {
-      label: 'Connect',
-      tagline: 'Find tutors and study with others.',
-      description: 'Verified 1-on-1 tutoring sessions, private peer study halls, and encrypted video rooms.',
-      icon: Users,
-      accent: 'border-navy text-navy-800 bg-navy-50'
-    },
-    {
-      label: 'Improve',
-      tagline: 'Track your progress.',
-      description: 'Clear trend graphs, revision velocity, and confidence meters that build real semester momentum.',
+      stepNumber: 'Step 4',
+      stage: 'MILESTONE',
+      title: 'Review your progress',
+      description: 'See how far you have come, celebrate wins, and adjust your routine as needed.',
       icon: TrendingUp,
-      accent: 'border-academic text-academic bg-academic-50'
+      tier: 'milestone',
+      badge: 'Continuous Growth',
+      route: 'dashboard',
+      actionLabel: 'Track milestones'
     }
   ];
 
@@ -361,7 +365,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
     },
     {
       q: 'How are Paystack payments handled?',
-      a: 'All payment processing is executed via Paystack’s PCI-DSS Level 1 compliant secure infrastructure. The Academic Platform server never touches, stores, or transmits your sensitive credit/debit card numbers or CVV codes.'
+      a: 'All payment processing is executed via Paystack’s PCI-DSS Level 1 compliant secure infrastructure. The Studora platform server never touches, stores, or transmits your sensitive credit/debit card numbers or CVV codes.'
     },
     {
       q: 'Does the platform support video tutoring?',
@@ -421,7 +425,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             <div>
               <span className="font-bold text-base tracking-tight text-ink">Studora</span>
               <span className="hidden sm:inline-block text-[11px] text-muted ml-1.5 font-normal tracking-normal border-l border-border pl-1.5">
-                Student Platform
+                Study smarter. Go further.
               </span>
             </div>
           </div>
@@ -429,10 +433,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
           {/* Desktop Links */}
           <nav className="hidden md:flex items-center gap-8 text-xs font-medium text-muted">
             <button onClick={() => scrollToSection('features')} className="hover:text-ink transition-colors">Features</button>
-            <button onClick={() => scrollToSection('how-it-works')} className="hover:text-ink transition-colors">How It Works</button>
-            <button onClick={() => scrollToSection('tutors')} className="hover:text-ink transition-colors">Tutors</button>
-            <button onClick={() => scrollToSection('ai-tutor')} className="hover:text-ink transition-colors">AI Tutor</button>
-            <button onClick={() => scrollToSection('pricing')} className="hover:text-ink transition-colors">Pricing</button>
+            <button onClick={() => scrollToSection('tutors')} className="hover:text-ink transition-colors">Find a Tutor</button>
+            <button onClick={() => scrollToSection('how-it-works')} className="hover:text-ink transition-colors">About</button>
           </nav>
 
           {/* Right Actions */}
@@ -476,28 +478,16 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 Features
               </button>
               <button
-                onClick={() => scrollToSection('how-it-works')}
-                className="text-left py-1.5 text-muted hover:text-ink"
-              >
-                How It Works
-              </button>
-              <button
                 onClick={() => scrollToSection('tutors')}
                 className="text-left py-1.5 text-muted hover:text-ink"
               >
-                Tutors
+                Find a Tutor
               </button>
               <button
-                onClick={() => scrollToSection('ai-tutor')}
+                onClick={() => scrollToSection('how-it-works')}
                 className="text-left py-1.5 text-muted hover:text-ink"
               >
-                AI Tutor
-              </button>
-              <button
-                onClick={() => scrollToSection('pricing')}
-                className="text-left py-1.5 text-muted hover:text-ink"
-              >
-                Pricing
+                About
               </button>
             </div>
 
@@ -508,7 +498,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 onClick={() => { setMobileMenuOpen(false); onNavigate('register'); }}
                 className="w-full shadow-tactile-btn"
               >
-                Get Started Free
+                Get Started
               </Button>
               <Button
                 variant="secondary"
@@ -516,7 +506,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 onClick={() => { setMobileMenuOpen(false); onNavigate('login'); }}
                 className="w-full"
               >
-                Log In to Workspace
+                Log In
               </Button>
             </div>
           </div>
@@ -530,15 +520,15 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
         <div className="text-center max-w-3xl mx-auto space-y-5">
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-academic-50 border border-academic-200 text-academic text-xs font-semibold select-none shadow-tactile-surface">
-            <span>The Academic Operating Ecosystem</span>
+            <span>YOUR ACADEMIC JOURNEY, SIMPLIFIED</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif text-ink tracking-tight leading-[1.15]">
-            Your academic life, organized.
+            Take control of your academic future.
           </h1>
 
           <p className="text-sm sm:text-base text-muted max-w-2xl mx-auto leading-relaxed">
-            Plan your semester, track your CGPA, prepare for tests, learn with AI, and connect with tutors all in one academic platform.
+            Track your performance, plan your semester, learn difficult concepts, and prepare for exams — all in one place.
           </p>
 
           <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -548,7 +538,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               onClick={() => onNavigate('register')}
               className="w-full sm:w-auto shadow-tactile-btn text-sm font-semibold px-7"
             >
-              Get Started Free
+              Get Started
             </Button>
             <Button
               variant="secondary"
@@ -556,12 +546,12 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               onClick={() => scrollToSection('features')}
               className="w-full sm:w-auto text-sm font-semibold px-6 border-border hover:bg-white"
             >
-              Explore the Platform
+              Explore Features
             </Button>
           </div>
 
           <p className="text-[11px] text-muted/80 font-mono tracking-tight">
-            Start free. Upgrade when you need more.
+            Built for students who want to study with purpose.
           </p>
         </div>
 
@@ -717,103 +707,450 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 3 — TRUST / VALUE STRIP                                           */}
+      {/* SECTION 3 — FEATURE SHOWCASE (3-TIER VISUAL HIERARCHY BENTO)               */}
       {/* ========================================================================= */}
-      <section className="border-y border-border bg-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <p className="text-center text-xs font-semibold text-muted tracking-wider uppercase">
-            Everything you need to stay on top of your academics.
-          </p>
+      <section id="features" className="py-16 sm:py-24 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-10">
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { title: 'CGPA', desc: 'Track your academic performance.', icon: GraduationCap },
-              { title: 'Study Plans', desc: 'Know what to study and when.', icon: Calendar },
-              { title: 'Test Prep', desc: 'Practice before exam day.', icon: FileCheck2 },
-              { title: 'AI Tutor', desc: "Get help when you're stuck.", icon: Sparkles },
-              { title: 'Tutors', desc: 'Connect with real academic support.', icon: Compass },
-              { title: 'Groups', desc: 'Learn together.', icon: Users },
-            ].map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-canvas border border-border/80 rounded-card p-4 flex flex-col justify-between hover:shadow-tactile-surface transition-all select-none"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-white border border-border flex items-center justify-center text-academic mb-3 shadow-tactile-surface">
-                    <Icon className="w-4 h-4" />
+          {/* Section Editorial Header */}
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <Badge variant="academic" size="md">STUDORA CAPABILITIES</Badge>
+            <h2 className="text-2xl sm:text-4xl font-serif text-ink tracking-tight">
+              Study smarter. Go further.
+            </h2>
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              Everything you need to master your coursework, stay accountable, and excel academically.
+            </p>
+          </div>
+
+          {/* Bento Grid Layout: 3 Visual Levels */}
+          <div className="space-y-6">
+
+            {/* LEVEL 1 — PRIMARY FEATURE (Measure / CGPA Calculator) */}
+            <div className="bg-gradient-to-br from-[#104633] via-academic to-[#13583F] text-white rounded-hero p-6 sm:p-10 lg:p-12 shadow-tactile-hero relative overflow-hidden transition-all">
+              {/* Subtle architectural background pattern */}
+              <div className="absolute -right-12 -bottom-12 w-96 h-96 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-1/4 w-64 h-64 rounded-full bg-academic-400/10 blur-xl pointer-events-none" />
+
+              <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[11px] font-mono tracking-wider uppercase font-semibold">
+                    <GraduationCap className="w-3.5 h-3.5 text-academic-200" />
+                    <span>ACADEMIC PERFORMANCE</span>
                   </div>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-ink">{item.title}</h3>
-                    <p className="text-[11px] text-muted mt-1 leading-snug">{item.desc}</p>
+
+                  <h3 className="text-2xl sm:text-4xl lg:text-5xl font-serif text-white tracking-tight leading-tight">
+                    Know where you stand.
+                  </h3>
+
+                  <p className="text-sm sm:text-base text-academic-100 max-w-xl leading-relaxed">
+                    Calculate your CGPA, explore possible results, and track your academic standing across semesters.
+                  </p>
+
+                  <div className="pt-3 flex flex-wrap items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('cgpa')}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-btn bg-white text-academic font-semibold text-sm shadow-tactile-btn hover:bg-academic-50 hover:-translate-y-[1px] active:translate-y-0 transition-all"
+                    >
+                      <span>Calculate my CGPA</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs text-academic-200 font-mono">Supports 5.0, 4.0 & 7.0 scales</span>
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Tactical preview card embedded in hero */}
+                <div className="lg:col-span-5 bg-white text-ink rounded-card p-6 shadow-tactile-raised border border-white/20 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-border border-b">
+                    <span className="text-[11px] font-mono font-semibold text-muted uppercase tracking-wider">CUMULATIVE GPA</span>
+                    <Badge variant="academic" size="sm">First Class Honours</Badge>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl sm:text-5xl font-extrabold text-ink font-mono tracking-tight">3.82</span>
+                    <span className="text-base text-muted font-mono font-medium">/ 5.00</span>
+                    <span className="ml-auto text-xs font-semibold text-academic font-mono">↑ +0.18</span>
+                  </div>
+                  <div className="pt-2 border-t border-border flex items-center justify-between text-xs text-muted font-mono">
+                    <span>102 Credit Units</span>
+                    <span className="text-academic font-medium">5 Semesters Tracked</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* LEVEL 2 — CORE WORKFLOWS (Plan & Learn — Medium Cards) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              {/* Plan Card */}
+              <div className="bg-white border border-border rounded-card p-6 sm:p-8 shadow-tactile-raised hover:shadow-tactile-raised-hover hover:border-academic/30 transition-all flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-11 h-11 rounded-xl bg-academic-50 border border-academic-100 flex items-center justify-center text-academic shadow-tactile-surface">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <Badge variant="academic" size="sm">STUDY PLANNING</Badge>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-serif text-ink tracking-tight">
+                      Turn your goals into a plan.
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted mt-2 leading-relaxed">
+                      Organize your courses, build realistic study routines, and keep track of what needs your attention.
+                    </p>
+                  </div>
+
+                  {/* Micro preview */}
+                  <div className="p-3.5 rounded-btn bg-canvas/60 border border-border space-y-2 text-xs">
+                    <div className="flex items-center justify-between font-mono text-[11px] text-muted">
+                      <span>Algorithms & Data Structures</span>
+                      <span className="text-academic font-semibold">Today · 09:00</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
+                      <div className="h-full bg-academic rounded-full" style={{ width: '75%' }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => onNavigate('study')}
+                    className="w-full sm:w-auto text-xs font-semibold border-border hover:bg-academic-50 hover:text-academic hover:border-academic-200 flex items-center justify-center gap-2"
+                  >
+                    <span>Plan my studies</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Learn Card */}
+              <div className="bg-white border border-border rounded-card p-6 sm:p-8 shadow-tactile-raised hover:shadow-tactile-raised-hover hover:border-academic/30 transition-all flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-11 h-11 rounded-xl bg-academic-50 border border-academic-100 flex items-center justify-center text-academic shadow-tactile-surface">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <Badge variant="academic" size="sm">AI-POWERED LEARNING</Badge>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-serif text-ink tracking-tight">
+                      Make difficult concepts easier.
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted mt-2 leading-relaxed">
+                      Get academic explanations, work through challenging topics, and learn at your own pace with your AI study assistant.
+                    </p>
+                  </div>
+
+                  {/* Micro preview */}
+                  <div className="p-3.5 rounded-btn bg-navy text-white space-y-1.5 text-xs shadow-tactile-surface">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-academic-300 font-semibold">
+                      <Sparkles className="w-3 h-3" />
+                      <span>AI Academic Tutor</span>
+                    </div>
+                    <p className="text-[11px] text-navy-200 italic line-clamp-2">
+                      &quot;Let&apos;s break recursion down into three clear parts: base case, inductive step, and call stack.&quot;
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => onNavigate('ai')}
+                    className="w-full sm:w-auto text-xs font-semibold border-border hover:bg-academic-50 hover:text-academic hover:border-academic-200 flex items-center justify-center gap-2"
+                  >
+                    <span>Start learning</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* LEVEL 3 — SUPPORTING FEATURES (Practice, Connect, Improve — Compact Cards) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+              {/* Practice */}
+              <div className="bg-white border border-border rounded-card p-5 shadow-tactile-surface hover:shadow-tactile-raised hover:border-academic/30 transition-all flex flex-col justify-between space-y-4">
+                <div className="space-y-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-academic-50 border border-academic-100 flex items-center justify-center text-academic">
+                    <FileCheck2 className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-base font-bold text-ink">Prepare with purpose.</h4>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Test your understanding with practice questions, assessments, and exam preparation resources.
+                  </p>
+                </div>
+                <div className="pt-1">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onNavigate('test-prep')}
+                    className="w-full text-xs font-semibold border-border hover:bg-academic-50 hover:text-academic hover:border-academic-200 flex items-center justify-center gap-1.5"
+                  >
+                    <span>Practise now</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Connect */}
+              <div className="bg-white border border-border rounded-card p-5 shadow-tactile-surface hover:shadow-tactile-raised hover:border-academic/30 transition-all flex flex-col justify-between space-y-4">
+                <div className="space-y-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-academic-50 border border-academic-100 flex items-center justify-center text-academic">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-base font-bold text-ink">Learn better, together.</h4>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Discover tutors, connect with fellow students, and find support for your academic journey.
+                  </p>
+                </div>
+                <div className="pt-1">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onNavigate('tutors')}
+                    className="w-full text-xs font-semibold border-border hover:bg-academic-50 hover:text-academic hover:border-academic-200 flex items-center justify-center gap-1.5"
+                  >
+                    <span>Find a tutor</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Improve */}
+              <div className="bg-white border border-border rounded-card p-5 shadow-tactile-surface hover:shadow-tactile-raised hover:border-academic/30 transition-all flex flex-col justify-between space-y-4">
+                <div className="space-y-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-academic-50 border border-academic-100 flex items-center justify-center text-academic">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-base font-bold text-ink">Turn progress into momentum.</h4>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Review your study progress, recognize areas that need attention, and make more informed decisions about what to study next.
+                  </p>
+                </div>
+                <div className="pt-1">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onNavigate('dashboard')}
+                    className="w-full text-xs font-semibold border-border hover:bg-academic-50 hover:text-academic hover:border-academic-200 flex items-center justify-center gap-1.5"
+                  >
+                    <span>View my progress</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 4 — THE ACADEMIC JOURNEY                                          */}
+      {/* SECTION 4 — HOW STUDORA WORKS (HIERARCHICAL ROADMAP JOURNEY)              */}
       {/* ========================================================================= */}
       <section id="how-it-works" className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="text-center max-w-2xl mx-auto space-y-3 mb-14">
-          <Badge variant="academic" size="md">The Academic Journey</Badge>
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
+          <Badge variant="academic" size="md">HOW STUDORA WORKS</Badge>
           <h2 className="text-2xl sm:text-4xl font-serif text-ink tracking-tight">
-            How serious students build mastery.
+            Everything starts with your goals.
           </h2>
           <p className="text-xs sm:text-sm text-muted leading-relaxed">
-            From measuring your current standing to continuous improvement, every capability is wired together as one coherent loop.
+            Build better academic habits through a clear, guided four-phase workflow.
           </p>
         </div>
 
-        {/* Tactile Timeline Rail */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {journeySteps.map((step, idx) => {
-            const Icon = step.icon;
-            const isActive = activeJourneyStep === idx;
+        {/* Hierarchical Responsive Layout: Mobile Timeline & Desktop Dynamic Bento Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 relative">
 
-            return (
-              <div
-                key={idx}
-                onClick={() => setActiveJourneyStep(idx)}
-                className={`bg-white border rounded-card p-5 cursor-pointer flex flex-col justify-between transition-all duration-200 select-none relative
-                  ${isActive
-                    ? 'border-academic ring-2 ring-academic/10 shadow-tactile-raised'
-                    : 'border-border shadow-tactile-surface hover:shadow-tactile-raised'}`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="font-mono text-xs font-bold text-muted">0{idx + 1}</span>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-                      ${isActive ? 'bg-academic-100 text-academic' : 'bg-canvas text-muted'}`}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </div>
+          {/* STEP 1: PRIMARY ANCHOR CARD (col-span-12 lg:col-span-6) */}
+          {/* Most prominent visual weight: Academic Green gradient card with baseline readout */}
+          <div className="md:col-span-12 lg:col-span-6 bg-gradient-to-br from-[#104633] via-academic to-[#13583F] text-white rounded-card p-6 sm:p-8 shadow-tactile-raised border border-white/20 flex flex-col justify-between space-y-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 -mr-10 -mt-10 w-44 h-44 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+
+            <div className="space-y-4 relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[11px] font-mono tracking-wider uppercase font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-academic-200 animate-pulse" />
+                  <span>STEP 1 • FOUNDATION</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center shadow-inner">
+                  <GraduationCap className="w-5 h-5 text-academic-100" />
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-mono font-medium text-academic-200 tracking-wider uppercase">01 / ESTABLISH BASELINE</span>
+                <h3 className="text-xl sm:text-2xl font-serif text-white tracking-tight leading-snug mt-1">
+                  Measure your starting point.
+                </h3>
+              </div>
+
+              <p className="text-xs sm:text-sm text-academic-100 leading-relaxed max-w-lg">
+                Understand your current academic standing, calculate your exact CGPA, and set realistic benchmarks before planning the semester ahead.
+              </p>
+
+              {/* Tactical baseline pill */}
+              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-academic-100/20 flex items-center justify-center text-white text-xs font-bold font-mono">
+                    GPA
                   </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Current Standing Model</p>
+                    <p className="text-[10px] text-academic-200">Supports 5.0, 4.0 & 7.0 scales</p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-white text-academic">
+                  Accurate
+                </span>
+              </div>
+            </div>
 
-                  <h3 className="text-base font-bold text-ink">{step.label}</h3>
-                  <p className="text-xs text-academic font-medium mt-0.5">{step.tagline}</p>
+            <div className="pt-2 relative z-10 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => onNavigate('cgpa')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-btn bg-white text-academic text-xs font-semibold shadow-tactile-btn hover:bg-academic-50 transition-all"
+              >
+                <span>Calculate baseline</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[11px] font-mono text-academic-200">Phase 01</span>
+            </div>
+          </div>
+
+          {/* STEP 2 & 3: CORE WORKFLOW CARDS (col-span-12 md:col-span-6 lg:col-span-6) */}
+          <div className="md:col-span-12 lg:col-span-6 flex flex-col justify-between gap-5 sm:gap-6">
+
+            {/* STEP 2: Plan your next move */}
+            <div className="bg-white border border-border rounded-card p-6 shadow-tactile-surface hover:shadow-tactile-raised hover:border-academic/40 transition-all flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-academic-50 border border-academic-100 text-academic text-[10px] font-mono tracking-wider uppercase font-semibold">
+                    <span>STEP 2 • PLANNING</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-canvas text-academic flex items-center justify-center border border-border">
+                    <Calendar className="w-4 h-4" />
+                  </div>
                 </div>
 
-                <p className="text-[11px] text-muted mt-3 leading-relaxed">
-                  {step.description}
-                </p>
+                <div>
+                  <span className="text-[10px] font-mono text-muted uppercase tracking-wider">02 / STRUCTURE ROUTINE</span>
+                  <h4 className="text-base sm:text-lg font-bold text-ink leading-snug mt-0.5">
+                    Plan your next move.
+                  </h4>
+                </div>
 
-                {isActive && (
-                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-8 h-1 bg-academic rounded-full" />
-                )}
+                <p className="text-xs text-muted leading-relaxed">
+                  Organize your courses, priority topics, and study routines into a realistic calendar that protects your daily momentum.
+                </p>
               </div>
-            );
-          })}
+
+              <div className="pt-1 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => onNavigate('study')}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-academic hover:underline"
+                >
+                  <span>Build study routine</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[10px] font-mono text-muted">Phase 02</span>
+              </div>
+            </div>
+
+            {/* STEP 3: Learn and practise */}
+            <div className="bg-white border border-border rounded-card p-6 shadow-tactile-surface hover:shadow-tactile-raised hover:border-academic/40 transition-all flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-academic-50 border border-academic-100 text-academic text-[10px] font-mono tracking-wider uppercase font-semibold">
+                    <span>STEP 3 • EXECUTION</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-canvas text-academic flex items-center justify-center border border-border">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-mono text-muted uppercase tracking-wider">03 / ACTIVE MASTERY</span>
+                  <h4 className="text-base sm:text-lg font-bold text-ink leading-snug mt-0.5">
+                    Learn and practise.
+                  </h4>
+                </div>
+
+                <p className="text-xs text-muted leading-relaxed">
+                  Break down difficult concepts with AI academic explanations, test yourself with practice questions, and verify your grasp.
+                </p>
+              </div>
+
+              <div className="pt-1 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => onNavigate('ai')}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-academic hover:underline"
+                >
+                  <span>Explore learning tools</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[10px] font-mono text-muted">Phase 03</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* STEP 4: MILESTONE & REVIEW BANNER CARD (col-span-12) */}
+          {/* Distinct wide milestone card with progress trajectory accent */}
+          <div className="col-span-12 bg-navy text-white rounded-card p-6 sm:p-8 shadow-tactile-surface border border-navy/80 relative overflow-hidden">
+            <div className="absolute right-0 bottom-0 w-80 h-36 bg-academic-500/10 blur-2xl pointer-events-none" />
+
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              <div className="md:col-span-8 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-academic-200 text-[10px] font-mono tracking-wider uppercase font-semibold">
+                    <CheckCircle2 className="w-3 h-3 text-academic-300" />
+                    <span>STEP 4 • MILESTONE & REFLECTION</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-navy-200 uppercase">Phase 04</span>
+                </div>
+
+                <h3 className="text-xl sm:text-2xl font-serif text-white tracking-tight leading-snug">
+                  Review your progress and accelerate.
+                </h3>
+
+                <p className="text-xs sm:text-sm text-navy-100 max-w-2xl leading-relaxed">
+                  Track completed hours, monitor study streaks, recognize weak areas, and adjust your routine with continuous feedback.
+                </p>
+              </div>
+
+              <div className="md:col-span-4 flex md:justify-end">
+                <button
+                  type="button"
+                  onClick={() => onNavigate('dashboard')}
+                  className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-btn bg-academic text-white font-semibold text-xs shadow-tactile-btn hover:bg-academic-600 transition-all"
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>View progress dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
       {/* ========================================================================= */}
       {/* SECTION 5 — CGPA                                                          */}
       {/* ========================================================================= */}
-      <section id="features" className="py-16 sm:py-24 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
+      <section id="cgpa-calculator" className="py-16 sm:py-24 bg-white border-t border-border px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
 
           {/* Left Editorial Copy */}
@@ -845,7 +1182,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <Button
                 variant="academic"
                 size="md"
-                onClick={() => onNavigate('register')}
+                onClick={() => onNavigate('cgpa')}
                 className="shadow-tactile-btn flex items-center gap-2"
               >
                 <span>Calculate Your CGPA</span>
@@ -858,9 +1195,9 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
           <div className="lg:col-span-7 bg-canvas/40 border border-border rounded-hero p-6 sm:p-8 shadow-tactile-raised space-y-6">
 
             {/* Multi-Scale Interactive Toggle */}
-            <div className="flex items-center justify-between pb-4 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
               <span className="text-xs font-semibold text-muted font-mono">PREVIEW SCALING SYSTEM</span>
-              <div className="flex p-0.5 rounded-btn bg-white border border-border shadow-tactile-surface">
+              <div className="flex p-0.5 rounded-btn bg-white border border-border shadow-tactile-surface self-start sm:self-auto">
                 {['5.0', '4.0', '7.0'].map(scale => (
                   <button
                     key={scale}
@@ -885,14 +1222,14 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 </span>
               </div>
 
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl sm:text-6xl font-extrabold text-ink font-mono tracking-tight">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-ink font-mono tracking-tight">
                   {demoCgpaValues[selectedDemoScale].cgpa}
                 </span>
-                <span className="text-xl sm:text-2xl text-muted font-mono">
+                <span className="text-lg sm:text-xl text-muted font-mono">
                   / {demoCgpaValues[selectedDemoScale].max}
                 </span>
-                <span className="ml-3 text-xs font-semibold text-academic font-mono">
+                <span className="text-xs font-semibold text-academic font-mono sm:ml-2">
                   {demoCgpaValues[selectedDemoScale].delta} this semester
                 </span>
               </div>
@@ -903,8 +1240,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             </div>
 
             {/* Semester History Peek Table */}
-            <div className="bg-white border border-border rounded-card overflow-hidden shadow-tactile-surface">
-              <table className="w-full text-left text-xs">
+            <div className="bg-white border border-border rounded-card overflow-x-auto shadow-tactile-surface">
+              <table className="w-full text-left text-xs min-w-[420px]">
                 <thead>
                   <tr className="border-b border-border bg-canvas/30 text-muted uppercase tracking-wider text-[10px] font-mono">
                     <th className="py-2.5 px-4 font-semibold">Semester</th>
@@ -1051,12 +1388,12 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
           {/* Left Copy */}
           <div className="lg:col-span-5 space-y-5">
-            <Badge variant="academic">Coursework Assistance</Badge>
+            <Badge variant="academic">YOUR STUDY COMPANION</Badge>
             <h2 className="text-2xl sm:text-4xl font-serif text-ink tracking-tight leading-tight">
-              Stuck? Learn through it.
+              Get help when a topic gets difficult.
             </h2>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              The AI Tutor is not a replacement for your university lecturers. It is an intelligent academic assistant built to help you deconstruct difficult concepts, generate revision questions, and bridge the gap between lecture slides and exam day.
+              Explore explanations, ask academic questions, and work through challenging concepts with Studora's AI learning tools.
             </p>
 
             <div className="space-y-3 pt-2">
@@ -1079,10 +1416,10 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <Button
                 variant="academic"
                 size="md"
-                onClick={() => onNavigate('register')}
+                onClick={() => onNavigate('ai')}
                 className="shadow-tactile-btn"
               >
-                Try the AI Tutor Free
+                Explore AI Learning
               </Button>
             </div>
           </div>
@@ -1277,12 +1614,12 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
         <div className="max-w-7xl mx-auto space-y-12">
 
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <Badge variant="academic">Studora Tutor Marketplace</Badge>
+            <Badge variant="academic">LEARN WITH SUPPORT</Badge>
             <h2 className="text-2xl sm:text-4xl font-serif text-ink tracking-tight">
-              Find a Tutor
+              The right guidance can change how you learn.
             </h2>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Connect with verified Studora tutors who can help you learn, prepare, practice, and make progress — online or in person.
+              Find tutors who have completed Studora's application and approval process. Explore their subjects, compare available session options, and choose support that fits your needs.
             </p>
 
             {/* Subject Filters */}
@@ -1350,18 +1687,28 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             ))}
           </div>
 
-          <div className="text-center pt-2 space-y-2">
+          <div className="text-center pt-2 space-y-3">
             <p className="text-xs text-muted">
               All tutors go through application, assessment, and admin approval before appearing in the marketplace.
             </p>
-            <Button
-              variant="academic"
-              size="md"
-              onClick={() => onNavigate('register')}
-              className="shadow-tactile-btn"
-            >
-              Find a Tutor
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button
+                variant="academic"
+                size="md"
+                onClick={() => onNavigate('register')}
+                className="shadow-tactile-btn"
+              >
+                Find a Tutor
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => onNavigate('become-tutor')}
+                className="border-border hover:bg-white"
+              >
+                Become a Tutor
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -1426,9 +1773,9 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 <Badge variant="academic">Active Session</Badge>
               </div>
 
-              <div className="p-3.5 rounded-btn bg-canvas border border-border text-xs flex items-center justify-between">
+              <div className="p-3.5 rounded-btn bg-canvas border border-border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-academic" />
+                  <Calendar className="w-4 h-4 text-academic shrink-0" />
                   <span>Next session: <strong className="text-ink">Saturday · 4:00 PM</strong></span>
                 </div>
                 <span className="font-mono text-muted text-[11px]">Topic: Compiler Syntax Trees</span>
@@ -1438,7 +1785,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-navy text-white flex items-center justify-center font-mono font-bold text-xs">
+                  <div className="w-10 h-10 rounded-xl bg-navy text-white flex items-center justify-center font-mono font-bold text-xs shrink-0">
                     NET
                   </div>
                   <div>
@@ -1449,9 +1796,9 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 <Badge variant="neutral">Upcoming</Badge>
               </div>
 
-              <div className="p-3.5 rounded-btn bg-canvas border border-border text-xs flex items-center justify-between">
+              <div className="p-3.5 rounded-btn bg-canvas border border-border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-academic" />
+                  <Calendar className="w-4 h-4 text-academic shrink-0" />
                   <span>Next session: <strong className="text-ink">Wednesday · 7:00 PM</strong></span>
                 </div>
                 <span className="font-mono text-muted text-[11px]">Topic: BGP & Packet Tracing</span>
@@ -1508,13 +1855,13 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-navy-200 pt-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-navy-200 pt-1">
               <span>Low-bandwidth optimized for African campus networks</span>
               <Button
                 variant="academic"
                 size="sm"
                 onClick={() => onNavigate('register')}
-                className="shadow-tactile-btn"
+                className="shadow-tactile-btn w-full sm:w-auto"
               >
                 Book a Session
               </Button>
@@ -1633,7 +1980,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 ))}
               </div>
 
-              <div className="p-3.5 rounded-btn bg-canvas border border-border flex items-center justify-between text-xs text-muted">
+              <div className="p-3.5 rounded-btn bg-canvas border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-muted">
                 <span>Strongest Subject: <strong className="text-ink">Algorithms (A)</strong></span>
                 <span>Focus Area: <strong className="text-gold-700">Compiler Optimization</strong></span>
               </div>
@@ -1886,11 +2233,11 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
           </div>
 
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-serif text-ink tracking-tight">
-            Build a better academic routine.
+            Your next academic milestone starts here.
           </h2>
 
           <p className="text-xs sm:text-sm text-muted max-w-lg mx-auto leading-relaxed">
-            Start with the essentials. Upgrade when you need more. Join students organizing their university journey in one focused platform.
+            Build a study routine that works for you. Track your progress, practise with purpose, and keep moving forward.
           </p>
 
           <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -1900,15 +2247,15 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               onClick={() => onNavigate('register')}
               className="w-full sm:w-auto shadow-tactile-btn text-sm font-semibold px-8"
             >
-              Get Started Free
+              Get Started
             </Button>
             <Button
               variant="secondary"
               size="lg"
-              onClick={() => scrollToSection('pricing')}
+              onClick={() => onNavigate('login')}
               className="w-full sm:w-auto text-sm font-semibold px-7 border-border hover:bg-white"
             >
-              View Plans
+              Log in
             </Button>
           </div>
         </div>
@@ -1926,10 +2273,10 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <div className="w-8 h-8 rounded-lg bg-academic-100 border border-academic-200 flex items-center justify-center text-academic">
                 <GraduationCap className="w-4 h-4" />
               </div>
-              <span className="font-bold text-base text-ink tracking-tight">Academic Platform</span>
+              <span className="font-bold text-base text-ink tracking-tight">Studora</span>
             </div>
-            <p className="text-xs text-muted max-w-sm leading-relaxed">
-              A serious, tactile academic operating environment for university students. Measure CGPA, plan study weeks, prepare for exams, and collaborate face-to-face.
+            <p className="text-xs text-muted max-w-sm leading-relaxed font-serif italic">
+              Study smarter. Go further.
             </p>
           </div>
 
@@ -1937,11 +2284,21 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
           <div className="space-y-3">
             <p className="font-bold text-ink uppercase tracking-wider text-[11px] font-mono">Product</p>
             <ul className="space-y-2 text-muted">
-              <li><button onClick={() => scrollToSection('features')} className="hover:text-ink">Features</button></li>
-              <li><button onClick={() => scrollToSection('pricing')} className="hover:text-ink">Pricing</button></li>
-              <li><button onClick={() => scrollToSection('tutors')} className="hover:text-ink">Tutors</button></li>
-              <li><button onClick={() => scrollToSection('ai-tutor')} className="hover:text-ink">AI Tutor</button></li>
-              <li><button onClick={() => scrollToSection('features')} className="hover:text-ink">Test Prep</button></li>
+              <li><button onClick={() => onNavigate('cgpa')} className="hover:text-ink">Measure</button></li>
+              <li><button onClick={() => onNavigate('study')} className="hover:text-ink">Plan</button></li>
+              <li><button onClick={() => onNavigate('ai')} className="hover:text-ink">Learn</button></li>
+              <li><button onClick={() => onNavigate('test-prep')} className="hover:text-ink">Practice</button></li>
+              <li><button onClick={() => onNavigate('tutors')} className="hover:text-ink">Find a Tutor</button></li>
+            </ul>
+          </div>
+
+          {/* Account Links */}
+          <div className="space-y-3">
+            <p className="font-bold text-ink uppercase tracking-wider text-[11px] font-mono">Account</p>
+            <ul className="space-y-2 text-muted">
+              <li><button onClick={() => onNavigate('login')} className="hover:text-ink">Log in</button></li>
+              <li><button onClick={() => onNavigate('register')} className="hover:text-ink">Get Started</button></li>
+              <li><button onClick={() => onNavigate('become-tutor')} className="hover:text-ink">Become a Tutor</button></li>
             </ul>
           </div>
 
@@ -1955,21 +2312,12 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             </ul>
           </div>
 
-          {/* Account Links */}
-          <div className="space-y-3">
-            <p className="font-bold text-ink uppercase tracking-wider text-[11px] font-mono">Account</p>
-            <ul className="space-y-2 text-muted">
-              <li><button onClick={() => onNavigate('login')} className="hover:text-ink">Log In</button></li>
-              <li><button onClick={() => onNavigate('register')} className="hover:text-ink">Create Account</button></li>
-            </ul>
-          </div>
-
         </div>
 
         {/* Bottom copyright notice */}
         <div className="max-w-7xl mx-auto pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-muted">
-          <p>© {new Date().getFullYear()} Academic Platform. All rights reserved.</p>
-          <p className="font-mono">Engineered for academic productivity.</p>
+          <p>© Studora. All rights reserved.</p>
+          <p className="font-mono text-muted/80">Study smarter. Go further.</p>
         </div>
       </footer>
 

@@ -620,7 +620,7 @@ function OnboardingWizard({ subjects, onComplete, onCancel, showToast }) {
 }
 
 // ── Assessment View ──────────────────────────────────────────────────────────
-function AssessmentView({ applicationId, showToast, onComplete }) {
+function AssessmentView({ applicationId, showToast, onComplete, onBack }) {
   const { loading, error, startAssessment, submitAssessment, fetchAttemptCount } = useTutorApplication();
   const [phase, setPhase] = useState('loading'); // loading | ready | answering | submitting | done
   const [sessionData, setSessionData] = useState(null);   // from start_tutor_assessment RPC
@@ -713,9 +713,16 @@ function AssessmentView({ applicationId, showToast, onComplete }) {
 
   if (phase === 'error') {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto space-y-4">
         <SectionCard>
           <ErrorAlert message={localError || error} />
+          {onBack && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <Button variant="outline" size="sm" onClick={onBack} className="w-full">
+                ← Back to Application Overview
+              </Button>
+            </div>
+          )}
         </SectionCard>
       </div>
     );
@@ -769,9 +776,16 @@ function AssessmentView({ applicationId, showToast, onComplete }) {
 
             <ErrorAlert message={localError || error} onDismiss={() => setLocalError(null)} />
 
-            <Button variant="academic" size="lg" loading={loading} onClick={handleStart} className="w-full">
-              Start Assessment
-            </Button>
+            <div className="space-y-2">
+              <Button variant="academic" size="lg" loading={loading} onClick={handleStart} className="w-full">
+                Start Assessment
+              </Button>
+              {onBack && (
+                <Button variant="ghost" size="sm" onClick={onBack} disabled={loading} className="w-full text-muted hover:text-ink">
+                  ← Back to Application Overview
+                </Button>
+              )}
+            </div>
           </div>
         </SectionCard>
       </div>
@@ -1155,6 +1169,7 @@ export function BecomeTutorPage({ userProfile, onNavigateDashboard, showToast })
           applicationId={application.id}
           showToast={showToast}
           onComplete={handleAssessmentComplete}
+          onBack={() => setPhase('status')}
         />
       )}
 

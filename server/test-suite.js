@@ -1,4 +1,10 @@
 import crypto from 'crypto';
+
+// Provide explicit mock test credentials for running the in-memory test suite
+process.env.APP_SECRET = process.env.APP_SECRET || 'test_suite_app_secret_phase1_audit_2026';
+process.env.ZEGOCLOUD_SERVER_SECRET = process.env.ZEGOCLOUD_SERVER_SECRET || 'test_suite_zego_server_secret_2026';
+process.env.PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET || 'test_suite_paystack_webhook_secret_2026';
+
 import { initializeDatabase, db } from './db.js';
 import { handleApiRequest, createSessionToken } from './api.js';
 import { 
@@ -119,6 +125,10 @@ async function runTestSuite() {
   assert(Boolean(regRes.data.token), 'Registration returns valid session token');
   const mayaToken = regRes.data.token;
   const mayaUserId = regRes.data.user.id;
+
+  // Ensure fresh baseline subscription state for Alexander in test runs
+  await db.query(`UPDATE user_subscriptions SET plan_id = 'plan_basic', status = 'active' WHERE user_id = 'usr_alexander_vance';`);
+  await db.query(`DELETE FROM payment_webhook_events WHERE event_id = 'evt_charge_success_12345';`);
 
   // ----------------------------------------------------
   // TEST GROUP 2: ROW-LEVEL SECURITY & DATA ISOLATION
@@ -462,7 +472,7 @@ async function runTestSuite() {
   // ----------------------------------------------------
   console.log('\n--- 11. Paystack Webhook & Idempotency ---');
 
-  const webhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY || 'paystack_webhook_test_secret_2026';
+  const webhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET;
   const testWebhookEvent = {
     event: 'charge.success',
     id: 'evt_test_charge_success_99',
@@ -627,6 +637,176 @@ async function runTestSuite() {
     'x-paystack-signature': payoutWebhookSig
   }, payoutWebhookEvent);
   assert(payoutHookRes.status === 200, 'Payout transfer webhook processed with status 200');
+
+  // ----------------------------------------------------
+  // TEST GROUP 14: PHASE 1 GETSTREAM & SUPABASE AUTH SECURITY
+  // ----------------------------------------------------
+  console.log('\n--- 14. Phase 1: GetStream & Supabase Auth Security ---');
+
+  // Helper to create Supabase-style JWT
+  function createMockSupabaseToken(sub, email, role, secret, expOffset = 3600) {
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      sub,
+      email,
+      role: 'authenticated',
+      aud: 'authenticated',
+      iss: 'https://test-project.supabase.co/auth/v1',
+      exp: Math.floor(Date.now() / 1000) + expOffset,
+      user_metadata: { full_name: 'Test Student' }
+    })).toString('base64url');
+    const sig = crypto.createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url');
+    return `${header}.${payload}.${sig}`;
+  }
+
+  const supabaseTestSecret = 'mock_supabase_jwt_secret_phase1_2026';
+  process.env.SUPABASE_JWT_SECRET = supabaseTestSecret;
+
+  // Test 14.1: Missing authentication on Stream token endpoint is rejected
+  const noAuthStreamRes = await runApi('POST', '/api/stream/token');
+  assert(noAuthStreamRes.status === 401, 'POST /api/stream/token rejects unauthenticated requests (401)');
+  assert(noAuthStreamRes.data.code === 'AUTH_REQUIRED', 'Error code is AUTH_REQUIRED');
+
+  // Test 14.2: Forged Supabase JWT (wrong signature) is rejected
+  const forgedToken = createMockSupabaseToken('usr_attacker', 'attacker@studora.local', 'authenticated', 'WRONG_SECRET');
+  const forgedRes = await runApi('POST', '/api/stream/token', {
+    authorization: `Bearer ${forgedToken}`
+  });
+  assert(forgedRes.status === 401, 'Forged Supabase JWT with invalid signature is rejected (401)');
+
+  // Test 14.3: Expired Supabase JWT is rejected
+  const expiredToken = createMockSupabaseToken('usr_expired', 'expired@studora.local', 'authenticated', supabaseTestSecret, -3600);
+  const expiredRes = await runApi('POST', '/api/stream/token', {
+    authorization: `Bearer ${expiredToken}`
+  });
+  assert(expiredRes.status === 401, 'Expired Supabase JWT is rejected (401)');
+
+  // Test 14.4: Stream service unconfigured handling
+  delete process.env.STREAM_API_KEY;
+  delete process.env.VITE_STREAM_API_KEY;
+  delete process.env.STREAM_API_SECRET;
+
+  const validToken = createMockSupabaseToken('usr_valid_student', 'valid.student@studora.local', 'authenticated', supabaseTestSecret, 3600);
+  const unconfiguredRes = await runApi('POST', '/api/stream/token', {
+    authorization: `Bearer ${validToken}`
+  });
+  assert(unconfiguredRes.status === 503, 'Unconfigured Stream service returns 503 Service Unavailable');
+  assert(unconfiguredRes.data.code === 'STREAM_NOT_CONFIGURED', 'Returns code STREAM_NOT_CONFIGURED');
+
+  // Test 14.5: Valid authenticated user receives Stream token derived from their verified identity
+  process.env.STREAM_API_KEY = 'test_stream_api_key_public';
+  process.env.STREAM_API_SECRET = 'test_stream_api_secret_private_1234567890abcdef1234567890abcdef';
+
+  const validStreamRes = await runApi('POST', '/api/stream/token', {
+    authorization: `Bearer ${validToken}`
+  });
+  assert(validStreamRes.status === 200, 'Authenticated user receives Stream token (200 OK)');
+  assert(Boolean(validStreamRes.data.token), 'Response contains Stream token');
+  assert(validStreamRes.data.apiKey === 'test_stream_api_key_public', 'Response returns public API key');
+  assert(validStreamRes.data.userId === 'usr_valid_student', 'Stream user ID is derived strictly from verified identity');
+  assert(!validStreamRes.data.secret && !validStreamRes.data.apiSecret, 'Stream API secret is NEVER exposed in API response');
+
+  // Test 14.6: Client cannot request token for another arbitrary user ID or escalate role in body
+  const spoofAttemptRes = await runApi('POST', '/api/stream/token', {
+    authorization: `Bearer ${validToken}`
+  }, {
+    userId: 'usr_victim_id',
+    role: 'admin'
+  });
+  assert(spoofAttemptRes.status === 200, 'Request processed without using body overrides');
+  assert(spoofAttemptRes.data.userId === 'usr_valid_student', 'Body spoof attempt ignored; user ID strictly matches verified identity');
+
+  // Test 14.7: Privileged admin endpoints reject forged admin role
+  const studentToken = createMockSupabaseToken('usr_student_regular', 'regular@studora.local', 'authenticated', supabaseTestSecret, 3600);
+  const adminAttemptRes = await runApi('POST', '/api/admin/tutors/payout-profile/some_tutor/verify', {
+    authorization: `Bearer ${studentToken}`
+  }, { role: 'admin' });
+  assert(adminAttemptRes.status === 403, 'Non-admin user blocked from privileged admin route (403)');
+
+  // --- 15. Phase 2: GetStream Chat & Tutor–Student Messaging ---
+  console.log('\n--- 15. Phase 2: GetStream Chat & Tutor–Student Messaging ---');
+
+  // Test 15.1: Unauthenticated request to /api/stream/conversation is rejected
+  const unauthConvRes = await runApi('POST', '/api/stream/conversation', {}, {
+    tutorId: 'usr_tutor_math'
+  });
+  assert(unauthConvRes.status === 401, 'Unauthenticated conversation request returns 401 Unauthorized');
+  assert(unauthConvRes.data.code === 'AUTH_REQUIRED', 'Returns code AUTH_REQUIRED');
+
+  // Test 15.2: Self-conversation is disallowed
+  const selfConvRes = await runApi('POST', '/api/stream/conversation', {
+    authorization: `Bearer ${validToken}`
+  }, {
+    tutorId: 'usr_valid_student'
+  });
+  assert(selfConvRes.status === 400, 'Self-conversation is rejected with 400 Bad Request');
+  assert(selfConvRes.data.code === 'SELF_CONVERSATION_DISALLOWED', 'Returns code SELF_CONVERSATION_DISALLOWED');
+
+  // Test 15.3: Missing tutorId without bookingId returns 400
+  const missingTutorRes = await runApi('POST', '/api/stream/conversation', {
+    authorization: `Bearer ${validToken}`
+  }, {});
+  assert(missingTutorRes.status === 400, 'Missing tutorId returns 400 Bad Request');
+  assert(missingTutorRes.data.code === 'MISSING_TUTOR_ID', 'Returns code MISSING_TUTOR_ID');
+
+  // Test 15.4: Authorized direct conversation between student and tutor is created/retrieved
+  const validConvRes = await runApi('POST', '/api/stream/conversation', {
+    authorization: `Bearer ${validToken}`
+  }, {
+    tutorId: 'usr_tutor_physics',
+    subject: 'Thermodynamics'
+  });
+  assert(validConvRes.status === 200, 'Direct conversation created/retrieved with status 200 OK');
+  assert(validConvRes.data.success === true, 'Response indicates success');
+  assert(Boolean(validConvRes.data.channelId), 'Response returns stable channelId');
+  assert(validConvRes.data.channelType === 'messaging', 'Channel type is messaging');
+  assert(validConvRes.data.members.includes('usr_valid_student'), 'Channel members include authenticated student');
+  assert(validConvRes.data.members.includes('usr_tutor_physics'), 'Channel members include designated tutor');
+
+  // Test 15.5: Idempotency — repeated call returns the same stable channelId
+  const repeatConvRes = await runApi('POST', '/api/stream/conversation', {
+    authorization: `Bearer ${validToken}`
+  }, {
+    tutorId: 'usr_tutor_physics',
+    subject: 'Thermodynamics'
+  });
+  assert(repeatConvRes.status === 200, 'Repeated conversation request returns 200 OK');
+  assert(repeatConvRes.data.channelId === validConvRes.data.channelId, 'ChannelId is identical and idempotent across calls');
+
+  // Test 15.6: Booking-based conversation derives channel identifier from booking ID
+  const bookingConvRes = await runApi('POST', '/api/stream/conversation', {
+    authorization: `Bearer ${validToken}`
+  }, {
+    bookingId: 'bk_demo_session_101',
+    tutorId: 'usr_tutor_physics',
+    subject: 'Thermodynamics'
+  });
+  assert(bookingConvRes.status === 200, 'Booking conversation creates with status 200 OK');
+  assert(bookingConvRes.data.channelId === 'booking_bk_demo_session_101', 'Booking channel derives stable booking_<id> identifier');
+
+  // Test 15.7: Client cannot impersonate participant in conversation body
+  const bodySpoofConvRes = await runApi('POST', '/api/stream/conversation', {
+    authorization: `Bearer ${validToken}`
+  }, {
+    studentId: 'usr_victim_student',
+    tutorId: 'usr_tutor_physics'
+  });
+  assert(bodySpoofConvRes.status === 200, 'Request processed');
+  assert(bodySpoofConvRes.data.members.includes('usr_valid_student'), 'Student member is strictly derived from verified token, ignoring body spoof');
+  assert(!bodySpoofConvRes.data.members.includes('usr_victim_student'), 'Spoofed studentId from body is completely ignored');
+
+  // Test 15.8: Peer-to-peer / student-to-student messaging via recipientId
+  const peerConvRes = await runApi('POST', '/api/stream/conversation', {
+    authorization: `Bearer ${validToken}`
+  }, {
+    recipientId: 'usr_student_peer_maya',
+    channelName: 'Study Group Peer Chat'
+  });
+  assert(peerConvRes.status === 200, 'Peer-to-peer direct conversation created with status 200 OK');
+  assert(peerConvRes.data.success === true, 'Peer conversation returns success');
+  assert(peerConvRes.data.members.includes('usr_valid_student'), 'Caller included in peer members');
+  assert(peerConvRes.data.members.includes('usr_student_peer_maya'), 'Recipient peer included in members');
+  assert(peerConvRes.data.channelId.startsWith('dm_'), 'Peer conversation uses stable dm_ deterministic prefix');
 
   console.log('\n====================================================');
   console.log(`🎉 AUDIT PASSED: ${passedTests}/${totalTests} TESTS SUCCESSFUL!`);

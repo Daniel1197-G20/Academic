@@ -25,6 +25,7 @@
 import crypto from 'crypto';
 import https from 'https';
 import { createClient } from '@supabase/supabase-js';
+import { getOrCreateDirectConversation, isStreamConfigured } from './stream-service.js';
 
 // ── Paystack Configuration (server-only) ──────────────────────────────────────
 
@@ -308,6 +309,29 @@ export async function verifyAndConfirmTutorPayment(reference) {
     const err = new Error(error.message || 'Failed to confirm session payment in database');
     err.statusCode = 500;
     throw err;
+  }
+
+  // Idempotently ensure the dedicated GetStream chat channel exists for this confirmed booking
+  if (isStreamConfigured()) {
+    try {
+      // Query booking details to obtain student_id, tutor_id, subject
+      const { data: bookingRow } = await client
+        .from('tutor_bookings')
+        .select('student_id, tutor_id, subject')
+        .eq('id', bookingId)
+        .maybeSingle();
+
+      if (bookingRow?.student_id && bookingRow?.tutor_id) {
+        await getOrCreateDirectConversation(bookingRow.student_id, bookingRow.tutor_id, {
+          bookingId,
+          subject: bookingRow.subject,
+          channelName: `Tutoring: ${bookingRow.subject || 'Session'}`
+        });
+      }
+    } catch (streamErr) {
+      // Non-blocking: failure in Stream channel creation must not abort or revert the confirmed financial payment
+      console.warn('[tutor-financial-service] Non-fatal notice creating Stream booking channel:', streamErr.message);
+    }
   }
 
   return {

@@ -30,8 +30,9 @@ import { NotFoundPage } from './components/common/NotFoundPage';
 import { PageLoader } from './components/common/PageLoader';
 import { api } from './services/api/client';
 import { supabase } from './lib/supabase/client';
+import { disconnectStreamUser } from './lib/stream/client';
 import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
-import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, Video, BookOpen, Copy, Check, Loader2 } from 'lucide-react';
+import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, BookOpen, Copy, Check, Loader2 } from 'lucide-react';
 import { BillingProvider } from './context/BillingContext';
 import { PricingPage } from './pages/billing/PricingPage';
 import { BillingCallbackPage } from './pages/billing/BillingCallbackPage';
@@ -43,6 +44,7 @@ import { TutorDashboardPage } from './pages/tutor/TutorDashboardPage';
 
 import { TutorMarketplacePage } from './pages/tutor/TutorMarketplacePage';
 import { AiTutorPage } from './pages/study/AiTutorPage';
+import { StudoraChat } from './components/chat/StudoraChat';
 
 // Canonical route sets
 const PUBLIC_ROUTES = new Set([
@@ -205,6 +207,7 @@ function AppContent() {
             setCurrentUser(null);
             setUserProfile(null);
             api.logout();
+            disconnectStreamUser();
             notifyAuthStateChange(null, null);
             setAuthChecking(false);
             setShowSplash(false);
@@ -430,6 +433,7 @@ function AppContent() {
       console.warn('Supabase signOut notice:', e);
     }
     api.logout();
+    disconnectStreamUser();
     setCurrentUser(null);
     setUserProfile(null);
     setSemesters([]);
@@ -443,6 +447,7 @@ function AppContent() {
   // Handle Permanent Account Deletion
   const handleAccountDeleted = () => {
     api.logout();
+    disconnectStreamUser();
     setCurrentUser(null);
     setUserProfile(null);
     setSemesters([]);
@@ -865,92 +870,26 @@ function AppContent() {
                 )}
 
 
-                {/* Community & ZEGOCLOUD Video Tutoring */}
+                {/* Messages & Tutor-Student Chat (GetStream) */}
                 {(activeTab === 'messages' || activeTab === 'community') && (
-                  <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="max-w-6xl mx-auto space-y-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
-                        <h2 className="text-xl sm:text-2xl font-bold text-ink">Study Groups & Video Tutoring</h2>
-                        <p className="text-xs sm:text-sm text-muted">Live HD video tutoring halls and private peer cohort study channels.</p>
+                        <h2 className="text-xl sm:text-2xl font-bold text-ink">Messages & Tutoring Chat</h2>
+                        <p className="text-xs sm:text-sm text-muted">
+                          Direct 1-on-1 messaging with verified Studora tutors and live study consultations.
+                        </p>
                       </div>
-                      <Badge variant="academic">ZEGOCLOUD Ready</Badge>
+                      <Badge variant="academic">GetStream Chat</Badge>
                     </div>
 
-                    {/* ZEGOCLOUD Video Tutoring Session Gating */}
-                    <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-academic-100 text-academic flex items-center justify-center shrink-0 border border-academic-200">
-                          <Video className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-ink">Live HD Video Tutoring Room</h3>
-                          <p className="text-xs text-muted">Low-latency live video, interactive whiteboard, and screen sharing</p>
-                        </div>
-                      </div>
-
-                      <FeatureGate
-                        feature="VIDEO_TUTORING"
-                        featureTitle="ZEGOCLOUD Live Video Tutoring"
-                        description="Live 1-on-1 and cohort video tutoring is reserved for Pro and Premium plans."
-                        requiredPlan="Pro"
-                        requiredPlanCode="pro"
-                        onUpgrade={() => navigateRoute('pricing')}
-                      >
-                        <div className="p-4 rounded-btn bg-canvas border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                          <div>
-                            <p className="text-xs font-semibold text-ink">Room: ZEGO-ROOM-301-ALGORITHMS</p>
-                            <p className="text-[11px] text-muted">Authenticated session with encrypted real-time audio/video</p>
-                          </div>
-                          <Button
-                            variant="academic"
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                const res = await api.request('/api/video/token', { method: 'POST', body: JSON.stringify({ roomCode: 'ZEGO-ROOM-301-ALGORITHMS' }) });
-                                addToast({ type: 'success', title: 'Video Room Active', message: `Connected to ZEGOCLOUD room ${res.roomCode}. Token verified.` });
-                              } catch (err) {
-                                addToast({ type: 'error', title: 'Access Denied', message: err.message });
-                              }
-                            }}
-                          >
-                            Join Live Video Room
-                          </Button>
-                        </div>
-                      </FeatureGate>
-                    </div>
-
-                    {/* Private Study Groups Gating */}
-                    <FeatureGate
-                      feature="PRIVATE_GROUPS"
-                      featureTitle="Private Study Groups"
-                      description="Create and join private department and cohort study groups."
-                      requiredPlan="Student"
-                      requiredPlanCode="student"
-                      onUpgrade={() => navigateRoute('pricing')}
-                    >
-                      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-surface space-y-4">
-                        <h3 className="text-base font-bold text-ink">Active Cohort Study Groups</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="p-4 rounded-btn border border-border bg-canvas/30 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-ink">Junior CS Honours Cohort</span>
-                              <span className="text-[10px] font-mono text-muted">18 Members</span>
-                            </div>
-                            <p className="text-[11px] text-muted">Daily review of algorithm proofs and compiler construction projects.</p>
-                            <Badge variant="academic" size="sm">Active Discussion</Badge>
-                          </div>
-
-                          <div className="p-4 rounded-btn border border-border bg-canvas/30 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-ink">Networks & Security Study Hall</span>
-                              <span className="text-[10px] font-mono text-muted">24 Members</span>
-                            </div>
-                            <p className="text-[11px] text-muted">Wireshark packet tracing and socket programming exercises.</p>
-                            <Badge variant="academic" size="sm">Active Discussion</Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </FeatureGate>
+                    {/* Integrated GetStream Chat Component */}
+                    <StudoraChat
+                      currentUser={currentUser}
+                      userProfile={userProfile}
+                      showToast={addToast}
+                      onNavigate={navigateRoute}
+                    />
                   </div>
                 )}
 

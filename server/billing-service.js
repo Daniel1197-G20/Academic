@@ -595,13 +595,26 @@ export async function handlePaystackWebhook(rawBody, signature) {
   }
 
   // Verify HMAC SHA512 Signature
-  const expectedSig = crypto.createHmac('sha512', PAYSTACK_WEBHOOK_SECRET).update(rawBody).digest('hex');
-  if (signature !== expectedSig && !IS_TEST_MODE) {
-    const err = new Error('Invalid Paystack webhook signature.');
-    err.statusCode = 401;
-    err.code = 'WEBHOOK_INVALID_SIGNATURE';
+  // In production (IS_TEST_MODE === false), PAYSTACK_WEBHOOK_SECRET is required and enforced at startup.
+  // In test/dev mode, skip signature verification only when no secret is configured (PAYSTACK_WEBHOOK_SECRET is null).
+  // When a test secret IS configured (injected via process.env), enforce verification so the test suite
+  // exercises the real signature path rather than silently bypassing it.
+  if (PAYSTACK_WEBHOOK_SECRET) {
+    const expectedSig = crypto.createHmac('sha512', PAYSTACK_WEBHOOK_SECRET).update(rawBody).digest('hex');
+    if (signature !== expectedSig) {
+      const err = new Error('Invalid Paystack webhook signature.');
+      err.statusCode = 401;
+      err.code = 'WEBHOOK_INVALID_SIGNATURE';
+      throw err;
+    }
+  } else if (!IS_TEST_MODE) {
+    // Should never reach here: startup guard at line 17-18 prevents this in production.
+    const err = new Error('Webhook secret not configured; cannot verify signature.');
+    err.statusCode = 500;
+    err.code = 'WEBHOOK_SECRET_MISSING';
     throw err;
   }
+  // IS_TEST_MODE && no secret: signature check skipped intentionally (local dev without webhook secret)
 
   let event;
   try {

@@ -25,32 +25,54 @@ import {
   handleTutorPaystackWebhook
 } from './tutor-financial-service.js';
 import { generateAiTutorResponse } from './ai-tutor-service.js';
+import { generateStreamUserToken, getOrCreateDirectConversation, isStreamConfigured } from './stream-service.js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-if (!process.env.APP_SECRET) {
-  throw new Error('[server/api.js] Missing required environment variable: APP_SECRET');
+// Secret configuration
+// APP_SECRET is required when creating or verifying legacy HMAC session tokens.
+export function getAppSecret() {
+  const secret = process.env.APP_SECRET;
+  if (!secret) {
+    throw new Error('[server/api.js] Missing required environment variable: APP_SECRET');
+  }
+  return secret;
 }
-const JWT_SECRET = process.env.APP_SECRET;
-const ZEGO_APP_ID = Number(process.env.ZEGOCLOUD_APP_ID || process.env.VITE_ZEGOCLOUD_APP_ID || 1234567890);
-if (!process.env.ZEGOCLOUD_SERVER_SECRET) {
-  throw new Error('[server/api.js] Missing required environment variable: ZEGOCLOUD_SERVER_SECRET');
+
+// ZEGOCLOUD_SERVER_SECRET is required only when generating legacy ZEGOCLOUD video tokens.
+export function getZegoServerSecret() {
+  const secret = process.env.ZEGOCLOUD_SERVER_SECRET;
+  if (!secret) {
+    throw new Error('[server/api.js] Missing required environment variable: ZEGOCLOUD_SERVER_SECRET');
+  }
+  return secret;
 }
-const ZEGO_SERVER_SECRET = process.env.ZEGOCLOUD_SERVER_SECRET;
+
+export function getZegoAppId() {
+  return Number(process.env.ZEGOCLOUD_APP_ID || process.env.VITE_ZEGOCLOUD_APP_ID || 1234567890);
+}
 
 // Create a signed HMAC-SHA256 session token
 export function createSessionToken(payload) {
+  const secret = getAppSecret();
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 })).toString('base64url');
-  const signature = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${body}`).digest('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
   return `${header}.${body}.${signature}`;
 }
 
 // Verify session token
 export function verifySessionToken(token) {
   if (!token) return null;
+  let secret;
+  try {
+    secret = getAppSecret();
+  } catch (e) {
+    return null;
+  }
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   const [header, body, signature] = parts;
-  const expectedSig = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${body}`).digest('base64url');
+  const expectedSig = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
   if (signature !== expectedSig) return null;
   
   try {
@@ -78,15 +100,67 @@ export async function getAuthenticatedUser(req) {
   try {
     const parts = token.split('.');
     if (parts.length === 3) {
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-      if (payload && payload.sub && (payload.iss?.includes('supabase') || payload.aud === 'authenticated' || payload.role === 'authenticated')) {
-        const nowSec = Math.floor(Date.now() / 1000);
-        if (payload.exp && nowSec > payload.exp) {
-          return null; // Expired token
+      let unverifiedPayload = null;
+      try {
+        unverifiedPayload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+      } catch (e) {
+        unverifiedPayload = null;
+      }
+
+      // Check if candidate token looks like a Supabase token
+      const isSupabaseCandidate = unverifiedPayload && (
+        unverifiedPayload.iss?.includes('supabase') ||
+        unverifiedPayload.aud === 'authenticated' ||
+        unverifiedPayload.role === 'authenticated'
+      );
+
+      if (isSupabaseCandidate) {
+        let verifiedUser = null;
+        let verifiedClaims = null;
+
+        // Verification Strategy A: Supabase Auth server verification via auth.getUser(token)
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+        if (supabaseUrl && supabaseAnonKey) {
+          try {
+            const sbAuthClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+              auth: { autoRefreshToken: false, persistSession: false }
+            });
+            const { data: authData, error: authError } = await sbAuthClient.auth.getUser(token);
+            if (!authError && authData?.user) {
+              verifiedUser = authData.user;
+            }
+          } catch (getUserErr) {
+            // Network/service error or offline environment
+          }
         }
 
-        const supabaseUserId = payload.sub;
-        const supabaseEmail = (payload.email || '').toLowerCase().trim();
+        // Verification Strategy B: Cryptographic HMAC signature check if SUPABASE_JWT_SECRET is configured
+        if (!verifiedUser && process.env.SUPABASE_JWT_SECRET) {
+          try {
+            const [h, b, s] = parts;
+            const expected = crypto.createHmac('sha256', process.env.SUPABASE_JWT_SECRET).update(`${h}.${b}`).digest('base64url');
+            if (s === expected) {
+              const nowSec = Math.floor(Date.now() / 1000);
+              if (unverifiedPayload.exp && nowSec > unverifiedPayload.exp) {
+                return null; // Expired
+              }
+              verifiedClaims = unverifiedPayload;
+            }
+          } catch (jwtErr) {}
+        }
+
+        // If neither cryptographic verification passed, REJECT the candidate Supabase token
+        if (!verifiedUser && !verifiedClaims) {
+          // Token claimed to be Supabase auth but failed cryptographic verification
+          return null;
+        }
+
+        // Derived strictly from verified identity
+        const supabaseUserId = verifiedUser ? verifiedUser.id : verifiedClaims.sub;
+        const supabaseEmail = ((verifiedUser ? verifiedUser.email : verifiedClaims.email) || '').toLowerCase().trim();
+        const userMetadata = verifiedUser ? verifiedUser.user_metadata : (verifiedClaims.user_metadata || {});
 
         // Lookup in local database
         const res = await db.query(
@@ -100,7 +174,7 @@ export async function getAuthenticatedUser(req) {
         }
 
         // Bridge newly authenticated Supabase user into local PGlite to support existing API endpoints
-        const displayName = payload.user_metadata?.full_name || payload.user_metadata?.fullName || supabaseEmail.split('@')[0] || 'Student';
+        const displayName = userMetadata?.full_name || userMetadata?.fullName || supabaseEmail.split('@')[0] || 'Student';
         await db.query(`
           INSERT INTO users (id, email, display_name, role, status)
           VALUES ($1, $2, $3, 'student', 'active')
@@ -114,9 +188,9 @@ export async function getAuthenticatedUser(req) {
         `, [
           supabaseUserId, 
           displayName,
-          payload.user_metadata?.institution || 'General Academy',
-          payload.user_metadata?.department || 'General Studies',
-          payload.user_metadata?.academic_level || payload.user_metadata?.academicLevel || 'Year 1'
+          userMetadata?.institution || 'General Academy',
+          userMetadata?.department || 'General Studies',
+          userMetadata?.academic_level || userMetadata?.academicLevel || 'Year 1'
         ]);
 
         await db.query(`
@@ -1367,6 +1441,9 @@ export async function handleApiRequest(req, res) {
       }
 
       try {
+        const zegoSecret = getZegoServerSecret();
+        const zegoAppId = getZegoAppId();
+
         // Generate ZEGOCLOUD Token04 strictly server-side
         const effectiveTimeInSeconds = 3600; // 1 hour token validity
         const payload = JSON.stringify({
@@ -1379,9 +1456,9 @@ export async function handleApiRequest(req, res) {
         });
 
         const token = generateToken04({
-          appId: ZEGO_APP_ID,
+          appId: zegoAppId,
           userId: zegoUserId,
-          serverSecret: ZEGO_SERVER_SECRET,
+          serverSecret: zegoSecret,
           effectiveTimeInSeconds,
           payload
         });
@@ -1390,7 +1467,7 @@ export async function handleApiRequest(req, res) {
         return sendJson(res, 200, {
           success: true,
           token,
-          appId: ZEGO_APP_ID,
+          appId: zegoAppId,
           roomID,
           roomCode: roomID,
           userID: zegoUserId,
@@ -1427,6 +1504,177 @@ export async function handleApiRequest(req, res) {
         retentionProbability: 98.4,
         topicMasteryIndex: 87.2
       });
+    }
+
+    // POST /api/stream/token — Generate authenticated GetStream user token
+    if (pathname === '/api/stream/token' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) {
+        return sendJson(res, 401, {
+          error: 'Authentication required. Please provide a valid session token.',
+          code: 'AUTH_REQUIRED'
+        });
+      }
+
+      if (!isStreamConfigured()) {
+        return sendJson(res, 503, {
+          error: 'Stream communication service is not configured on this server.',
+          code: 'STREAM_NOT_CONFIGURED'
+        });
+      }
+
+      // Canonical user ID is strictly derived from the verified Supabase user ID
+      const canonicalUserId = authUser.supabaseUid || authUser.userId;
+
+      // Fetch user profile from database to sync display name and avatar (never trust client payload)
+      let profileData = {};
+      try {
+        const profRes = await db.query(
+          `SELECT full_name, avatar_url FROM profiles WHERE user_id = $1;`,
+          [authUser.userId]
+        );
+        if (profRes.rows.length > 0) {
+          const p = profRes.rows[0];
+          if (p.full_name) profileData.name = p.full_name;
+          if (p.avatar_url) profileData.image = p.avatar_url;
+        }
+      } catch (dbErr) {
+        // Non-blocking fallback
+        profileData.name = authUser.email ? authUser.email.split('@')[0] : 'User';
+      }
+
+      try {
+        const result = await generateStreamUserToken(canonicalUserId, profileData);
+        return sendJson(res, 200, {
+          success: true,
+          token: result.token,
+          apiKey: result.apiKey,
+          userId: result.streamUserId
+        });
+      } catch (streamErr) {
+        return sendJson(res, streamErr.statusCode || 500, {
+          error: streamErr.message,
+          code: streamErr.code || 'STREAM_TOKEN_ERROR'
+        });
+      }
+    }
+
+    // POST /api/stream/conversation — ensure or create an authorized 1-on-1 messaging or booking channel
+    if (pathname === '/api/stream/conversation' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) {
+        return sendJson(res, 401, {
+          error: 'Authentication required. Please provide a valid session token.',
+          code: 'AUTH_REQUIRED'
+        });
+      }
+
+      if (!isStreamConfigured()) {
+        return sendJson(res, 503, {
+          error: 'Stream communication service is not configured on this server.',
+          code: 'STREAM_NOT_CONFIGURED'
+        });
+      }
+
+      const body = await parseJsonBody(req);
+      const { tutorId, recipientId, userId, bookingId, subject, channelName } = body;
+      const targetUserId = recipientId || tutorId || userId;
+
+      const currentUserId = authUser.supabaseUid || authUser.userId;
+
+      let participantA = currentUserId;
+      let participantB = null;
+      let conversationSubject = subject || null;
+
+      // Case 1: Channel requested for a confirmed booking
+      if (bookingId) {
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+        let booking = null;
+        if (supabaseUrl && (supabaseServiceKey || supabaseAnonKey)) {
+          try {
+            const client = createSupabaseClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
+              auth: { autoRefreshToken: false, persistSession: false }
+            });
+            const { data, error } = await client
+              .from('tutor_bookings')
+              .select('id, student_id, tutor_id, subject, status, payment_status')
+              .eq('id', bookingId)
+              .maybeSingle();
+            if (!error && data) {
+              booking = data;
+            }
+          } catch (e) {
+            // fallback if supabase unavailable
+          }
+        }
+
+        if (booking) {
+          // Authorize: Current user MUST be either the student or the tutor for this booking
+          const isStudent = booking.student_id === currentUserId;
+          const isTutor = booking.tutor_id === currentUserId;
+          if (!isStudent && !isTutor) {
+            return sendJson(res, 403, {
+              error: 'Forbidden: You are not an authorized participant for this booking.',
+              code: 'FORBIDDEN_BOOKING_PARTICIPANT'
+            });
+          }
+
+          participantA = booking.student_id;
+          participantB = booking.tutor_id;
+          conversationSubject = booking.subject;
+        } else {
+          // If no remote booking record found (or in test environment), validate targetUserId
+          if (!targetUserId) {
+            return sendJson(res, 404, {
+              error: 'Booking not found or recipientId/tutorId required.',
+              code: 'BOOKING_NOT_FOUND'
+            });
+          }
+          participantA = currentUserId;
+          participantB = targetUserId;
+        }
+      } else {
+        // Case 2: App-wide direct user-to-user messaging or pre-booking enquiry
+        if (!targetUserId) {
+          return sendJson(res, 400, {
+            error: 'recipientId or tutorId is required to start a conversation.',
+            code: 'MISSING_TUTOR_ID'
+          });
+        }
+        participantA = currentUserId;
+        participantB = targetUserId;
+      }
+
+      if (participantA === participantB) {
+        return sendJson(res, 400, {
+          error: 'Cannot start a conversation with yourself.',
+          code: 'SELF_CONVERSATION_DISALLOWED'
+        });
+      }
+
+      try {
+        const convResult = await getOrCreateDirectConversation(participantA, participantB, {
+          bookingId: bookingId || null,
+          subject: conversationSubject,
+          channelName: channelName || null,
+          initiatedBy: currentUserId
+        });
+
+        return sendJson(res, 200, {
+          success: true,
+          channelId: convResult.channelId,
+          channelType: convResult.channelType,
+          members: convResult.members
+        });
+      } catch (convErr) {
+        return sendJson(res, convErr.statusCode || 500, {
+          error: convErr.message,
+          code: convErr.code || 'CONVERSATION_CREATION_FAILED'
+        });
+      }
     }
 
     // Default 404
