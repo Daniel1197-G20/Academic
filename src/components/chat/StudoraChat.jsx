@@ -1,22 +1,4 @@
-/**
- * src/components/chat/StudoraChat.jsx
- *
- * Polished, real-time messaging experience for Studora inspired by WhatsApp & Messenger.
- * Built on GetStream Chat SDK + Supabase authenticated user directory.
- *
- * Core Capabilities:
- * - App-wide direct messaging: Students, approved tutors, and peer study partners.
- * - Integrated Search: Search both existing conversations and Studora user directory.
- * - Fast tab switching between "Chats" and "Find People" with debounce and case-insensitive search.
- * - New Conversation: Open existing conversation or create a canonical 1-on-1 channel.
- * - Active thread header: Participant avatar, name, online presence, session badge.
- * - WhatsApp/Messenger-style call controls: Voice call (Phone) & Video call (Video) buttons in header with accessible labels and tooltips.
- * - Accurate Call Status: Explicitly explains calling prerequisites without faking connections.
- * - Message Bubbles: Incoming/outgoing styling, timestamps, and delivery/read receipts.
- * - Message Composer: Send button, real file/image attachments via Stream Channel API, emoji picker, and mic button.
- * - Responsive layout: Desktop split-view and mobile slide view with back navigation.
- * - Empty, loading, unconfigured, and offline resilience.
- */
+
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
@@ -201,7 +183,7 @@ export function StudoraChat({
 
     // Load initial messages for active channel
     setMessages(activeChannel.state.messages || []);
-    activeChannel.markRead().catch(() => {});
+    activeChannel.markRead().catch(() => { });
 
     // Channel event handlers
     const handleNewMessage = (event) => {
@@ -210,7 +192,7 @@ export function StudoraChat({
           if (prev.some((m) => m.id === event.message.id)) return prev;
           return [...prev, event.message];
         });
-        activeChannel.markRead().catch(() => {});
+        activeChannel.markRead().catch(() => { });
       }
     };
 
@@ -469,7 +451,7 @@ export function StudoraChat({
     try {
       const isImg = file.type.startsWith('image/');
       let uploadResult;
-      
+
       if (isImg && typeof activeChannel.sendImage === 'function') {
         uploadResult = await activeChannel.sendImage(file);
       } else if (typeof activeChannel.sendFile === 'function') {
@@ -517,10 +499,10 @@ export function StudoraChat({
     setInputText(value);
 
     if (activeChannel && value.trim()) {
-      activeChannel.keystroke().catch(() => {});
+      activeChannel.keystroke().catch(() => { });
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        activeChannel.stopTyping().catch(() => {});
+        activeChannel.stopTyping().catch(() => { });
       }, 2500);
     }
   };
@@ -601,9 +583,8 @@ export function StudoraChat({
     <div className="relative bg-white border border-border rounded-card shadow-tactile-surface overflow-hidden flex flex-col md:flex-row h-[660px] md:h-[720px]">
       {/* ── LEFT: Navigation & Conversation/User List ── */}
       <div
-        className={`w-full md:w-80 lg:w-96 border-r border-border flex flex-col h-full bg-canvas/30 ${
-          isMobileThreadOpen ? 'hidden md:flex' : 'flex'
-        }`}
+        className={`w-full md:w-80 lg:w-96 border-r border-border flex flex-col h-full bg-canvas/30 ${isMobileThreadOpen ? 'hidden md:flex' : 'flex'
+          }`}
       >
         {/* Header with Title & Action */}
         <div className="p-4 border-b border-border bg-white space-y-3">
@@ -641,11 +622,10 @@ export function StudoraChat({
           <div className="flex rounded-lg bg-canvas p-0.5 border border-border text-xs font-semibold">
             <button
               onClick={() => setSidebarTab('conversations')}
-              className={`flex-1 py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
-                sidebarTab === 'conversations'
+              className={`flex-1 py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${sidebarTab === 'conversations'
                   ? 'bg-white text-ink shadow-tactile-btn'
                   : 'text-muted hover:text-ink'
-              }`}
+                }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Chats</span>
@@ -657,11 +637,10 @@ export function StudoraChat({
                   searchUsersInDatabase('').then(setDirectoryResults);
                 }
               }}
-              className={`flex-1 py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
-                sidebarTab === 'users'
+              className={`flex-1 py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${sidebarTab === 'users'
                   ? 'bg-white text-ink shadow-tactile-btn'
                   : 'text-muted hover:text-ink'
-              }`}
+                }`}
             >
               <Users className="w-3.5 h-3.5" />
               <span>Find People</span>
@@ -740,9 +719,8 @@ export function StudoraChat({
                       setActiveChannel(ch);
                       setIsMobileThreadOpen(true);
                     }}
-                    className={`w-full text-left p-3.5 flex items-start gap-3 transition-colors ${
-                      isActive ? 'bg-white shadow-tactile-surface border-l-4 border-l-academic' : 'hover:bg-white/80'
-                    }`}
+                    className={`w-full text-left p-3.5 flex items-start gap-3 transition-colors ${isActive ? 'bg-white shadow-tactile-surface border-l-4 border-l-academic' : 'hover:bg-white/80'
+                      }`}
                   >
                     <div className="relative shrink-0">
                       <Avatar
@@ -865,9 +843,8 @@ export function StudoraChat({
 
       {/* ── RIGHT: Active Conversation View ── */}
       <div
-        className={`flex-1 flex flex-col h-full bg-white ${
-          !isMobileThreadOpen ? 'hidden md:flex' : 'flex'
-        }`}
+        className={`flex-1 flex flex-col h-full bg-white ${!isMobileThreadOpen ? 'hidden md:flex' : 'flex'
+          }`}
       >
         {activeChannel ? (
           <>
@@ -981,11 +958,10 @@ export function StudoraChat({
                         )}
 
                         <div
-                          className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                            isMine
+                          className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${isMine
                               ? 'bg-academic text-white rounded-br-sm shadow-tactile-btn'
                               : 'bg-white border border-border text-ink rounded-bl-sm shadow-tactile-surface'
-                          }`}
+                            }`}
                         >
                           {/* Attachments rendering */}
                           {hasAttachments && (
@@ -1014,11 +990,10 @@ export function StudoraChat({
                                     href={att.asset_url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-semibold ${
-                                      isMine
+                                    className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-semibold ${isMine
                                         ? 'bg-white/10 border-white/20 text-white'
                                         : 'bg-canvas border-border text-ink'
-                                    }`}
+                                      }`}
                                   >
                                     <File className="w-4 h-4 shrink-0" />
                                     <span className="truncate">{att.title || 'Document'}</span>
@@ -1120,9 +1095,8 @@ export function StudoraChat({
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker((prev) => !prev)}
-                className={`p-2 rounded-lg transition-colors ${
-                  showEmojiPicker ? 'text-academic bg-academic-50' : 'text-muted hover:text-ink hover:bg-canvas'
-                }`}
+                className={`p-2 rounded-lg transition-colors ${showEmojiPicker ? 'text-academic bg-academic-50' : 'text-muted hover:text-ink hover:bg-canvas'
+                  }`}
                 title="Add emoji"
                 aria-label="Emoji picker"
               >

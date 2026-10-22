@@ -178,6 +178,39 @@ export async function getOrCreateDirectConversation(user1, user2, meta = {}) {
   const members = [participantA, participantB];
 
   try {
+    // Ensure all participant users exist in Stream before creating the channel.
+    // If a user has never logged into chat before, Stream will reject channel creation with:
+    // "The following users are involved in channel create operation, but don't exist: [userId]"
+    const effectiveKey = client.key || client.apiKey || getStreamApiKey();
+    const isMockKey = String(effectiveKey).startsWith('test_') || String(effectiveKey).includes('mock');
+
+    if (!isMockKey) {
+      try {
+        const { users: existingStreamUsers } = await client.queryUsers({
+          id: { $in: members }
+        });
+        const existingIds = new Set((existingStreamUsers || []).map((u) => u.id));
+        const missingIds = members.filter((id) => !existingIds.has(id));
+
+        if (missingIds.length > 0) {
+          // Attempt to populate user details from profiles if passed in meta
+          const providedProfiles = new Map((meta.userProfiles || []).map((p) => [p.id, p]));
+          const usersToUpsert = missingIds.map((id) => {
+            const p = providedProfiles.get(id);
+            return {
+              id,
+              name: p?.name || p?.full_name || 'Studora User',
+              ...(p?.image || p?.avatar_url ? { image: p.image || p.avatar_url } : {})
+            };
+          });
+
+          await client.upsertUsers(usersToUpsert);
+        }
+      } catch (upsertErr) {
+        console.warn('[stream-service] Participant pre-check notice:', upsertErr.message);
+      }
+    }
+
     const channelData = {
       members,
       created_by_id: meta.initiatedBy || participantA,
@@ -190,8 +223,6 @@ export async function getOrCreateDirectConversation(user1, user2, meta = {}) {
     
     // In mock/test environments (where API keys are test strings), calling remote channel.create()
     // will fail network authentication with 'api_key not valid'. We gracefully isolate test credentials.
-    const effectiveKey = client.key || client.apiKey || getStreamApiKey();
-    const isMockKey = String(effectiveKey).startsWith('test_') || String(effectiveKey).includes('mock');
     if (!isMockKey) {
       await channel.create();
     }

@@ -1655,12 +1655,34 @@ export async function handleApiRequest(req, res) {
         });
       }
 
+      // Fetch user profiles for both participants to populate names/avatars in Stream
+      const userProfiles = [];
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        try {
+          const client = createSupabaseClient(supabaseUrl, supabaseKey, {
+            auth: { autoRefreshToken: false, persistSession: false }
+          });
+          const { data: profilesData } = await client
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', [participantA, participantB]);
+          if (profilesData && profilesData.length > 0) {
+            userProfiles.push(...profilesData);
+          }
+        } catch (profErr) {
+          // Non-blocking fallback
+        }
+      }
+
       try {
         const convResult = await getOrCreateDirectConversation(participantA, participantB, {
           bookingId: bookingId || null,
           subject: conversationSubject,
           channelName: channelName || null,
-          initiatedBy: currentUserId
+          initiatedBy: currentUserId,
+          userProfiles
         });
 
         return sendJson(res, 200, {

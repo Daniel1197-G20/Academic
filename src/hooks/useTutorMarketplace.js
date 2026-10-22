@@ -47,7 +47,6 @@ export function useTutorMarketplace() {
           bio,
           teaching_approach,
           hourly_rate,
-          session_price_kobo,
           rating,
           review_count,
           is_verified,

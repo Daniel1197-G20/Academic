@@ -968,11 +968,11 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
         </div>
 
         {/* Hierarchical Responsive Layout: Mobile Timeline & Desktop Dynamic Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 relative">
 
-          {/* STEP 1: PRIMARY ANCHOR CARD (col-span-12 lg:col-span-6) */}
+          {/* STEP 1: PRIMARY ANCHOR CARD (col-span-1 lg:col-span-6) */}
           {/* Most prominent visual weight: Academic Green gradient card with baseline readout */}
-          <div className="md:col-span-12 lg:col-span-6 bg-gradient-to-br from-[#104633] via-academic to-[#13583F] text-white rounded-card p-6 sm:p-8 shadow-tactile-raised border border-white/20 flex flex-col justify-between space-y-6 relative overflow-hidden group">
+          <div className="col-span-1 lg:col-span-6 bg-gradient-to-br from-[#104633] via-academic to-[#13583F] text-white rounded-card p-6 sm:p-8 shadow-tactile-raised border border-white/20 flex flex-col justify-between space-y-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 -mr-10 -mt-10 w-44 h-44 rounded-full bg-white/5 blur-2xl pointer-events-none" />
 
             <div className="space-y-4 relative z-10">
@@ -1027,8 +1027,8 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             </div>
           </div>
 
-          {/* STEP 2 & 3: CORE WORKFLOW CARDS (col-span-12 md:col-span-6 lg:col-span-6) */}
-          <div className="md:col-span-12 lg:col-span-6 flex flex-col justify-between gap-5 sm:gap-6">
+          {/* STEP 2 & 3: CORE WORKFLOW CARDS (col-span-1 lg:col-span-6) */}
+          <div className="col-span-1 lg:col-span-6 flex flex-col justify-between gap-5 sm:gap-6">
 
             {/* STEP 2: Plan your next move */}
             <div className="bg-white border border-border rounded-card p-6 shadow-tactile-surface hover:shadow-tactile-raised hover:border-academic/40 transition-all flex flex-col justify-between space-y-4">
@@ -1106,9 +1106,9 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
 
           </div>
 
-          {/* STEP 4: MILESTONE & REVIEW BANNER CARD (col-span-12) */}
+          {/* STEP 4: MILESTONE & REVIEW BANNER CARD (col-span-1 lg:col-span-12) */}
           {/* Distinct wide milestone card with progress trajectory accent */}
-          <div className="col-span-12 bg-navy text-white rounded-card p-6 sm:p-8 shadow-tactile-surface border border-navy/80 relative overflow-hidden">
+          <div className="col-span-1 lg:col-span-12 bg-navy text-white rounded-card p-6 sm:p-8 shadow-tactile-surface border border-navy/80 relative overflow-hidden">
             <div className="absolute right-0 bottom-0 w-80 h-36 bg-academic-500/10 blur-2xl pointer-events-none" />
 
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
