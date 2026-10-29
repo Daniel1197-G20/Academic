@@ -659,7 +659,10 @@ function AppContent() {
           />
 
           {/* Page Container */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <main className={`flex-1 w-full mx-auto ${(activeTab === 'messages' || activeTab === 'community')
+              ? 'p-2 sm:p-4 md:p-6 lg:p-8 max-w-7xl flex flex-col min-h-0'
+              : 'p-4 sm:p-6 lg:p-8 max-w-7xl'
+            }`}>
             <ErrorBoundary onGoHome={() => navigateRoute('dashboard')}>
               <Suspense fallback={<PageLoader message="Loading Studora..." />}>
                 {(activeTab === 'dashboard' || activeTab === 'overview') && (
@@ -872,8 +875,8 @@ function AppContent() {
 
                 {/* Messages & Tutor-Student Chat (GetStream) */}
                 {(activeTab === 'messages' || activeTab === 'community') && (
-                  <div className="max-w-6xl mx-auto space-y-6">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1 flex flex-col min-h-0 w-full space-y-3 sm:space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 shrink-0">
                       <div>
                         <h2 className="text-xl sm:text-2xl font-bold text-ink">Messages & Tutoring Chat</h2>
                         <p className="text-xs sm:text-sm text-muted">
@@ -884,12 +887,14 @@ function AppContent() {
                     </div>
 
                     {/* Integrated GetStream Chat Component */}
-                    <StudoraChat
-                      currentUser={currentUser}
-                      userProfile={userProfile}
-                      showToast={addToast}
-                      onNavigate={navigateRoute}
-                    />
+                    <div className="flex-1 min-h-0 flex flex-col">
+                      <StudoraChat
+                        currentUser={currentUser}
+                        userProfile={userProfile}
+                        showToast={addToast}
+                        onNavigate={navigateRoute}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -904,11 +909,13 @@ function AppContent() {
             </ErrorBoundary>
           </main>
 
-          {/* Universal Footer */}
-          <Footer
-            onNavigate={navigateRoute}
-            onOpenCookieSettings={() => setShowCookieModal(true)}
-          />
+          {/* Universal Footer - Conditionally excluded on Messages route to give full responsive height */}
+          {activeTab !== 'messages' && activeTab !== 'community' && (
+            <Footer
+              onNavigate={navigateRoute}
+              onOpenCookieSettings={() => setShowCookieModal(true)}
+            />
+          )}
         </div>
 
         {/* Mobile Bottom Navigation Dock */}

@@ -979,7 +979,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <div className="flex items-center justify-between">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[11px] font-mono tracking-wider uppercase font-semibold">
                   <span className="w-2 h-2 rounded-full bg-academic-200 animate-pulse" />
-                  <span>STEP 1 • FOUNDATION</span>
+                  <span>FOUNDATION</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center shadow-inner">
                   <GraduationCap className="w-5 h-5 text-academic-100" />
@@ -987,7 +987,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               </div>
 
               <div>
-                <span className="text-[11px] font-mono font-medium text-academic-200 tracking-wider uppercase">01 / ESTABLISH BASELINE</span>
+                <span className="text-[11px] font-mono font-medium text-academic-200 tracking-wider uppercase">ESTABLISH BASELINE</span>
                 <h3 className="text-xl sm:text-2xl font-serif text-white tracking-tight leading-snug mt-1">
                   Measure your starting point.
                 </h3>
@@ -1023,7 +1023,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 <span>Calculate baseline</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <span className="text-[11px] font-mono text-academic-200">Phase 01</span>
+              <span className="text-[11px] font-mono text-academic-200"></span>
             </div>
           </div>
 
@@ -1035,7 +1035,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-academic-50 border border-academic-100 text-academic text-[10px] font-mono tracking-wider uppercase font-semibold">
-                    <span>STEP 2 • PLANNING</span>
+                    <span>PLANNING</span>
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-canvas text-academic flex items-center justify-center border border-border">
                     <Calendar className="w-4 h-4" />
@@ -1043,7 +1043,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-mono text-muted uppercase tracking-wider">02 / STRUCTURE ROUTINE</span>
+                  <span className="text-[10px] font-mono text-muted uppercase tracking-wider">STRUCTURE ROUTINE</span>
                   <h4 className="text-base sm:text-lg font-bold text-ink leading-snug mt-0.5">
                     Plan your next move.
                   </h4>
@@ -1063,7 +1063,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                   <span>Build study routine</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-[10px] font-mono text-muted">Phase 02</span>
+                <span className="text-[10px] font-mono text-muted"></span>
               </div>
             </div>
 
@@ -1072,7 +1072,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-academic-50 border border-academic-100 text-academic text-[10px] font-mono tracking-wider uppercase font-semibold">
-                    <span>STEP 3 • EXECUTION</span>
+                    <span>EXECUTION</span>
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-canvas text-academic flex items-center justify-center border border-border">
                     <Sparkles className="w-4 h-4" />
@@ -1080,7 +1080,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-mono text-muted uppercase tracking-wider">03 / ACTIVE MASTERY</span>
+                  <span className="text-[10px] font-mono text-muted uppercase tracking-wider">ACTIVE MASTERY</span>
                   <h4 className="text-base sm:text-lg font-bold text-ink leading-snug mt-0.5">
                     Learn and practise.
                   </h4>
@@ -1100,7 +1100,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                   <span>Explore learning tools</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-[10px] font-mono text-muted">Phase 03</span>
+                <span className="text-[10px] font-mono text-muted"></span>
               </div>
             </div>
 
@@ -1116,9 +1116,9 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                 <div className="flex items-center gap-3">
                   <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-academic-200 text-[10px] font-mono tracking-wider uppercase font-semibold">
                     <CheckCircle2 className="w-3 h-3 text-academic-300" />
-                    <span>STEP 4 • MILESTONE & REFLECTION</span>
+                    <span>MILESTONE & REFLECTION</span>
                   </div>
-                  <span className="text-[10px] font-mono text-navy-200 uppercase">Phase 04</span>
+                  <span className="text-[10px] font-mono text-navy-200 uppercase"></span>
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-serif text-white tracking-tight leading-snug">

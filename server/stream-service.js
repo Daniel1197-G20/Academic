@@ -90,6 +90,7 @@ export async function generateStreamUserToken(userId, profileData = {}) {
 
   try {
     // Generate the user token using Stream's HMAC signing
+    // Stream token standard is compatible across Chat and Video
     const token = client.createToken(streamUserId);
 
     // Optionally synchronize user details to Stream (safe to retry / idempotent)

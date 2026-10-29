@@ -12,10 +12,12 @@
  */
 
 import { StreamChat } from 'stream-chat';
+import { StreamVideoClient } from '@stream-io/video-react-sdk';
 import { api } from '../../services/api/client.js';
 import { clientConfig } from '../../config/clientConfig.js';
 
 let streamClientInstance = null;
+let streamVideoClientInstance = null;
 let currentConnectedUserId = null;
 let connectionPromise = null;
 
@@ -121,8 +123,79 @@ export async function disconnectStreamUser() {
       console.warn('[stream-client] Error during user disconnect:', err);
     }
   }
+
+  if (streamVideoClientInstance) {
+    try {
+      await streamVideoClientInstance.disconnectUser();
+    } catch (err) {
+      console.warn('[stream-client] Error during video user disconnect:', err);
+    }
+    streamVideoClientInstance = null;
+  }
+
   currentConnectedUserId = null;
   connectionPromise = null;
+}
+
+/**
+ * Get or initialize the StreamVideoClient singleton.
+ * Uses public API key and authenticated session token.
+ *
+ * @param {Object} [userPayload] - { id, name, image }
+ * @param {string} [tokenOverride] - Optional token override
+ * @returns {Promise<StreamVideoClient|null>}
+ */
+export async function getStreamVideoClient(userPayload = null, tokenOverride = null) {
+  const apiKey = clientConfig.stream?.apiKey;
+  if (!apiKey) return null;
+
+  if (streamVideoClientInstance && (!userPayload || streamVideoClientInstance.state?.currentUser?.id === userPayload.id)) {
+    return streamVideoClientInstance;
+  }
+
+  // Retrieve token securely from backend if not provided
+  let token = tokenOverride;
+  let effectiveUserId = userPayload?.id || currentConnectedUserId;
+
+  if (!token) {
+    const res = await api.getStreamToken();
+    if (!res || !res.token) {
+      throw new Error('Failed to retrieve Stream token for video client initialization.');
+    }
+    token = res.token;
+    effectiveUserId = effectiveUserId || res.userId;
+  }
+
+  if (!effectiveUserId) {
+    return null;
+  }
+
+  // Disconnect any prior video instance
+  if (streamVideoClientInstance) {
+    try {
+      await streamVideoClientInstance.disconnectUser();
+    } catch (e) {}
+    streamVideoClientInstance = null;
+  }
+
+  try {
+    const user = {
+      id: effectiveUserId,
+      ...(userPayload?.name ? { name: userPayload.name } : {}),
+      ...(userPayload?.image ? { image: userPayload.image } : {})
+    };
+
+    streamVideoClientInstance = new StreamVideoClient({
+      apiKey,
+      user,
+      token
+    });
+
+    return streamVideoClientInstance;
+  } catch (err) {
+    console.error('[stream-client] Failed to initialize StreamVideoClient:', err);
+    return null;
+  }
 }
 
 /**

@@ -29,14 +29,17 @@ import {
   ExternalLink,
   BookOpen,
   Info,
-  Users
+  Users,
+  ChevronDown
 } from 'lucide-react';
-import { connectStreamUser, disconnectStreamUser, getStreamClient } from '../../lib/stream/client';
+import { connectStreamUser, disconnectStreamUser, getStreamClient, getStreamVideoClient } from '../../lib/stream/client';
 import { isStreamConfigured } from '../../config/clientConfig';
 import { supabase } from '../../lib/supabase/client';
 import { api } from '../../services/api/client';
 import { Avatar, Badge, Button } from '../ui';
 import { rankUserSearchResults } from '../../lib/search/userSearchEngine';
+import { StudoraCallModal } from './StudoraCallModal';
+import { StreamVideo } from '@stream-io/video-react-sdk';
 
 // Quick emojis for familiar WhatsApp/Messenger feel
 const QUICK_EMOJIS = ['👍', '👋', '📚', '💡', '🙏', '🔥', '🎉', '😊'];
@@ -81,21 +84,87 @@ export function StudoraChat({
   // Emoji picker toggle
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  // Unread indicator tracking
+  const [hasNewUnreadMessages, setHasNewUnreadMessages] = useState(false);
+
+  // Stream Video call states
+  const [activeCall, setActiveCall] = useState(null);
+  const [activeCallType, setActiveCallType] = useState('video'); // 'video' | 'audio'
+  const [activeCallRecipientName, setActiveCallRecipientName] = useState('Participant');
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [startingCall, setStartingCall] = useState(false);
+  const [streamVideoClient, setStreamVideoClient] = useState(null);
+
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const isNearBottomRef = useRef(true);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const searchDebounceRef = useRef(null);
 
   const currentUserId = userProfile?.id || currentUser?.id || currentUser?.uid;
 
-  // Scroll to bottom of message list
-  const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
-  };
+  // Determine if user has scrolled near bottom
+  const checkIsNearBottom = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return true;
+    const threshold = 120; // 120px from bottom is considered "near bottom"
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return distanceToBottom <= threshold;
+  }, []);
 
+  const handleMessagesScroll = useCallback(() => {
+    const near = checkIsNearBottom();
+    isNearBottomRef.current = near;
+    if (near) {
+      setHasNewUnreadMessages(false);
+    }
+  }, [checkIsNearBottom]);
+
+  // Scroll messages container smoothly or instantly without jumping the outer page window
+  const scrollToBottom = useCallback((smooth = true) => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    if (smooth) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+    isNearBottomRef.current = true;
+    setHasNewUnreadMessages(false);
+  }, []);
+
+  // When activeChannel changes, reset to bottom instantly
   useEffect(() => {
-    scrollToBottom(false);
-  }, [messages]);
+    if (activeChannel) {
+      setHasNewUnreadMessages(false);
+      isNearBottomRef.current = true;
+      // Scroll container to bottom after DOM render
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
+    }
+  }, [activeChannel?.id, scrollToBottom]);
+
+  // When messages update: if near bottom or user sent message, auto-scroll; otherwise show indicator
+  const prevMessagesLengthRef = useRef(messages.length);
+  useEffect(() => {
+    const prevLen = prevMessagesLengthRef.current;
+    prevMessagesLengthRef.current = messages.length;
+
+    if (messages.length === 0) return;
+
+    const lastMsg = messages[messages.length - 1];
+    const isMyMessage = lastMsg?.user?.id === currentUserId;
+
+    if (isMyMessage || isNearBottomRef.current || prevLen === 0) {
+      // Auto-scroll inside container
+      scrollToBottom(prevLen > 0);
+    } else if (messages.length > prevLen) {
+      // Message received while reading older messages
+      setHasNewUnreadMessages(true);
+    }
+  }, [messages, currentUserId, scrollToBottom]);
 
   // ── 1. Connect to Stream Chat via Server-side Auth ─────────────────────────
   const initChat = useCallback(async () => {
@@ -263,24 +332,27 @@ export function StudoraChat({
 
   // ── 5. Authoritative Public User Directory Search (Safe & Ranked) ──
   const searchUsersInDatabase = useCallback(async (searchTerm = '') => {
+    const normalizedQuery = (searchTerm || '').trim();
+    // Do not query when empty or under 2 characters
+    if (normalizedQuery.length < 2) {
+      setLoadingDirectory(false);
+      setDirectoryError(null);
+      return [];
+    }
+
     setLoadingDirectory(true);
     setDirectoryError(null);
 
     try {
-      const normalizedQuery = (searchTerm || '').trim();
       let query = supabase
         .from('profiles')
         .select('id, full_name, avatar_url, institution, department, academic_level, role, is_public')
         .eq('is_public', true)
         .neq('id', currentUserId);
 
-      if (normalizedQuery) {
-        // Multi-field search for name, department, institution
-        const filter = `full_name.ilike.%${normalizedQuery}%,department.ilike.%${normalizedQuery}%,institution.ilike.%${normalizedQuery}%`;
-        query = query.or(filter).limit(50);
-      } else {
-        query = query.limit(25);
-      }
+      // Multi-field search for name, department, institution
+      const filter = `full_name.ilike.%${normalizedQuery}%,department.ilike.%${normalizedQuery}%,institution.ilike.%${normalizedQuery}%`;
+      query = query.or(filter).limit(50);
 
       const { data, error: err } = await query;
       if (err) throw err;
@@ -301,6 +373,15 @@ export function StudoraChat({
   useEffect(() => {
     if (sidebarTab !== 'users') return;
 
+    const trimmed = (directorySearchQuery || '').trim();
+    if (trimmed.length < 2) {
+      setDirectoryResults([]);
+      setLoadingDirectory(false);
+      setDirectoryError(null);
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      return;
+    }
+
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(async () => {
       const results = await searchUsersInDatabase(directorySearchQuery);
@@ -314,19 +395,33 @@ export function StudoraChat({
 
   // Search for the New Chat Modal
   useEffect(() => {
-    if (!showNewChatModal) return;
-    let isCancelled = false;
+    if (!showNewChatModal) {
+      setModalUsers([]);
+      setLoadingModalUsers(false);
+      return;
+    }
 
+    const trimmed = (modalSearchQuery || '').trim();
+    if (trimmed.length < 2) {
+      setModalUsers([]);
+      setLoadingModalUsers(false);
+      return;
+    }
+
+    let isCancelled = false;
     setLoadingModalUsers(true);
-    searchUsersInDatabase(modalSearchQuery).then((results) => {
+
+    const timer = setTimeout(async () => {
+      const results = await searchUsersInDatabase(modalSearchQuery);
       if (!isCancelled) {
         setModalUsers(results);
         setLoadingModalUsers(false);
       }
-    });
+    }, 250);
 
     return () => {
       isCancelled = true;
+      clearTimeout(timer);
     };
   }, [showNewChatModal, modalSearchQuery, searchUsersInDatabase]);
 
@@ -507,29 +602,124 @@ export function StudoraChat({
     }
   };
 
-  // ── 10. Call Action Handlers (Accurately Explained / Non-Fake) ──────────────
+  // ── 10. Call Action Handlers (Stream Video Real Calling + Booking Zego Preservation) ──
+  const startStreamCall = async (type = 'video') => {
+    if (!activeChannel) {
+      showToast?.({
+        type: 'warning',
+        title: 'No Conversation Selected',
+        message: 'Please select a conversation before initiating a call.'
+      });
+      return;
+    }
+
+    if (startingCall) return;
+
+    setStartingCall(true);
+    const other = getOtherParticipant(activeChannel);
+    const targetUserId = other?.id;
+    const recipientDisplayName = other?.name || activeChannel.data?.name || 'Participant';
+
+    if (!targetUserId) {
+      showToast?.({
+        type: 'error',
+        title: 'Call Failed',
+        message: 'Could not determine recipient participant for this call.'
+      });
+      setStartingCall(false);
+      return;
+    }
+
+    try {
+      // 1. Initialize Stream Video Client singleton securely with current user
+      const videoClient = await getStreamVideoClient({
+        id: currentUserId,
+        name: userProfile?.full_name || currentUser?.displayName || 'Studora User',
+        image: userProfile?.avatar_url || currentUser?.photoURL || ''
+      });
+
+      if (!videoClient) {
+        throw new Error('Could not establish Stream Video connection.');
+      }
+      setStreamVideoClient(videoClient);
+
+      // 2. Deterministic Call ID derived from active channel or participants
+      const rawCallId = activeChannel.id ? `call-${activeChannel.id}` : `call-${Date.now()}`;
+      const callId = rawCallId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+
+      // 3. Create or join call
+      const call = videoClient.call('default', callId);
+      await call.getOrCreate({
+        ring: true,
+        data: {
+          members: [
+            { user_id: currentUserId, role: 'call_member' },
+            { user_id: targetUserId, role: 'call_member' }
+          ],
+          custom: {
+            channelId: activeChannel.id,
+            callType: type,
+            startedBy: currentUserId
+          }
+        }
+      });
+
+      // Join the call session
+      await call.join({ create: true });
+
+      // Apply initial audio/video tracks based on call type
+      if (type === 'audio' && call.camera) {
+        await call.camera.disable();
+      }
+
+      setActiveCall(call);
+      setActiveCallType(type);
+      setActiveCallRecipientName(recipientDisplayName);
+      setShowCallModal(true);
+
+      showToast?.({
+        type: 'success',
+        title: `${type === 'video' ? 'Video' : 'Voice'} Call Initiated`,
+        message: `Connecting to ${recipientDisplayName}…`
+      });
+    } catch (callErr) {
+      console.error('[StudoraChat] Failed to initiate call:', callErr);
+      showToast?.({
+        type: 'error',
+        title: 'Call Error',
+        message: callErr.message || 'Unable to start call. Please verify device permissions.'
+      });
+    } finally {
+      setStartingCall(false);
+    }
+  };
+
   const handleVoiceCallClick = () => {
-    showToast?.({
-      type: 'info',
-      title: 'Voice Calling Unavailable',
-      message: 'Direct 1-on-1 audio dialing requires a dedicated call SDK or active tutoring session.'
-    });
+    startStreamCall('audio');
   };
 
   const handleVideoCallClick = () => {
+    // Phase 4 Mandate: Preserve ZEGOCLOUD tutoring calls when booking_id is present
     if (activeChannel?.data?.booking_id) {
       onNavigate?.('dashboard');
       showToast?.({
         type: 'info',
-        title: 'Join Live Room',
-        message: 'Opening Live Video Tutoring Room for this booked session.'
+        title: 'Join Live Tutoring Room',
+        message: 'Opening Live Video Tutoring Room for this booked session via ZEGOCLOUD.'
       });
     } else {
-      showToast?.({
-        type: 'info',
-        title: 'Video Calling Unavailable',
-        message: 'Direct 1-on-1 video calling is reserved for confirmed tutoring sessions hosted via ZEGOCLOUD.'
-      });
+      // 1-on-1 direct video call via GetStream Video
+      startStreamCall('video');
+    }
+  };
+
+  const handleCallModalClose = async () => {
+    setShowCallModal(false);
+    if (activeCall) {
+      try {
+        await activeCall.leave();
+      } catch (e) {}
+      setActiveCall(null);
     }
   };
 
@@ -580,10 +770,10 @@ export function StudoraChat({
   }
 
   return (
-    <div className="relative bg-white border border-border rounded-card shadow-tactile-surface overflow-hidden flex flex-col md:flex-row h-[660px] md:h-[720px]">
+    <div className="relative bg-white border border-border rounded-card shadow-tactile-surface overflow-hidden flex flex-col md:flex-row flex-1 min-h-[500px] h-full max-h-[calc(100dvh-130px)] md:max-h-[calc(100vh-140px)]">
       {/* ── LEFT: Navigation & Conversation/User List ── */}
       <div
-        className={`w-full md:w-80 lg:w-96 border-r border-border flex flex-col h-full bg-canvas/30 ${isMobileThreadOpen ? 'hidden md:flex' : 'flex'
+        className={`w-full md:w-80 lg:w-96 border-r border-border flex flex-col h-full min-h-0 bg-canvas/30 shrink-0 ${isMobileThreadOpen ? 'hidden md:flex' : 'flex'
           }`}
       >
         {/* Header with Title & Action */}
@@ -633,9 +823,6 @@ export function StudoraChat({
             <button
               onClick={() => {
                 setSidebarTab('users');
-                if (directoryResults.length === 0) {
-                  searchUsersInDatabase('').then(setDirectoryResults);
-                }
               }}
               className={`flex-1 py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${sidebarTab === 'users'
                   ? 'bg-white text-ink shadow-tactile-btn'
@@ -698,7 +885,6 @@ export function StudoraChat({
                   icon={Users}
                   onClick={() => {
                     setSidebarTab('users');
-                    searchUsersInDatabase('').then(setDirectoryResults);
                   }}
                   className="mt-2"
                 >
@@ -778,10 +964,36 @@ export function StudoraChat({
             )
           ) : (
             /* Tab B: Find People (User Directory Search) */
-            loadingDirectory ? (
+            (directorySearchQuery || '').trim().length < 2 ? (
+              <div className="p-8 text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-canvas border border-border flex items-center justify-center mx-auto text-muted">
+                  <Search className="w-5 h-5 text-academic" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-ink">Search for people by name or keyword.</p>
+                  <p className="text-[11px] text-muted mt-1 max-w-xs mx-auto">
+                    Type at least 2 characters to discover verified Studora students and tutors.
+                  </p>
+                </div>
+              </div>
+            ) : loadingDirectory ? (
               <div className="p-8 text-center space-y-2">
                 <Loader2 className="w-6 h-6 text-academic animate-spin mx-auto" />
                 <p className="text-xs text-muted">Searching Studora directory…</p>
+              </div>
+            ) : directoryError ? (
+              <div className="p-8 text-center space-y-2">
+                <AlertCircle className="w-6 h-6 text-rose-500 mx-auto" />
+                <p className="text-xs font-semibold text-ink">Search failed</p>
+                <p className="text-[11px] text-muted max-w-xs mx-auto">{directoryError}</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => searchUsersInDatabase(directorySearchQuery).then(setDirectoryResults)}
+                  className="mt-1"
+                >
+                  Retry Search
+                </Button>
               </div>
             ) : directoryResults.length === 0 ? (
               <div className="p-8 text-center space-y-2">
@@ -843,7 +1055,7 @@ export function StudoraChat({
 
       {/* ── RIGHT: Active Conversation View ── */}
       <div
-        className={`flex-1 flex flex-col h-full bg-white ${!isMobileThreadOpen ? 'hidden md:flex' : 'flex'
+        className={`flex-1 flex flex-col h-full min-h-0 bg-white ${!isMobileThreadOpen ? 'hidden md:flex' : 'flex'
           }`}
       >
         {activeChannel ? (
@@ -903,8 +1115,9 @@ export function StudoraChat({
                 <button
                   type="button"
                   onClick={handleVoiceCallClick}
-                  className="p-2 text-muted hover:text-ink hover:bg-canvas rounded-lg transition-colors"
-                  title="Start voice call (Requires call engine or active tutoring session)"
+                  disabled={startingCall}
+                  className="p-2 text-muted hover:text-academic hover:bg-academic-50 rounded-lg transition-colors disabled:opacity-50"
+                  title="Start 1-on-1 voice call (Stream Video)"
                   aria-label="Start voice call"
                 >
                   <Phone className="w-4 h-4" />
@@ -913,11 +1126,12 @@ export function StudoraChat({
                 <button
                   type="button"
                   onClick={handleVideoCallClick}
-                  className="p-2 text-muted hover:text-ink hover:bg-canvas rounded-lg transition-colors"
+                  disabled={startingCall}
+                  className="p-2 text-muted hover:text-academic hover:bg-academic-50 rounded-lg transition-colors disabled:opacity-50"
                   title={
                     activeChannel?.data?.booking_id
-                      ? 'Join Live Video Tutoring Room'
-                      : 'Start video call (Reserved for confirmed tutoring sessions via ZEGOCLOUD)'
+                      ? 'Join Live Video Tutoring Room (ZEGOCLOUD)'
+                      : 'Start 1-on-1 video call (Stream Video)'
                   }
                   aria-label="Start video call"
                 >
@@ -926,124 +1140,143 @@ export function StudoraChat({
               </div>
             </div>
 
-            {/* Message Thread */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8fafc]/50">
-              {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
-                  <div className="w-12 h-12 rounded-2xl bg-academic-50 border border-academic-200 flex items-center justify-center text-academic">
-                    <Sparkles className="w-6 h-6" />
+            {/* Message Thread Container */}
+            <div className="relative flex-1 min-h-0 flex flex-col">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+                className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-4 space-y-3 bg-[#f8fafc]/50 overscroll-contain"
+              >
+                {messages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
+                    <div className="w-12 h-12 rounded-2xl bg-academic-50 border border-academic-200 flex items-center justify-center text-academic">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-xs font-bold text-ink">This is the beginning of your conversation</h4>
+                    <p className="text-[11px] text-muted max-w-xs">
+                      Send a message to collaborate on studies, ask questions, or discuss session details.
+                    </p>
                   </div>
-                  <h4 className="text-xs font-bold text-ink">This is the beginning of your conversation</h4>
-                  <p className="text-[11px] text-muted max-w-xs">
-                    Send a message to collaborate on studies, ask questions, or discuss session details.
-                  </p>
-                </div>
-              ) : (
-                messages.map((msg) => {
-                  const isMine = msg.user?.id === currentUserId;
-                  const hasAttachments = Array.isArray(msg.attachments) && msg.attachments.length > 0;
+                ) : (
+                  messages.map((msg) => {
+                    const isMine = msg.user?.id === currentUserId;
+                    const hasAttachments = Array.isArray(msg.attachments) && msg.attachments.length > 0;
 
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
-                    >
-                      <div className="flex items-end gap-2 max-w-[85%] sm:max-w-[75%]">
-                        {!isMine && (
-                          <Avatar
-                            name={msg.user?.name || 'User'}
-                            src={msg.user?.image || null}
-                            size="sm"
-                          />
-                        )}
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
+                      >
+                        <div className="flex items-end gap-2 max-w-[85%] sm:max-w-[75%]">
+                          {!isMine && (
+                            <Avatar
+                              name={msg.user?.name || 'User'}
+                              src={msg.user?.image || null}
+                              size="sm"
+                            />
+                          )}
 
-                        <div
-                          className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${isMine
-                              ? 'bg-academic text-white rounded-br-sm shadow-tactile-btn'
-                              : 'bg-white border border-border text-ink rounded-bl-sm shadow-tactile-surface'
-                            }`}
-                        >
-                          {/* Attachments rendering */}
-                          {hasAttachments && (
-                            <div className="space-y-2 mb-2">
-                              {msg.attachments.map((att, idx) => {
-                                if (att.type === 'image') {
+                          <div
+                            className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${isMine
+                                ? 'bg-academic text-white rounded-br-sm shadow-tactile-btn'
+                                : 'bg-white border border-border text-ink rounded-bl-sm shadow-tactile-surface'
+                              }`}
+                          >
+                            {/* Attachments rendering */}
+                            {hasAttachments && (
+                              <div className="space-y-2 mb-2">
+                                {msg.attachments.map((att, idx) => {
+                                  if (att.type === 'image') {
+                                    return (
+                                      <a
+                                        key={idx}
+                                        href={att.asset_url || att.image_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="block overflow-hidden rounded-lg border border-white/20 hover:opacity-90"
+                                      >
+                                        <img
+                                          src={att.asset_url || att.image_url}
+                                          alt={att.title || 'Attached image'}
+                                          className="max-h-60 rounded object-cover"
+                                        />
+                                      </a>
+                                    );
+                                  }
                                   return (
                                     <a
                                       key={idx}
-                                      href={att.asset_url || att.image_url}
+                                      href={att.asset_url}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="block overflow-hidden rounded-lg border border-white/20 hover:opacity-90"
+                                      className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-semibold ${isMine
+                                          ? 'bg-white/10 border-white/20 text-white'
+                                          : 'bg-canvas border-border text-ink'
+                                        }`}
                                     >
-                                      <img
-                                        src={att.asset_url || att.image_url}
-                                        alt={att.title || 'Attached image'}
-                                        className="max-h-60 rounded object-cover"
-                                      />
+                                      <File className="w-4 h-4 shrink-0" />
+                                      <span className="truncate">{att.title || 'Document'}</span>
+                                      <ExternalLink className="w-3.5 h-3.5 shrink-0 ml-auto" />
                                     </a>
                                   );
-                                }
-                                return (
-                                  <a
-                                    key={idx}
-                                    href={att.asset_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-semibold ${isMine
-                                        ? 'bg-white/10 border-white/20 text-white'
-                                        : 'bg-canvas border-border text-ink'
-                                      }`}
-                                  >
-                                    <File className="w-4 h-4 shrink-0" />
-                                    <span className="truncate">{att.title || 'Document'}</span>
-                                    <ExternalLink className="w-3.5 h-3.5 shrink-0 ml-auto" />
-                                  </a>
-                                );
-                              })}
-                            </div>
-                          )}
+                                })}
+                              </div>
+                            )}
 
-                          {msg.text && (
-                            <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                            {msg.text && (
+                              <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Timestamp & read receipts */}
+                        <div className="flex items-center gap-1 mt-1 px-1 text-[10px] text-muted font-mono">
+                          <span>
+                            {new Date(msg.created_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                          {isMine && (
+                            <span>
+                              <CheckCheck className="w-3 h-3 text-academic" />
+                            </span>
                           )}
                         </div>
                       </div>
+                    );
+                  })
+                )}
 
-                      {/* Timestamp & read receipts */}
-                      <div className="flex items-center gap-1 mt-1 px-1 text-[10px] text-muted font-mono">
-                        <span>
-                          {new Date(msg.created_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                        {isMine && (
-                          <span>
-                            <CheckCheck className="w-3 h-3 text-academic" />
-                          </span>
-                        )}
-                      </div>
+                {/* Typing indicator */}
+                {typingUsers.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-muted italic px-2">
+                    <div className="flex gap-1 items-center">
+                      <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" />
+                      <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce [animation-delay:0.4s]" />
                     </div>
-                  );
-                })
-              )}
-
-              {/* Typing indicator */}
-              {typingUsers.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-muted italic px-2">
-                  <div className="flex gap-1 items-center">
-                    <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" />
-                    <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce [animation-delay:0.4s]" />
+                    <span>
+                      {typingUsers.map((u) => u.name || 'User').join(', ')} is typing…
+                    </span>
                   </div>
-                  <span>
-                    {typingUsers.map((u) => u.name || 'User').join(', ')} is typing…
-                  </span>
-                </div>
-              )}
+                )}
 
-              <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Unread message floating pill button */}
+              {hasNewUnreadMessages && (
+                <button
+                  type="button"
+                  onClick={() => scrollToBottom(true)}
+                  className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-academic text-white text-xs font-semibold shadow-tactile-raised hover:bg-academic/90 transition-all animate-bounce"
+                  aria-label="Scroll to new messages"
+                >
+                  <span>New messages</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Quick Emoji Bar (Toggled) */}
@@ -1074,13 +1307,13 @@ export function StudoraChat({
             />
 
             {/* Message Input Composer (WhatsApp / Messenger Style) */}
-            <form onSubmit={handleSendMessage} className="p-3 border-t border-border bg-white flex items-center gap-2">
+            <form onSubmit={handleSendMessage} className="p-2 sm:p-3 border-t border-border bg-white flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Attachment Button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAttachment}
-                className="p-2 text-muted hover:text-ink hover:bg-canvas rounded-lg transition-colors disabled:opacity-50"
+                className="p-1.5 sm:p-2 text-muted hover:text-ink hover:bg-canvas rounded-lg transition-colors disabled:opacity-50 shrink-0"
                 title="Attach image or file"
                 aria-label="Attach file"
               >
@@ -1095,7 +1328,7 @@ export function StudoraChat({
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker((prev) => !prev)}
-                className={`p-2 rounded-lg transition-colors ${showEmojiPicker ? 'text-academic bg-academic-50' : 'text-muted hover:text-ink hover:bg-canvas'
+                className={`p-1.5 sm:p-2 rounded-lg transition-colors shrink-0 ${showEmojiPicker ? 'text-academic bg-academic-50' : 'text-muted hover:text-ink hover:bg-canvas'
                   }`}
                 title="Add emoji"
                 aria-label="Emoji picker"
@@ -1110,14 +1343,14 @@ export function StudoraChat({
                 value={inputText}
                 onChange={handleInputChange}
                 disabled={sending}
-                className="flex-1 px-3.5 py-2.5 text-xs bg-canvas/40 border border-border rounded-xl text-ink placeholder:text-muted focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic/20 transition-all"
+                className="flex-1 min-w-0 px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs bg-canvas/40 border border-border rounded-xl text-ink placeholder:text-muted focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic/20 transition-all"
               />
 
               {/* Voice Note Button */}
               <button
                 type="button"
                 onClick={handleVoiceNoteClick}
-                className="p-2 text-muted hover:text-ink hover:bg-canvas rounded-lg transition-colors"
+                className="hidden xs:flex p-1.5 sm:p-2 text-muted hover:text-ink hover:bg-canvas rounded-lg transition-colors shrink-0"
                 title="Record voice note"
                 aria-label="Record voice note"
               >
@@ -1131,7 +1364,7 @@ export function StudoraChat({
                 size="sm"
                 loading={sending}
                 disabled={!inputText.trim() || sending}
-                className="shadow-tactile-btn px-4"
+                className="shadow-tactile-btn px-3 sm:px-4 shrink-0"
               >
                 <Send className="w-4 h-4" />
               </Button>
@@ -1195,17 +1428,44 @@ export function StudoraChat({
                   value={modalSearchQuery}
                   onChange={(e) => setModalSearchQuery(e.target.value)}
                   autoFocus
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-border rounded-lg text-ink placeholder:text-muted focus:outline-none focus:border-academic"
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-white border border-border rounded-lg text-ink placeholder:text-muted focus:outline-none focus:border-academic"
                 />
+                {modalSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setModalSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-muted hover:text-ink rounded"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
             {/* User Directory Results */}
             <div className="max-h-72 overflow-y-auto divide-y divide-border/60 p-2">
-              {loadingModalUsers ? (
+              {(modalSearchQuery || '').trim().length < 2 ? (
+                <div className="p-8 text-center space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-canvas border border-border flex items-center justify-center mx-auto text-muted">
+                    <Search className="w-5 h-5 text-academic" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-ink">Search for people by name or keyword.</p>
+                    <p className="text-[11px] text-muted mt-1 max-w-xs mx-auto">
+                      Type at least 2 characters to find students and tutors to start messaging.
+                    </p>
+                  </div>
+                </div>
+              ) : loadingModalUsers ? (
                 <div className="p-8 text-center space-y-2">
                   <Loader2 className="w-6 h-6 text-academic animate-spin mx-auto" />
                   <p className="text-xs text-muted">Searching Studora directory…</p>
+                </div>
+              ) : directoryError ? (
+                <div className="p-8 text-center space-y-2">
+                  <AlertCircle className="w-6 h-6 text-rose-500 mx-auto" />
+                  <p className="text-xs font-semibold text-ink">Search failed</p>
+                  <p className="text-[11px] text-muted max-w-xs mx-auto">{directoryError}</p>
                 </div>
               ) : modalUsers.length === 0 ? (
                 <div className="p-8 text-center space-y-2">
@@ -1275,6 +1535,19 @@ export function StudoraChat({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Stream Video Calling Modal */}
+      {showCallModal && activeCall && streamVideoClient && (
+        <StreamVideo client={streamVideoClient}>
+          <StudoraCallModal
+            isOpen={showCallModal}
+            call={activeCall}
+            callType={activeCallType}
+            recipientName={activeCallRecipientName}
+            onClose={handleCallModalClose}
+          />
+        </StreamVideo>
       )}
     </div>
   );
