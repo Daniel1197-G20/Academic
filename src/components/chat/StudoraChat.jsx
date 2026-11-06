@@ -946,8 +946,8 @@ export function StudoraChat({
                 {/* Official Stream typing indicator */}
                 <TypingIndicator />
 
-                {/* Official Stream MessageComposer (replaces custom form) */}
-                <MessageComposer />
+                {/* Official Stream MessageComposer (with Voice & Attachment controls) */}
+                <MessageComposer audioRecordingEnabled={true} />
               </Window>
 
               {/* Official Thread panel: slides open on reply */}

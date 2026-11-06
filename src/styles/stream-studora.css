@@ -71,20 +71,20 @@
   --str-chat__base-black: #111827;
 
   /* Message bubbles */
-  --str-chat__own-message-bubble-background: #176B4D;
-  --str-chat__own-message-bubble-color: #FFFFFF;
+  --str-chat__own-message-bubble-background: #D3EDE2;
+  --str-chat__own-message-bubble-color: #0E4935;
   --str-chat__other-message-bubble-background: #FFFFFF;
   --str-chat__other-message-bubble-color: #111827;
-  --str-chat__own-message-bubble-border-color: #13583F;
-  --str-chat__other-message-bubble-border-color: #E5E7EB;
+  --str-chat__own-message-bubble-border-color: #BBE1D1;
+  --str-chat__other-message-bubble-border-color: #E2E8F0;
 
   /* Input / Composer */
-  --str-chat__message-textarea-background: #F6F7F3;
-  --str-chat__message-textarea-border-color: #E5E7EB;
+  --str-chat__message-textarea-background: #FFFFFF;
+  --str-chat__message-textarea-border-color: #E2E8F0;
   --str-chat__message-textarea-color: #111827;
-  --str-chat__message-textarea-placeholder-color: #9CA3AF;
+  --str-chat__message-textarea-placeholder-color: #94A3B8;
   --str-chat__message-textarea-focused-border-color: #176B4D;
-  --str-chat__message-textarea-border-radius: 0.75rem;
+  --str-chat__message-textarea-border-radius: 9999px;
 
   /* Reactions */
   --str-chat__reaction-selector-background-color: #FFFFFF;
@@ -235,51 +235,68 @@
   --str-chat__border-radius-lg: 1rem;
 }
 
-/* MessageList: fill the right panel, enable independent scroll */
+/* MessageList: fill the right panel, enable independent scroll, chat wallpaper */
 .str-chat__message-list-scroll {
   padding: 1.25rem 1.5rem !important;
-  background-color: #FAFBF8 !important;
+  background-color: #F8FAFD !important;
+  background-image: url('/chat-bg-pattern.png') !important;
+  background-repeat: repeat !important;
+  background-size: 433px 184px !important;
+  background-attachment: local !important;
 }
 
 /* Message list background */
 .str-chat__ul,
 .str-chat__list {
-  background-color: #FAFBF8 !important;
+  background-color: transparent !important;
 }
 
 .str-chat__theme-dark .str-chat__message-list-scroll {
   background-color: #0F1624 !important;
+  background-image: linear-gradient(rgba(15, 22, 36, 0.94), rgba(15, 22, 36, 0.94)), url('/chat-bg-pattern.png') !important;
+  background-repeat: repeat !important;
+  background-size: 433px 184px !important;
 }
 .str-chat__theme-dark .str-chat__ul,
 .str-chat__theme-dark .str-chat__list {
-  background-color: #0F1624 !important;
+  background-color: transparent !important;
 }
 
-/* Message bubbles: rounded like the existing Studora style */
+/* Message bubbles: rounded like the reference style */
 .str-chat__message-bubble {
-  border-radius: 1rem !important;
-  font-size: 0.75rem !important;
-  line-height: 1.6 !important;
+  border-radius: 1.125rem !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.55 !important;
   font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Own message: green, Studora-branded */
+/* Own message: soft sage-green (#D3EDE2) with dark academic green text (#0E4935) matching reference */
 .str-chat__message--me .str-chat__message-bubble,
 .str-chat__message-simple.str-chat__message--me .str-chat__message-bubble {
-  background-color: #176B4D !important;
-  color: #FFFFFF !important;
-  border-radius: 1rem 1rem 0.25rem 1rem !important;
-  border: 1px solid #13583F !important;
+  background-color: #D3EDE2 !important;
+  color: #0E4935 !important;
+  border-radius: 1.125rem 1.125rem 0.25rem 1.125rem !important;
+  border: 1px solid #BBE1D1 !important;
 }
 .str-chat__theme-dark .str-chat__message--me .str-chat__message-bubble,
 .str-chat__theme-dark .str-chat__message-simple.str-chat__message--me .str-chat__message-bubble {
-  background-color: #22916A !important;
-  border-color: #1A7357 !important;
+  background-color: #174838 !important;
+  color: #E2F5ED !important;
+  border-color: #21614C !important;
 }
 
-/* Other message: surface card */
+/* Other message: pure crisp white with soft subtle border matching reference */
 .str-chat__message:not(.str-chat__message--me) .str-chat__message-bubble {
-  border-radius: 1rem 1rem 1rem 0.25rem !important;
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border-radius: 1.125rem 1.125rem 1.125rem 0.25rem !important;
+  border: 1px solid #E2E8F0 !important;
+}
+.str-chat__theme-dark .str-chat__message:not(.str-chat__message--me) .str-chat__message-bubble {
+  background-color: #1A2438 !important;
+  color: #F1F5F9 !important;
+  border-color: #26354F !important;
 }
 
 /* Message timestamp: Studora mono small */
@@ -287,35 +304,52 @@
 .str-chat__message-timestamp {
   font-size: 0.625rem !important;
   font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-  opacity: 0.7 !important;
+  opacity: 0.65 !important;
 }
 
 /* Composer / MessageComposer wrapper */
 .str-chat__message-composer,
 .str-chat__message-input {
-  background-color: var(--str-chat__background-core-surface-default) !important;
-  border-top: 1px solid var(--str-chat__border-primary) !important;
-  padding: 0.875rem 1.25rem !important;
+  background-color: #FFFFFF !important;
+  border-top: 1px solid #E2E8F0 !important;
+  padding: 0.75rem 1rem !important;
+}
+.str-chat__theme-dark .str-chat__message-composer,
+.str-chat__theme-dark .str-chat__message-input {
+  background-color: #172033 !important;
+  border-top: 1px solid #233050 !important;
 }
 
-/* Composer inner container: align items vertically centered */
+/* Composer inner container: rounded pill styling */
 .str-chat__message-composer-container,
 .str-chat__message-input-inner {
   align-items: center !important;
   gap: 0.5rem !important;
+  background-color: #F8FAFD !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 9999px !important;
+  padding: 0.25rem 0.5rem 0.25rem 0.75rem !important;
+}
+.str-chat__theme-dark .str-chat__message-composer-container,
+.str-chat__theme-dark .str-chat__message-input-inner {
+  background-color: #0F1624 !important;
+  border-color: #26354F !important;
 }
 
-/* Composer textarea */
+/* Composer textarea inside pill */
 .str-chat__message-textarea,
 .str-chat__textarea__textarea {
-  font-size: 0.75rem !important;
+  font-size: 0.8125rem !important;
   font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  border-radius: 0.75rem !important;
-  min-height: 2.5rem !important;
-  max-height: 8rem !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  min-height: 2.25rem !important;
+  max-height: 7rem !important;
   resize: none !important;
-  padding: 0.5rem 0.875rem !important;
-  line-height: 1.6 !important;
+  padding: 0.375rem 0.5rem !important;
+  line-height: 1.5 !important;
 }
 
 /* Send button: circular green, matches reference */
@@ -331,13 +365,46 @@
   align-items: center !important;
   justify-content: center !important;
   transition: background-color 140ms ease, transform 140ms ease !important;
+  box-shadow: 0 1px 3px rgba(23, 107, 77, 0.25) !important;
 }
 .str-chat__send-button:hover,
 .str-chat__message-send-button:hover {
-  background-color: #13583F !important;
+  background-color: #104633 !important;
   transform: scale(1.05) !important;
 }
 .str-chat__theme-dark .str-chat__send-button,
+.str-chat__theme-dark .str-chat__message-send-button {
+  background-color: #22916A !important;
+}
+.str-chat__theme-dark .str-chat__send-button:hover {
+  background-color: #1A7357 !important;
+}
+
+/* Attachment button */
+.str-chat__attachment-selector-button {
+  padding: 0.375rem !important;
+  border-radius: 9999px !important;
+  color: #64748B !important;
+  transition: color 140ms ease, background-color 140ms ease !important;
+}
+.str-chat__attachment-selector-button:hover {
+  color: #176B4D !important;
+  background-color: #DDEFE5 !important;
+}
+
+/* Audio recording button inside composer */
+.str-chat__audio-recording-button,
+.str-chat__start-audio-recording-button {
+  padding: 0.375rem !important;
+  border-radius: 9999px !important;
+  color: #64748B !important;
+  transition: color 140ms ease, background-color 140ms ease !important;
+}
+.str-chat__audio-recording-button:hover,
+.str-chat__start-audio-recording-button:hover {
+  color: #176B4D !important;
+  background-color: #DDEFE5 !important;
+}
 .str-chat__theme-dark .str-chat__message-send-button {
   background-color: #22916A !important;
 }
