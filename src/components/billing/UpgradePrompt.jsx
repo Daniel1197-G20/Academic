@@ -30,7 +30,7 @@ export function UpgradePrompt({
     AI_TUTOR: { title: 'AI Academic Assistant', plan: 'Student', price: '₦2,500/mo' },
     AI_TUTOR_ADVANCED: { title: 'Multi-Mode AI Problem Solver', plan: 'Pro', price: '₦5,000/mo' },
     TUTOR_BOOKING: { title: 'Verified Tutor 1-on-1 Booking', plan: 'Student', price: '₦2,500/mo' },
-    VIDEO_TUTORING: { title: 'ZEGOCLOUD Live Video Tutoring', plan: 'Pro', price: '₦5,000/mo' },
+    VIDEO_TUTORING: { title: 'Live Video Tutoring', plan: 'Pro', price: '₦5,000/mo' },
     PRIVATE_GROUPS: { title: 'Private Cohort Study Groups', plan: 'Student', price: '₦2,500/mo' },
     ADVANCED_ANALYTICS: { title: 'Predictive Academic Trend Modeling', plan: 'Pro', price: '₦5,000/mo' },
     PREMIUM_RESOURCES: { title: 'Curated Academic Vault', plan: 'Student', price: '₦2,500/mo' },

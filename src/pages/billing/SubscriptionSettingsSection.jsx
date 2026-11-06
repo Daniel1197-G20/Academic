@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  Crown, 
   CreditCard, 
   CheckCircle2, 
   Lock, 
@@ -87,7 +88,7 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
     { code: 'STUDY_PLANNER_ADVANCED', name: 'Study Planner & Unlimited Streaks', fallbackCode: 'STUDY_PLANNER_BASIC' },
     { code: 'AI_TUTOR', name: 'AI Academic Coursework Assistant' },
     { code: 'TUTOR_BOOKING', name: 'Verified University Tutor Booking' },
-    { code: 'VIDEO_TUTORING', name: 'ZEGOCLOUD Live Video Tutoring Sessions' },
+    { code: 'VIDEO_TUTORING', name: 'Live Video Tutoring Sessions' },
     { code: 'PRIVATE_GROUPS', name: 'Private Cohort Study Groups' },
     { code: 'ADVANCED_ANALYTICS', name: 'Predictive Semester Analytics' }
   ];
@@ -98,28 +99,37 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl">
+      {/* Official Reference Header: Section 3_1 */}
+      <div className="pt-1">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight font-sans">
+          Payments
+        </h1>
+        <p className="text-xs sm:text-sm text-[#667085] dark:text-white/70 mt-0.5">
+          Manage your transactions and subscriptions
+        </p>
+      </div>
       {/* 1. Current Plan Card */}
-      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border">
+      <div className="glass-panel rounded-2xl p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-black/5 dark:border-white/10">
           <div>
-            <span className="text-[11px] font-semibold text-muted tracking-wider uppercase font-mono">
+            <span className="text-[11px] font-semibold text-muted dark:text-white/60 tracking-wider uppercase font-mono">
               CURRENT PLAN
             </span>
             <div className="flex items-center gap-2.5 mt-1">
-              <h3 className="text-2xl font-bold text-ink">{planName}</h3>
+              <h3 className="text-2xl font-bold text-ink dark:text-white">{planName}</h3>
               <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1.5 select-none
                 ${status === 'active' && !isNonRenewing
-                  ? 'bg-academic-100 text-academic border border-academic-200'
+                  ? 'bg-academic-100 text-academic border border-academic-200 dark:bg-academic-900/50 dark:text-academic-200 dark:border-academic-700'
                   : isNonRenewing
-                    ? 'bg-gold-50 text-gold-700 border border-gold-200'
-                    : 'bg-canvas text-muted border border-border'}`}
+                    ? 'bg-gold-50 text-gold-700 border border-gold-200 dark:bg-gold-950/40 dark:text-gold-300'
+                    : 'bg-canvas text-muted border border-border dark:bg-white/5 dark:text-white/60'}`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current" />
                 {isNonRenewing ? 'Non-Renewing (Active until period end)' : status === 'active' ? 'Active' : status}
               </span>
             </div>
-            <p className="text-xs text-muted mt-1 font-mono">
+            <p className="text-xs text-muted dark:text-white/60 mt-1 font-mono">
               {planAmount > 0 ? `₦${planAmount.toLocaleString()}/month` : '₦0/month (Free Tier)'}
             </p>
           </div>
@@ -168,12 +178,12 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
         </div>
 
         {/* Next Billing & Preservation Notice */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted dark:text-white/70">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-academic" />
             <span>
               {isNonRenewing ? 'Access expires on:' : 'Next billing date:'}{' '}
-              <strong className="text-ink font-mono">{nextBillingDate}</strong>
+              <strong className="text-ink dark:text-white font-mono">{nextBillingDate}</strong>
             </span>
           </div>
 
@@ -187,18 +197,18 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
       {/* 2. Monthly Usage Meters */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* AI Tutor Usage */}
-        <div className="bg-white border border-border rounded-card p-5 shadow-tactile-surface space-y-3">
+        <div className="glass-panel rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-academic" />
-              <span className="text-xs font-bold text-ink">AI Tutor Usage</span>
+              <span className="text-xs font-bold text-ink dark:text-white">AI Tutor Usage</span>
             </div>
-            <span className="text-xs font-mono font-semibold text-ink">
+            <span className="text-xs font-mono font-semibold text-ink dark:text-white">
               {aiUsage} / {aiLimit ?? '∞'}
             </span>
           </div>
           <ProgressBar progress={aiProgress} variant="academic" />
-          <p className="text-[11px] text-muted flex items-center justify-between">
+          <p className="text-[11px] text-muted dark:text-white/60 flex items-center justify-between">
             <span>Monthly quota resets on the 1st</span>
             <span className="font-mono text-academic font-medium">
               {entitlements?.remaining?.AI_TUTOR ?? 'Unlimited'} remaining
@@ -207,18 +217,18 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
         </div>
 
         {/* Test Prep Drills */}
-        <div className="bg-white border border-border rounded-card p-5 shadow-tactile-surface space-y-3">
+        <div className="glass-panel rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-academic" />
-              <span className="text-xs font-bold text-ink">Test Prep Drills</span>
+              <span className="text-xs font-bold text-ink dark:text-white">Test Prep Drills</span>
             </div>
-            <span className="text-xs font-mono font-semibold text-ink">
+            <span className="text-xs font-mono font-semibold text-ink dark:text-white">
               {testUsage} / {testLimit ?? '∞'}
             </span>
           </div>
           <ProgressBar progress={testProgress} variant="gold" />
-          <p className="text-[11px] text-muted flex items-center justify-between">
+          <p className="text-[11px] text-muted dark:text-white/60 flex items-center justify-between">
             <span>Exam simulator attempts</span>
             <span className="font-mono text-academic font-medium">
               {entitlements?.remaining?.TEST_PREP_BASIC ?? 'Unlimited'} remaining
@@ -228,8 +238,8 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
       </div>
 
       {/* 3. Feature Entitlements Breakdown */}
-      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-surface space-y-4">
-        <h4 className="text-xs font-bold text-ink tracking-wider uppercase">
+      <div className="glass-panel rounded-2xl p-6 space-y-4">
+        <h4 className="text-xs font-bold text-ink dark:text-white tracking-wider uppercase">
           Active Feature Entitlements
         </h4>
 
@@ -240,18 +250,18 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
             return (
               <div
                 key={f.code}
-                className={`p-3 rounded-btn border flex items-center justify-between gap-3 select-none
+                className={`p-3 rounded-xl border flex items-center justify-between gap-3 select-none
                   ${hasAccess
-                    ? 'bg-canvas/50 border-border text-ink'
-                    : 'bg-canvas/20 border-border/60 text-muted opacity-60'}`}
+                    ? 'bg-white/60 dark:bg-white/5 border-black/5 dark:border-white/10 text-ink dark:text-white'
+                    : 'bg-black/5 dark:bg-white/5 border-transparent text-muted dark:text-white/40 opacity-60'}`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   {hasAccess ? (
-                    <div className="w-5 h-5 rounded-full bg-academic-100 text-academic flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-academic-100 text-academic dark:bg-academic-900/60 dark:text-academic-200 flex items-center justify-center shrink-0">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                     </div>
                   ) : (
-                    <div className="w-5 h-5 rounded-full bg-canvas text-muted flex items-center justify-center shrink-0 border border-border">
+                    <div className="w-5 h-5 rounded-full bg-canvas text-muted flex items-center justify-center shrink-0 border border-border dark:bg-white/10 dark:text-white/40 dark:border-white/10">
                       <Lock className="w-3 h-3" />
                     </div>
                   )}
@@ -259,7 +269,7 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
                 </div>
 
                 {!hasAccess && (
-                  <span className="text-[10px] font-mono text-muted shrink-0">
+                  <span className="text-[10px] font-mono text-muted dark:text-white/40 shrink-0">
                     Upgrade required
                   </span>
                 )}
@@ -270,27 +280,27 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
       </div>
 
       {/* 4. Billing History Table */}
-      <div id="billing-history-section" className="bg-white border border-border rounded-card p-6 shadow-tactile-surface space-y-4">
+      <div id="billing-history-section" className="glass-panel rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold text-ink tracking-wider uppercase">
+          <h4 className="text-xs font-bold text-ink dark:text-white tracking-wider uppercase">
             Billing & Invoicing History
           </h4>
-          <span className="text-[11px] text-muted font-mono">
+          <span className="text-[11px] text-muted dark:text-white/60 font-mono">
             {billingHistory.length} recorded transaction{billingHistory.length === 1 ? '' : 's'}
           </span>
         </div>
 
         {historyLoading ? (
-          <p className="text-xs text-muted py-4 text-center">Loading transactions...</p>
+          <p className="text-xs text-muted dark:text-white/60 py-4 text-center">Loading transactions...</p>
         ) : billingHistory.length === 0 ? (
-          <div className="p-6 text-center rounded-btn bg-canvas border border-border text-xs text-muted">
+          <div className="p-6 text-center rounded-xl bg-white/50 dark:bg-white/5 border border-black/5 dark:border-white/10 text-xs text-muted dark:text-white/60">
             No paid billing transactions recorded yet. When you upgrade, your receipts and transaction references will appear here.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-border text-muted uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-black/5 dark:border-white/10 text-muted dark:text-white/60 uppercase tracking-wider text-[10px]">
                   <th className="pb-2.5 font-semibold">Date</th>
                   <th className="pb-2.5 font-semibold">Plan</th>
                   <th className="pb-2.5 font-semibold">Reference</th>
@@ -298,16 +308,16 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
                   <th className="pb-2.5 font-semibold text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-black/5 dark:divide-white/10">
                 {billingHistory.map((item) => (
-                  <tr key={item.id} className="text-ink">
-                    <td className="py-3 font-mono text-[11px] text-muted">
+                  <tr key={item.id} className="text-ink dark:text-white">
+                    <td className="py-3 font-mono text-[11px] text-muted dark:text-white/60">
                       {formatDate(item.paidAt || item.createdAt)}
                     </td>
                     <td className="py-3 font-medium">
                       {item.planName || 'Academic Plan'}
                     </td>
-                    <td className="py-3 font-mono text-[11px] text-muted truncate max-w-[150px]">
+                    <td className="py-3 font-mono text-[11px] text-muted dark:text-white/60 truncate max-w-[150px]">
                       {item.reference}
                     </td>
                     <td className="py-3 font-mono font-semibold">
@@ -316,8 +326,8 @@ export function SubscriptionSettingsSection({ onNavigatePricing, showToast }) {
                     <td className="py-3 text-right">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold font-mono
                         ${item.status === 'success'
-                          ? 'bg-academic-100 text-academic border border-academic-200'
-                          : 'bg-danger-50 text-danger border border-danger-100'}`}
+                          ? 'bg-academic-100 text-academic border border-academic-200 dark:bg-academic-900/60 dark:text-academic-200 dark:border-academic-700'
+                          : 'bg-danger-50 text-danger border border-danger-100 dark:bg-danger-950/40 dark:text-danger-300'}`}
                       >
                         {item.status}
                       </span>

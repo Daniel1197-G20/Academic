@@ -95,7 +95,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
         'Everything in Student',
         'Higher AI Tutor allowance (300 queries/month)',
         'Advanced test preparation (unlimited)',
-        'Video tutoring (10 hrs/month ZEGOCLOUD)',
+        'Video tutoring (10 hrs/month)',
         'Advanced analytics & grade curves',
         'More premium resources',
         'Increased usage limits'
@@ -369,7 +369,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
     },
     {
       q: 'Does the platform support video tutoring?',
-      a: 'Yes. Live 1-on-1 and cohort tutoring is powered by our high-performance WebRTC and ZEGOCLOUD integration, offering low-latency encrypted video, voice, screen sharing, and an interactive whiteboard for mathematical derivations.'
+      a: 'Yes. Live 1-on-1 and cohort tutoring is powered by our high-performance WebRTC integration, offering low-latency encrypted video, voice, screen sharing, and an interactive whiteboard for mathematical derivations.'
     },
     {
       q: 'Can I use the AI Tutor on the Basic plan?',
@@ -391,7 +391,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
     { name: 'Tutor Marketplace Browsing', basic: 'Included', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Verified Tutor Booking', basic: '—', student: '5 Bookings / mo', pro: 'Unlimited', premium: 'Unlimited' },
     { name: 'Private Cohort Study Groups', basic: '—', student: 'Included', pro: 'Included', premium: 'Included' },
-    { name: 'Live Video Tutoring (ZEGOCLOUD)', basic: '—', student: '—', pro: '10 hrs / mo', premium: 'Unlimited' },
+    { name: 'Live Video Tutoring', basic: '—', student: '—', pro: '10 hrs / mo', premium: 'Unlimited' },
     { name: 'Advanced Predictive Analytics', basic: '—', student: '—', pro: 'Included', premium: 'Included' },
     { name: 'Curated Academic Vault', basic: '—', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Priority Tutor Matching & Support', basic: '—', student: '—', pro: '—', premium: 'Included' }

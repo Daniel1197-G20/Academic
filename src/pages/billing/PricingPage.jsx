@@ -74,14 +74,14 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
       'Unlimited test prep simulation & drills',
       '300 AI Tutor queries / month',
       'Multi-mode AI tutoring (Quiz, Exam, Summary)',
-      '10 hours / month ZEGOCLOUD HD video tutoring',
+      '10 hours / month HD video tutoring',
       'Unlimited verified tutor bookings',
       'Predictive semester analytics & grade curves'
     ],
     premium: [
       'Everything in Pro, plus:',
       '1,000 AI Tutor queries / month',
-      'Unlimited ZEGOCLOUD video tutoring sessions',
+      'Unlimited video tutoring sessions',
       'Priority Studora tutor matching',
       'Priority platform customer support',
       'Early access to new academic modules'
@@ -99,7 +99,7 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
     { name: 'Tutor Marketplace Browsing', basic: 'Included', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Verified Tutor Booking', basic: '—', student: '5 Bookings / mo', pro: 'Unlimited', premium: 'Unlimited' },
     { name: 'Private Cohort Study Groups', basic: '—', student: 'Included', pro: 'Included', premium: 'Included' },
-    { name: 'Live Video Tutoring (ZEGOCLOUD)', basic: '—', student: '—', pro: '10 hrs / mo', premium: 'Unlimited' },
+    { name: 'Live Video Tutoring', basic: '—', student: '—', pro: '10 hrs / mo', premium: 'Unlimited' },
     { name: 'Advanced Predictive Analytics', basic: '—', student: '—', pro: 'Included', premium: 'Included' },
     { name: 'Curated Academic Vault', basic: '—', student: 'Included', pro: 'Included', premium: 'Included' },
     { name: 'Priority Tutor Matching & Support', basic: '—', student: '—', pro: '—', premium: 'Included' }
@@ -145,7 +145,7 @@ export function PricingPage({ onBack, onSelectPlan, showToast }) {
     },
     {
       q: 'Does the platform support video tutoring?',
-      a: 'Yes. Live 1-on-1 and cohort tutoring is powered by our high-performance WebRTC and ZEGOCLOUD integration, offering low-latency encrypted video, voice, screen sharing, and an interactive whiteboard for mathematical derivations.'
+      a: 'Yes. Live 1-on-1 and cohort tutoring is powered by our high-performance WebRTC integration, offering low-latency encrypted video, voice, screen sharing, and an interactive whiteboard for mathematical derivations.'
     },
     {
       q: 'Can I use the AI Tutor on the Basic plan?',

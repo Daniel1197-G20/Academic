@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import {
   Sidebar,
   BottomNav,
@@ -15,6 +15,7 @@ import {
 } from './components/ui';
 import { AuthPage } from './pages/auth/AuthPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { MyCoursesPage } from './pages/courses/MyCoursesPage';
 import { CgpaPage } from './pages/cgpa/CgpaPage';
 import { StudyPlannerPage } from './pages/study/StudyPlannerPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
@@ -32,7 +33,7 @@ import { api } from './services/api/client';
 import { supabase } from './lib/supabase/client';
 import { disconnectStreamUser } from './lib/stream/client';
 import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
-import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, BookOpen, Copy, Check, Loader2 } from 'lucide-react';
+import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, BookOpen, Copy, Check, Loader2, CheckCircle2 } from 'lucide-react';
 import { BillingProvider } from './context/BillingContext';
 import { PricingPage } from './pages/billing/PricingPage';
 import { BillingCallbackPage } from './pages/billing/BillingCallbackPage';
@@ -46,7 +47,8 @@ import { TutorMarketplacePage } from './pages/tutor/TutorMarketplacePage';
 import { AiTutorPage } from './pages/study/AiTutorPage';
 import { StudoraChat } from './components/chat/StudoraChat';
 
-// Canonical route sets
+import { CampusBackground } from './components/ui/CampusBackground';
+
 const PUBLIC_ROUTES = new Set([
   'landing',
   'pricing',
@@ -130,6 +132,8 @@ function AppContent() {
   const [availableScales, setAvailableScales] = useState([]);
   const [studyPlans, setStudyPlans] = useState([]);
   const [streakData, setStreakData] = useState({ streak: 0, totalHours: 0 });
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [dataLoading, setDataLoading] = useState(false);
 
   // Helper to determine initial tab from URL pathname or hash
@@ -144,6 +148,24 @@ function AppContent() {
   const [selectedPlanForAuth, setSelectedPlanForAuth] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showCookieModal, setShowCookieModal] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    // Respect OS preference or stored preference
+    const stored = localStorage.getItem('studora-theme');
+    if (stored) return stored === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  // Apply dark class to document root
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('studora-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  const handleToggleDark = useCallback(() => setIsDark(d => !d), []);
 
 
 
@@ -439,6 +461,8 @@ function AppContent() {
     setSemesters([]);
     setStudyPlans([]);
     setSelectedPlanForAuth(null);
+    setUnreadMessages(0);
+    setUnreadNotifications(0);
     notifyAuthStateChange(null, null);
     navigateRoute('landing');
     addToast({ type: 'info', title: 'Signed Out', message: 'You have safely signed out of your workspace.' });
@@ -453,6 +477,8 @@ function AppContent() {
     setSemesters([]);
     setStudyPlans([]);
     setSelectedPlanForAuth(null);
+    setUnreadMessages(0);
+    setUnreadNotifications(0);
     notifyAuthStateChange(null, null);
     navigateRoute('landing');
     addToast({
@@ -634,7 +660,20 @@ function AppContent() {
 
   return (
     <BillingProvider currentUser={currentUser} showToast={addToast}>
-      <div className="min-h-screen bg-canvas flex text-ink antialiased selection:bg-academic-100 selection:text-academic">
+      <div className={`min-h-screen flex text-ink antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
+        {/* Campus background — visible through glass surfaces */}
+        {(activeTab === 'dashboard' || activeTab === 'overview') && (
+          <CampusBackground />
+        )}
+        {/* Background color — used on non-dashboard pages and as fallback */}
+        <div
+          className={`fixed inset-0 -z-10 transition-colors duration-500 ${
+            (activeTab === 'dashboard' || activeTab === 'overview')
+              ? 'bg-transparent'
+              : isDark ? 'bg-navy-900' : 'bg-canvas'
+          }`}
+        />
+
         {/* Desktop Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -643,24 +682,32 @@ function AppContent() {
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           userProfile={userProfile}
           onLogout={handleLogout}
+          unreadMessages={unreadMessages}
         />
 
         {/* Main Content Workspace */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-clip">
+        <div className={`flex-1 flex flex-col min-w-0 overflow-x-clip ${
+          (activeTab === 'messages' || activeTab === 'community')
+            ? 'h-dvh max-h-dvh pb-[calc(62px+env(safe-area-inset-bottom,0px))] md:pb-0'
+            : 'min-h-screen'
+        }`}>
           {/* Top Header */}
           <TopHeader
             userProfile={userProfile}
             cgpaMetrics={null}
             streakDays={streakData.streak}
+            unreadNotifications={unreadNotifications}
             onOpenProfile={() => navigateRoute('profile')}
             onOpenPricing={() => navigateRoute('pricing')}
             onOpenSubscription={() => navigateRoute('settings/subscription')}
             activeTabTitle={tabTitles[activeTab] || 'Overview'}
+            isDark={isDark}
+            onToggleDark={handleToggleDark}
           />
 
           {/* Page Container */}
           <main className={`flex-1 w-full mx-auto ${(activeTab === 'messages' || activeTab === 'community')
-              ? 'p-2 sm:p-4 md:p-6 lg:p-8 max-w-7xl flex flex-col min-h-0'
+              ? 'p-0 sm:p-3 md:p-6 lg:p-8 max-w-7xl flex flex-col min-h-0'
               : 'p-4 sm:p-6 lg:p-8 max-w-7xl'
             }`}>
             <ErrorBoundary onGoHome={() => navigateRoute('dashboard')}>
@@ -672,6 +719,8 @@ function AppContent() {
                     studyPlans={studyPlans}
                     streakData={streakData}
                     selectedScale={selectedScale}
+                    dataLoading={dataLoading}
+                    unreadMessages={unreadMessages}
                     onNavigateTab={navigateRoute}
                     onToggleTopic={handleToggleTopic}
                     showToast={addToast}
@@ -693,11 +742,13 @@ function AppContent() {
                 )}
 
                 {activeTab === 'cgpa' && (
-                  <CgpaPage
+                  <MyCoursesPage
                     semesters={semesters}
+                    studyPlans={studyPlans}
                     selectedScale={selectedScale}
                     availableScales={availableScales}
                     onRefreshData={fetchAllData}
+                    onNavigateTab={navigateRoute}
                     showToast={addToast}
                   />
                 )}
@@ -789,76 +840,123 @@ function AppContent() {
 
                 {/* Test Prep Drills */}
                 {(activeTab === 'test-prep' || activeTab === 'prep') && (
-                  <div className="max-w-4xl mx-auto space-y-6">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div>
-                        <h2 className="text-xl sm:text-2xl font-bold text-ink">Test Preparation & Exam Simulation</h2>
-                        <p className="text-xs sm:text-sm text-muted">Diagnostic question drills and real-time algorithmic assessments.</p>
-                      </div>
-                      <Badge variant="academic">Active Simulator</Badge>
+                  <div className="max-w-5xl mx-auto space-y-6">
+                    {/* Header matching official reference Section 3_0 */}
+                    <div className="pt-1">
+                      <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight font-sans">
+                        Assessments
+                      </h1>
+                      <p className="text-xs sm:text-sm text-[#667085] dark:text-white/70 mt-0.5">
+                        Take assessments and track your performance
+                      </p>
                     </div>
 
-                    <FeatureGate
-                      feature="TEST_PREP_BASIC"
-                      featureTitle="Practice Test Drills"
-                      description="Simulate exam scenarios with timed test drills and diagnostic topic breakdowns."
-                      showRemaining={true}
-                      onUpgrade={() => navigateRoute('pricing')}
-                    >
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-academic-100 text-academic">CSC301</span>
-                            <span className="text-xs text-muted font-mono">25 Questions • 45 Mins</span>
-                          </div>
-                          <div>
-                            <h3 className="text-base font-bold text-ink">Algorithms & Complexity Drill</h3>
-                            <p className="text-xs text-muted mt-1">Master theorem, dynamic programming, recurrence relations, and NP proofs.</p>
-                          </div>
-                          <Button
-                            variant="academic"
-                            size="sm"
-                            className="w-full shadow-tactile-btn"
-                            onClick={async () => {
-                              try {
-                                const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'CSC301: Algorithms' }) });
-                                addToast({ type: 'success', title: 'Drill Session Initialized', message: `Exam drill session ${res.examSessionId} started (${res.usage.usageCount} tests recorded).` });
-                              } catch (err) {
-                                addToast({ type: 'error', title: 'Test Limit Notice', message: err.message });
-                              }
-                            }}
-                          >
-                            Start Algorithmic Drill
-                          </Button>
-                        </div>
+                    {/* Tabs matching reference: Available Tests / Completed */}
+                    <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+                      <button
+                        type="button"
+                        className="px-4 py-1.5 rounded-full bg-[#DDEFE5] dark:bg-[#176B4D]/30 text-[#176B4D] dark:text-[#A7F3D0] text-xs font-bold shadow-sm"
+                      >
+                        Available Tests
+                      </button>
+                      <button
+                        type="button"
+                        className="px-4 py-1.5 rounded-full text-[#667085] dark:text-white/70 text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                      >
+                        Completed
+                      </button>
+                    </div>
 
-                        <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-gold-100 text-gold-800">CSC307</span>
-                            <span className="text-xs text-muted font-mono">30 Questions • 50 Mins</span>
+                    {/* Assessments Content Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                      {/* Left: Test Cards (span 8 on lg) */}
+                      <div className="lg:col-span-8 space-y-4">
+                        <FeatureGate
+                          feature="TEST_PREP_BASIC"
+                          featureTitle="Practice Test Drills"
+                          description="Simulate exam scenarios with timed test drills and diagnostic topic breakdowns."
+                          showRemaining={true}
+                          onUpgrade={() => navigateRoute('pricing')}
+                        >
+                          <div className="space-y-3.5">
+                            {/* Card 1: Mathematics Theory Test */}
+                            <div className="glass-panel rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 hover:shadow-md transition-all">
+                              <div className="flex items-center gap-3.5 min-w-0">
+                                <div className="w-12 h-12 rounded-2xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0">
+                                  <FileCheck2 className="w-6 h-6" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h3 className="text-sm sm:text-base font-bold text-[#111827] dark:text-white truncate">
+                                    Mathematics Theory Test
+                                  </h3>
+                                  <p className="text-xs text-[#667085] dark:text-white/60 mt-0.5">
+                                    Duration: 60 mins • 50 Questions
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] shadow-sm transition-all shrink-0"
+                                onClick={async () => {
+                                  try {
+                                    const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'Mathematics' }) });
+                                    addToast({ type: 'success', title: 'Test Session Initialized', message: `Test session started (${res.usage?.usageCount || 1} completed).` });
+                                  } catch (err) {
+                                    addToast({ type: 'error', title: 'Notice', message: err.message });
+                                  }
+                                }}
+                              >
+                                Start Assessment
+                              </button>
+                            </div>
+
+                            {/* Card 2: Algorithms & Complexity Drill */}
+                            <div className="glass-panel rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 hover:shadow-md transition-all">
+                              <div className="flex items-center gap-3.5 min-w-0">
+                                <div className="w-12 h-12 rounded-2xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center shrink-0">
+                                  <FileCheck2 className="w-6 h-6" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h3 className="text-sm sm:text-base font-bold text-[#111827] dark:text-white truncate">
+                                    Algorithms & Complexity Drill
+                                  </h3>
+                                  <p className="text-xs text-[#667085] dark:text-white/60 mt-0.5">
+                                    Duration: 45 mins • 25 Questions
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] shadow-sm transition-all shrink-0"
+                                onClick={async () => {
+                                  try {
+                                    const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'CSC301: Algorithms' }) });
+                                    addToast({ type: 'success', title: 'Drill Session Initialized', message: `Drill session started.` });
+                                  } catch (err) {
+                                    addToast({ type: 'error', title: 'Notice', message: err.message });
+                                  }
+                                }}
+                              >
+                                Start Assessment
+                              </button>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-base font-bold text-ink">Computer Networks Simulation</h3>
-                            <p className="text-xs text-muted mt-1">OSI model, TCP/IP flow control, CIDR subnetting, and BGP routing protocols.</p>
-                          </div>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="w-full shadow-tactile-btn"
-                            onClick={async () => {
-                              try {
-                                const res = await api.request('/api/prep/start', { method: 'POST', body: JSON.stringify({ subject: 'CSC307: Networks' }) });
-                                addToast({ type: 'success', title: 'Drill Session Initialized', message: `Exam drill session ${res.examSessionId} started (${res.usage.usageCount} tests recorded).` });
-                              } catch (err) {
-                                addToast({ type: 'error', title: 'Test Limit Notice', message: err.message });
-                              }
-                            }}
-                          >
-                            Start Networks Drill
-                          </Button>
-                        </div>
+                        </FeatureGate>
                       </div>
-                    </FeatureGate>
+
+                      {/* Right: Decorative Academic Artwork Card (span 4 on lg) */}
+                      <div className="lg:col-span-4 glass-panel rounded-2xl p-5 flex flex-col items-center justify-center text-center">
+                        <div className="w-20 h-20 rounded-2xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center mb-3 shadow-inner">
+                          <CheckCircle2 className="w-10 h-10" />
+                        </div>
+                        <h4 className="text-sm font-bold text-[#111827] dark:text-white">
+                          Verified Diagnostics
+                        </h4>
+                        <p className="text-xs text-[#667085] dark:text-white/60 mt-1 max-w-xs leading-relaxed">
+                          Assessments are timed and automatically evaluated against our question bank standards.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -875,8 +973,8 @@ function AppContent() {
 
                 {/* Messages & Tutor-Student Chat (GetStream) */}
                 {(activeTab === 'messages' || activeTab === 'community') && (
-                  <div className="flex-1 flex flex-col min-h-0 w-full space-y-3 sm:space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 shrink-0">
+                  <div className="flex-1 flex flex-col min-h-0 w-full space-y-0 sm:space-y-4">
+                    <div className="hidden sm:flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 shrink-0 px-2 sm:px-0 pt-1 sm:pt-0">
                       <div>
                         <h2 className="text-xl sm:text-2xl font-bold text-ink">Messages & Tutoring Chat</h2>
                         <p className="text-xs sm:text-sm text-muted">

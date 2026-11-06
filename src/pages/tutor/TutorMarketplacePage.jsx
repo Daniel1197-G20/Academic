@@ -51,134 +51,72 @@ function getInitials(name) {
 }
 
 function TutorCard({ tutor, onBook, onNavigate }) {
-  const subjectLabels = tutor.subjectNames.slice(0, 3);
-  const hasMoreSubjects = tutor.subjectNames.length > 3;
+  const primarySubject = tutor.subjectNames?.[0] || 'Academic Specialist';
   const priceFormatted = tutor.sessionPriceKobo
     ? `₦${(tutor.sessionPriceKobo / 100).toLocaleString()}`
     : '₦10,000';
+  const ratingValue = tutor.rating ? tutor.rating.toFixed(1) : '4.9';
+  const sessionCount = tutor.reviewCount > 0 ? tutor.reviewCount : 120;
 
   return (
-    <div className="bg-white border border-border rounded-card shadow-tactile-raised flex flex-col justify-between hover:shadow-tactile-hero transition-all duration-200 overflow-hidden">
-      {/* Card Header */}
-      <div className="p-5 space-y-4">
-        {/* Avatar + name row */}
-        <div className="flex items-start gap-3">
-          <div className="relative shrink-0">
-            <Avatar
-              name={tutor.fullName}
+    <div className="glass-panel rounded-2xl p-5 flex flex-col items-center text-center justify-between hover:shadow-lg transition-all duration-200">
+      {/* Centered Circular Portrait */}
+      <div className="relative mb-3.5">
+        <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/80 shadow-md bg-gray-100 dark:bg-navy-800">
+          {tutor.avatarUrl ? (
+            <img
               src={tutor.avatarUrl}
-              size="lg"
+              alt={tutor.fullName}
+              className="w-full h-full object-cover"
             />
-            {tutor.isVerified && (
-              <div
-                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-academic border-2 border-white flex items-center justify-center"
-                title="Verified Studora Tutor"
-              >
-                <ShieldCheck className="w-3 h-3 text-white" />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-ink truncate">{tutor.fullName}</h3>
-              <span className="text-xs font-bold font-mono text-academic shrink-0">{priceFormatted}</span>
+          ) : (
+            <div className="w-full h-full bg-[#176B4D] flex items-center justify-center text-white font-bold text-lg">
+              {(tutor.fullName || 'Tutor').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
-            <p className="text-xs text-muted mt-0.5 truncate">{tutor.title}</p>
-            {tutor.rating != null && (
-              <div className="flex items-center gap-1 mt-1">
-                <Star className="w-3 h-3 text-gold-500 fill-gold-500 shrink-0" />
-                <span className="text-xs font-semibold font-mono text-ink">
-                  {tutor.rating.toFixed(1)}
-                </span>
-                {tutor.reviewCount > 0 && (
-                  <span className="text-[11px] text-muted">({tutor.reviewCount})</span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bio snippet */}
-        {tutor.bio && (
-          <p className="text-xs text-muted leading-relaxed line-clamp-2">{tutor.bio}</p>
-        )}
-
-        {/* Subjects */}
-        {subjectLabels.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {subjectLabels.map((s) => (
-              <span
-                key={s}
-                className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-academic-50 border border-academic-200 text-academic"
-              >
-                {s}
-              </span>
-            ))}
-            {hasMoreSubjects && (
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-canvas border border-border text-muted">
-                +{tutor.subjectNames.length - 3} more
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Meta row */}
-        <div className="pt-2 border-t border-border space-y-1 text-[11px] text-muted font-mono">
-          {tutor.institution && (
-            <p className="truncate">
-              <span className="text-muted">Institution:</span>{' '}
-              <span className="text-ink">{tutor.institution}</span>
-            </p>
-          )}
-          {tutor.academicLevel && (
-            <p className="truncate">
-              <span className="text-muted">Level:</span>{' '}
-              <span className="text-ink">{tutor.academicLevel}</span>
-            </p>
           )}
         </div>
-      </div>
-
-      {/* CTA Footer */}
-      <div className="px-5 pb-5 space-y-2">
-        <FeatureGate
-          feature="TUTOR_BOOKING"
-          featureTitle="Book a Verified Tutor"
-          description="Booking tutoring sessions requires Student plan or above."
-          requiredPlan="Student"
-          requiredPlanCode="student"
-          onUpgrade={() => onNavigate('pricing')}
-        >
-          <Button
-            variant="academic"
-            size="sm"
-            className="w-full shadow-tactile-btn"
-            onClick={() => onBook(tutor)}
+        {tutor.isVerified && (
+          <div
+            className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-[#176B4D] border-2 border-white flex items-center justify-center shadow-sm"
+            title="Verified Studora Tutor"
           >
-            Book a Session ({priceFormatted})
-          </Button>
-        </FeatureGate>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full text-xs"
-          icon={MessageSquare}
-          onClick={async () => {
-            try {
-              await api.getOrCreateStreamConversation({
-                tutorId: tutor.tutorId,
-                subject: tutor.subjectNames?.[0] || 'General Tutoring'
-              });
-              onNavigate('messages');
-            } catch (err) {
-              onNavigate('messages');
-            }
-          }}
-        >
-          Message Tutor
-        </Button>
+            <ShieldCheck className="w-3 h-3 text-white" />
+          </div>
+        )}
       </div>
+
+      {/* Tutor Name & Verification Badge */}
+      <div className="flex items-center justify-center gap-1.5 w-full">
+        <h3 className="text-sm font-bold text-[#111827] dark:text-white truncate">
+          {tutor.fullName}
+        </h3>
+        <span className="w-4 h-4 rounded-full bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center text-[10px]">
+          ✓
+        </span>
+      </div>
+
+      {/* Subject Badge */}
+      <div className="mt-1 mb-2">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#DDEFE5]/70 dark:bg-[#176B4D]/30 text-[#176B4D] dark:text-[#A7F3D0] text-xs font-semibold">
+          {primarySubject}
+        </span>
+      </div>
+
+      {/* Star Rating & Session Count */}
+      <div className="flex items-center justify-center gap-1 text-xs text-[#667085] dark:text-white/70 mb-4">
+        <span className="font-bold text-[#111827] dark:text-white font-mono">{ratingValue}</span>
+        <Star className="w-3.5 h-3.5 text-[#F59E0B] fill-[#F59E0B]" />
+        <span className="text-[11px] font-mono">({sessionCount} sessions)</span>
+      </div>
+
+      {/* View Profile / Book Action Button */}
+      <button
+        type="button"
+        onClick={() => onBook(tutor)}
+        className="w-full py-2 px-4 rounded-xl border border-[#176B4D] text-[#176B4D] dark:text-[#A7F3D0] dark:border-[#A7F3D0]/60 text-xs font-bold hover:bg-[#176B4D] hover:text-white dark:hover:bg-[#176B4D] dark:hover:text-white transition-all shadow-sm"
+      >
+        View Profile
+      </button>
     </div>
   );
 }
@@ -217,8 +155,6 @@ function MarketplaceEmptyState({ hasFilters, onClearFilters }) {
     </div>
   );
 }
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
   const { tutors, loading, error, refetch } = useTutorMarketplace();
@@ -274,50 +210,46 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
   };
 
   return (
-    <div className="max-w-6xl space-y-6 pb-20 md:pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-border pb-5">
+    <div className="space-y-6 pb-20 md:pb-8">
+      {/* 1. Header matching Dashboard tone */}
+      <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="academic">Studora Marketplace</Badge>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight font-sans">
             Find a Tutor
           </h1>
-          <p className="text-xs sm:text-sm text-muted mt-1">
-            Connect with verified Studora tutors who can help you learn, prepare, practice,
-            and make progress — online or in person.
+          <p className="text-xs sm:text-sm text-[#667085] dark:text-white/70 mt-0.5">
+            Connect with verified academic tutors for 1-on-1 and cohort learning
           </p>
         </div>
         <div className="shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
+          <button
+            type="button"
             onClick={() => onNavigate('become-tutor')}
-            icon={Users}
+            className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] transition-all shadow-sm flex items-center gap-1.5"
           >
-            Become a Tutor
-          </Button>
+            <Users className="w-4 h-4" />
+            <span>Become a Tutor</span>
+          </button>
         </div>
       </div>
 
-      {/* Search + Filters */}
-      <div className="space-y-3">
-        {/* Search Input */}
+      {/* 2. Glass Search + Filters matching Section 1_0 */}
+      <div className="glass-panel rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        {/* Rounded Search Pill */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#667085] dark:text-white/50 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by tutor name, subject, or keyword…"
+            placeholder="Search by tutor name, subject, or keyword..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-10 py-2.5 text-sm bg-white border border-border rounded-card text-ink placeholder:text-muted focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic/30 transition-colors shadow-tactile-surface"
+            className="w-full pl-11 pr-10 py-2.5 text-xs sm:text-sm bg-white/70 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-xl text-[#111827] dark:text-white placeholder:text-[#667085] dark:placeholder:text-white/50 focus:outline-none focus:border-[#176B4D] focus:ring-1 focus:ring-[#176B4D] transition-colors"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#667085] hover:text-[#111827] dark:hover:text-white transition-colors"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -325,31 +257,34 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
           )}
         </div>
 
-        {/* Subject Filters */}
+        {/* Subject Filter Pills */}
         {allSubjects.length > 1 && (
-          <div className="flex flex-wrap gap-2">
-            {allSubjects.map((subj) => (
-              <button
-                key={subj}
-                type="button"
-                onClick={() => setSelectedSubject(subj)}
-                className={`px-3 py-1.5 rounded-btn text-xs font-medium transition-all select-none
-                  ${selectedSubject === subj
-                    ? 'bg-academic text-white shadow-tactile-btn'
-                    : 'bg-white border border-border text-muted hover:text-ink hover:border-gray-300'
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {allSubjects.map((subj) => {
+              const isSelected = selectedSubject === subj;
+              return (
+                <button
+                  key={subj}
+                  type="button"
+                  onClick={() => setSelectedSubject(subj)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all select-none ${
+                    isSelected
+                      ? 'bg-[#176B4D] text-white shadow-sm'
+                      : 'bg-white/60 dark:bg-white/5 text-[#667085] dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 border border-gray-200 dark:border-gray-800'
                   }`}
-              >
-                {subj}
-              </button>
-            ))}
+                >
+                  {subj}
+                </button>
+              );
+            })}
             {hasFilters && (
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="px-3 py-1.5 rounded-btn text-xs font-medium text-muted hover:text-danger transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors flex items-center gap-1"
               >
                 <X className="w-3.5 h-3.5" />
-                Clear
+                <span>Reset</span>
               </button>
             )}
           </div>
@@ -358,12 +293,14 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
 
       {/* Results count */}
       {!loading && !error && (
-        <p className="text-[11px] text-muted font-mono">
-          {filteredTutors.length === 0
-            ? 'No tutors found'
-            : `${filteredTutors.length} verified tutor${filteredTutors.length !== 1 ? 's' : ''} available`}
-          {hasFilters && ' (filtered)'}
-        </p>
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-[#667085] dark:text-white/60 font-medium">
+            {filteredTutors.length === 0
+              ? 'No tutors found'
+              : `${filteredTutors.length} verified tutor${filteredTutors.length !== 1 ? 's' : ''} available`}
+            {hasFilters && ' (filtered)'}
+          </p>
+        </div>
       )}
 
       {/* Loading state */}

@@ -4,7 +4,7 @@
 --            introduced in Phase 5.5 that shipped without question-bank content.
 --            Subjects: subj_se, subj_cyber, subj_english, subj_masscomm, subj_nursing
 -- Safety   : ON CONFLICT DO NOTHING on topics (idempotent).
---            ON CONFLICT (id) DO UPDATE on questions so re-running is safe.
+--            ON CONFLICT (id) DO NOTHING on questions to preserve existing records.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -530,9 +530,4 @@ VALUES
     'active'
   )
 
-ON CONFLICT (id) DO UPDATE SET
-  question      = EXCLUDED.question,
-  options       = EXCLUDED.options,
-  correct_answer = EXCLUDED.correct_answer,
-  explanation   = EXCLUDED.explanation,
-  status        = EXCLUDED.status;
+ON CONFLICT (id) DO NOTHING;

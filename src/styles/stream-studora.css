@@ -1,0 +1,480 @@
+/**
+ * src/styles/stream-studora.css
+ *
+ * Studora × GetStream Chat — Design System Integration
+ *
+ * Overrides GetStream's CSS custom properties and selected class targets
+ * to match the Studora Premium Hybrid design system.
+ *
+ * Rules:
+ * - Targets --str-chat__ CSS variables only (Stream's documented theming API).
+ * - Preserves Stream's functional structure, accessibility, and animation.
+ * - Applies Studora tokens: Academic Green, Deep Navy, Canvas, Ink, Gold, etc.
+ * - Light theme applied to .str-chat__theme-light
+ * - Dark theme applied to .str-chat__theme-dark
+ */
+
+/* ============================================================
+   LIGHT THEME OVERRIDES
+   ============================================================ */
+.str-chat__theme-light {
+  /* Core accent: Academic Green */
+  --str-chat__accent-primary: #176B4D;
+  --str-chat__accent-primary-high-emphasis: #104633;
+  --str-chat__accent-primary-low-emphasis: #DDEFE5;
+
+  /* Semantic accents */
+  --str-chat__accent-error: #C24141;
+  --str-chat__accent-success: #176B4D;
+  --str-chat__accent-neutral: #667085;
+
+  /* Background layers */
+  --str-chat__background-core-app: #F6F7F3;
+  --str-chat__background-core-surface-default: #FFFFFF;
+  --str-chat__background-core-surface-card: #FAFBF8;
+  --str-chat__background-core-surface-subtle: #F6F7F3;
+  --str-chat__background-core-surface-strong: #F0F2ED;
+  --str-chat__background-core-elevation-0: #FFFFFF;
+  --str-chat__background-core-elevation-1: #FAFBF8;
+  --str-chat__background-core-elevation-2: #F6F7F3;
+  --str-chat__background-core-elevation-3: #ECEEE9;
+  --str-chat__background-core-highlight: #DDEFE5;
+  --str-chat__background-core-on-accent: #FFFFFF;
+  --str-chat__background-core-inverse: #111827;
+  --str-chat__background-core-overlay-light: rgba(246, 247, 243, 0.92);
+  --str-chat__background-core-scrim: rgba(17, 24, 39, 0.5);
+  --str-chat__background-utility-hover: rgba(23, 107, 77, 0.06);
+  --str-chat__background-utility-pressed: rgba(23, 107, 77, 0.10);
+  --str-chat__background-utility-selected: rgba(23, 107, 77, 0.08);
+  --str-chat__background-utility-disabled: rgba(17, 24, 39, 0.05);
+
+  /* Text/foreground */
+  --str-chat__foreground-core-primary: #111827;
+  --str-chat__foreground-core-secondary: #374151;
+  --str-chat__foreground-core-tertiary: #667085;
+  --str-chat__foreground-core-quaternary: #9CA3AF;
+  --str-chat__foreground-core-on-accent: #FFFFFF;
+  --str-chat__foreground-core-on-inverse: #FFFFFF;
+  --str-chat__foreground-core-on-surface: #111827;
+  --str-chat__foreground-core-inverse: #FFFFFF;
+  --str-chat__foreground-utility-disabled: #9CA3AF;
+  --str-chat__foreground-utility-link: #176B4D;
+
+  /* Borders */
+  --str-chat__border-primary: #E5E7EB;
+  --str-chat__border-secondary: #ECEEE9;
+  --str-chat__border-inverse: #1F2937;
+  --str-chat__border-radius: 0.75rem;
+
+  /* Base palette references */
+  --str-chat__base-white: #FFFFFF;
+  --str-chat__base-black: #111827;
+
+  /* Message bubbles */
+  --str-chat__own-message-bubble-background: #176B4D;
+  --str-chat__own-message-bubble-color: #FFFFFF;
+  --str-chat__other-message-bubble-background: #FFFFFF;
+  --str-chat__other-message-bubble-color: #111827;
+  --str-chat__own-message-bubble-border-color: #13583F;
+  --str-chat__other-message-bubble-border-color: #E5E7EB;
+
+  /* Input / Composer */
+  --str-chat__message-textarea-background: #F6F7F3;
+  --str-chat__message-textarea-border-color: #E5E7EB;
+  --str-chat__message-textarea-color: #111827;
+  --str-chat__message-textarea-placeholder-color: #9CA3AF;
+  --str-chat__message-textarea-focused-border-color: #176B4D;
+  --str-chat__message-textarea-border-radius: 0.75rem;
+
+  /* Reactions */
+  --str-chat__reaction-selector-background-color: #FFFFFF;
+  --str-chat__reaction-selector-border-color: #E5E7EB;
+  --str-chat__my-reactions-background-color: #DDEFE5;
+  --str-chat__my-reactions-border-color: #BCE0CE;
+  --str-chat__my-reactions-color: #176B4D;
+
+  /* Avatar */
+  --str-chat__avatar-bg-default: #DDEFE5;
+  --str-chat__avatar-text-default: #176B4D;
+
+  /* Avatar palette */
+  --str-chat__avatar-palette-bg-1: #DDEFE5;
+  --str-chat__avatar-palette-text-1: #176B4D;
+
+  /* Unread badge */
+  --str-chat__badge-bg-primary: #176B4D;
+
+  /* Thread */
+  --str-chat__thread-background-color: #FAFBF8;
+
+  /* Tooltip */
+  --str-chat__tooltip-background-color: #111827;
+  --str-chat__tooltip-color: #FFFFFF;
+
+  /* Loading */
+  --str-chat__loading-indicator-color: #176B4D;
+
+  /* Scroll to latest */
+  --str-chat__scroll-to-latest-button-background-color: #176B4D;
+  --str-chat__scroll-to-latest-button-color: #FFFFFF;
+}
+
+/* ============================================================
+   DARK THEME OVERRIDES
+   ============================================================ */
+.str-chat__theme-dark {
+  /* Core accent: Academic Green (maintained) */
+  --str-chat__accent-primary: #22916A;
+  --str-chat__accent-primary-high-emphasis: #2AB580;
+  --str-chat__accent-primary-low-emphasis: #0E392B;
+
+  /* Semantic accents */
+  --str-chat__accent-error: #E05454;
+  --str-chat__accent-success: #22916A;
+  --str-chat__accent-neutral: #98ACCA;
+
+  /* Background layers: Deep Navy palette */
+  --str-chat__background-core-app: #0F1624;
+  --str-chat__background-core-surface-default: #172033;
+  --str-chat__background-core-surface-card: #1E2A42;
+  --str-chat__background-core-surface-subtle: #0F1624;
+  --str-chat__background-core-surface-strong: #233050;
+  --str-chat__background-core-elevation-0: #172033;
+  --str-chat__background-core-elevation-1: #1E2A42;
+  --str-chat__background-core-elevation-2: #233050;
+  --str-chat__background-core-elevation-3: #2A3A60;
+  --str-chat__background-core-highlight: #0E392B;
+  --str-chat__background-core-on-accent: #FFFFFF;
+  --str-chat__background-core-inverse: #E8ECF2;
+  --str-chat__background-core-overlay-light: rgba(15, 22, 36, 0.92);
+  --str-chat__background-core-scrim: rgba(0, 0, 0, 0.6);
+  --str-chat__background-utility-hover: rgba(34, 145, 106, 0.08);
+  --str-chat__background-utility-pressed: rgba(34, 145, 106, 0.14);
+  --str-chat__background-utility-selected: rgba(34, 145, 106, 0.10);
+  --str-chat__background-utility-disabled: rgba(255, 255, 255, 0.04);
+
+  /* Text/foreground */
+  --str-chat__foreground-core-primary: #E8ECF2;
+  --str-chat__foreground-core-secondary: #C5D0E0;
+  --str-chat__foreground-core-tertiary: #98ACCA;
+  --str-chat__foreground-core-quaternary: #6482AF;
+  --str-chat__foreground-core-on-accent: #FFFFFF;
+  --str-chat__foreground-core-on-inverse: #172033;
+  --str-chat__foreground-core-on-surface: #E8ECF2;
+  --str-chat__foreground-core-inverse: #172033;
+  --str-chat__foreground-utility-disabled: #6482AF;
+  --str-chat__foreground-utility-link: #22916A;
+
+  /* Borders */
+  --str-chat__border-primary: #233050;
+  --str-chat__border-secondary: #1E2A42;
+  --str-chat__border-inverse: #E5E7EB;
+  --str-chat__border-radius: 0.75rem;
+
+  /* Base palette */
+  --str-chat__base-white: #FFFFFF;
+  --str-chat__base-black: #0F1624;
+
+  /* Message bubbles */
+  --str-chat__own-message-bubble-background: #22916A;
+  --str-chat__own-message-bubble-color: #FFFFFF;
+  --str-chat__other-message-bubble-background: #1E2A42;
+  --str-chat__other-message-bubble-color: #E8ECF2;
+  --str-chat__own-message-bubble-border-color: #1A7357;
+  --str-chat__other-message-bubble-border-color: #233050;
+
+  /* Input / Composer */
+  --str-chat__message-textarea-background: #0F1624;
+  --str-chat__message-textarea-border-color: #233050;
+  --str-chat__message-textarea-color: #E8ECF2;
+  --str-chat__message-textarea-placeholder-color: #6482AF;
+  --str-chat__message-textarea-focused-border-color: #22916A;
+  --str-chat__message-textarea-border-radius: 0.75rem;
+
+  /* Reactions */
+  --str-chat__reaction-selector-background-color: #1E2A42;
+  --str-chat__reaction-selector-border-color: #233050;
+  --str-chat__my-reactions-background-color: #0E392B;
+  --str-chat__my-reactions-border-color: #195C40;
+  --str-chat__my-reactions-color: #22916A;
+
+  /* Avatar */
+  --str-chat__avatar-bg-default: #0E392B;
+  --str-chat__avatar-text-default: #22916A;
+  --str-chat__avatar-palette-bg-1: #0E392B;
+  --str-chat__avatar-palette-text-1: #22916A;
+
+  /* Unread badge */
+  --str-chat__badge-bg-primary: #22916A;
+
+  /* Thread */
+  --str-chat__thread-background-color: #0F1624;
+
+  /* Tooltip */
+  --str-chat__tooltip-background-color: #E8ECF2;
+  --str-chat__tooltip-color: #172033;
+
+  /* Loading */
+  --str-chat__loading-indicator-color: #22916A;
+
+  /* Scroll to latest */
+  --str-chat__scroll-to-latest-button-background-color: #22916A;
+  --str-chat__scroll-to-latest-button-color: #FFFFFF;
+}
+
+/* ============================================================
+   STRUCTURAL OVERRIDES — Layout, Typography, Border Radius
+   These apply to both themes and preserve Stream's layout behaviour.
+   ============================================================ */
+
+/* Root chat container: blend into Studora surface */
+.str-chat {
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  --str-chat__border-radius-sm: 0.5rem;
+  --str-chat__border-radius-md: 0.75rem;
+  --str-chat__border-radius-lg: 1rem;
+}
+
+/* MessageList: fill the right panel, enable independent scroll */
+.str-chat__message-list-scroll {
+  padding: 1rem 1.25rem !important;
+}
+
+/* Message bubbles: rounded like the existing Studora style */
+.str-chat__message-bubble {
+  border-radius: 1rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1.6 !important;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Own message: green, Studora-branded */
+.str-chat__message--me .str-chat__message-bubble,
+.str-chat__message-simple.str-chat__message--me .str-chat__message-bubble {
+  background-color: #176B4D !important;
+  color: #FFFFFF !important;
+  border-radius: 1rem 1rem 0.25rem 1rem !important;
+  border: 1px solid #13583F !important;
+}
+.str-chat__theme-dark .str-chat__message--me .str-chat__message-bubble,
+.str-chat__theme-dark .str-chat__message-simple.str-chat__message--me .str-chat__message-bubble {
+  background-color: #22916A !important;
+  border-color: #1A7357 !important;
+}
+
+/* Other message: surface card */
+.str-chat__message:not(.str-chat__message--me) .str-chat__message-bubble {
+  border-radius: 1rem 1rem 1rem 0.25rem !important;
+}
+
+/* Message timestamp: Studora mono small */
+.str-chat__message-simple-timestamp,
+.str-chat__message-timestamp {
+  font-size: 0.625rem !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  opacity: 0.7 !important;
+}
+
+/* Composer / MessageComposer wrapper */
+.str-chat__message-composer,
+.str-chat__message-input {
+  background-color: var(--str-chat__background-core-surface-default) !important;
+  border-top: 1px solid var(--str-chat__border-primary) !important;
+  padding: 0.75rem 1rem !important;
+}
+
+/* Composer textarea */
+.str-chat__message-textarea,
+.str-chat__textarea__textarea {
+  font-size: 0.75rem !important;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  border-radius: 0.75rem !important;
+  min-height: 2.5rem !important;
+  max-height: 8rem !important;
+  resize: none !important;
+  padding: 0.5rem 0.875rem !important;
+  line-height: 1.6 !important;
+}
+
+/* Send button: Studora green */
+.str-chat__send-button,
+.str-chat__message-send-button {
+  background-color: #176B4D !important;
+  color: #FFFFFF !important;
+  border-radius: 0.75rem !important;
+  transition: background-color 140ms ease, transform 140ms ease !important;
+}
+.str-chat__send-button:hover,
+.str-chat__message-send-button:hover {
+  background-color: #13583F !important;
+  transform: translateY(-1px) !important;
+}
+.str-chat__theme-dark .str-chat__send-button,
+.str-chat__theme-dark .str-chat__message-send-button {
+  background-color: #22916A !important;
+}
+.str-chat__theme-dark .str-chat__send-button:hover {
+  background-color: #1A7357 !important;
+}
+
+/* Date separator: matches existing Studora style */
+.str-chat__date-separator {
+  margin: 1rem 0 !important;
+}
+.str-chat__date-separator-line {
+  border-color: var(--str-chat__border-secondary) !important;
+}
+.str-chat__date-separator-date {
+  font-size: 0.625rem !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  background-color: var(--str-chat__background-core-surface-default) !important;
+  color: var(--str-chat__foreground-core-tertiary) !important;
+  border-radius: 9999px !important;
+  padding: 0.25rem 0.75rem !important;
+  border: 1px solid var(--str-chat__border-primary) !important;
+}
+
+/* Typing indicator */
+.str-chat__typing-indicator {
+  padding: 0.25rem 1.25rem !important;
+  font-size: 0.6875rem !important;
+  color: var(--str-chat__foreground-core-tertiary) !important;
+  font-style: italic !important;
+}
+.str-chat__typing-indicator__dots span {
+  background-color: var(--str-chat__foreground-core-tertiary) !important;
+}
+
+/* Reaction selector */
+.str-chat__reaction-selector {
+  border-radius: 1rem !important;
+  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.1), 0 1px 4px rgba(17, 24, 39, 0.06) !important;
+  border: 1px solid var(--str-chat__border-primary) !important;
+}
+
+/* Thread panel */
+.str-chat__thread {
+  background-color: var(--str-chat__thread-background-color) !important;
+  border-left: 1px solid var(--str-chat__border-primary) !important;
+}
+.str-chat__thread-header {
+  border-bottom: 1px solid var(--str-chat__border-primary) !important;
+  font-weight: 700 !important;
+  font-size: 0.8125rem !important;
+}
+
+/* Avatar: match Studora avatar design */
+.str-chat__avatar {
+  border-radius: 0.625rem !important;
+}
+
+/* Unread separator */
+.str-chat__unread-messages-separator {
+  font-size: 0.6875rem !important;
+  font-weight: 700 !important;
+  color: var(--str-chat__accent-primary) !important;
+  letter-spacing: 0.03em !important;
+}
+.str-chat__unread-messages-separator-line {
+  background-color: var(--str-chat__accent-primary) !important;
+  opacity: 0.3 !important;
+}
+
+/* Scroll to latest button */
+.str-chat__scroll-to-latest-button {
+  border-radius: 9999px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(23, 107, 77, 0.3) !important;
+}
+
+/* Message options / actions */
+.str-chat__message-options {
+  background-color: var(--str-chat__background-core-surface-default) !important;
+  border: 1px solid var(--str-chat__border-primary) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.08) !important;
+}
+
+/* Attachment previews */
+.str-chat__attachment-preview-image img,
+.str-chat__gallery img {
+  border-radius: 0.75rem !important;
+}
+.str-chat__attachment-preview-file {
+  border-radius: 0.75rem !important;
+  border-color: var(--str-chat__border-primary) !important;
+  font-size: 0.75rem !important;
+}
+
+/* Window: remove any default border/shadow Stream adds — Studora shell handles this */
+.str-chat__channel,
+.str-chat__channel-inner {
+  background: transparent !important;
+}
+
+/* Quoted message bubble */
+.str-chat__quoted-message-bubble {
+  border-radius: 0.75rem !important;
+  border-left: 3px solid var(--str-chat__accent-primary) !important;
+  font-size: 0.6875rem !important;
+}
+
+/* Attachment selector icons */
+.str-chat__attachment-selector-button svg {
+  color: var(--str-chat__foreground-core-tertiary) !important;
+}
+.str-chat__attachment-selector-button:hover svg {
+  color: var(--str-chat__accent-primary) !important;
+}
+
+/* Message tooltip/popover */
+.str-chat__tooltip {
+  border-radius: 0.5rem !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
+}
+
+/* Modal (lightbox, bounced message, etc.) */
+.str-chat__modal__inner {
+  border-radius: 1rem !important;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12) !important;
+}
+
+/* Giphy card */
+.str-chat__card {
+  border-radius: 0.875rem !important;
+  border-color: var(--str-chat__border-primary) !important;
+}
+
+/* Focus ring consistency */
+.str-chat *:focus-visible {
+  outline: 2px solid #176B4D !important;
+  outline-offset: 2px !important;
+}
+.str-chat__theme-dark *:focus-visible {
+  outline-color: #22916A !important;
+}
+
+/* Emoji picker integration */
+.str-chat__emoji-picker-button {
+  color: var(--str-chat__foreground-core-tertiary) !important;
+  border-radius: 0.5rem !important;
+  transition: color 140ms ease, background-color 140ms ease !important;
+}
+.str-chat__emoji-picker-button:hover {
+  color: var(--str-chat__accent-primary) !important;
+  background-color: var(--str-chat__accent-primary-low-emphasis) !important;
+}
+
+/* Loading spinner */
+.str-chat__loading-indicator svg {
+  color: var(--str-chat__accent-primary) !important;
+}
+
+/* Attachment icon colors */
+.str-chat-icon {
+  color: currentColor !important;
+}

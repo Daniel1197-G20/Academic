@@ -6,10 +6,13 @@ import {
   Circle, 
   Flame, 
   Clock, 
-  Calendar, 
+  Calendar as CalendarIcon, 
   Trash2, 
   Timer, 
-  ArrowRight
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  CheckSquare
 } from 'lucide-react';
 import { 
   Button, 
@@ -18,7 +21,6 @@ import {
   Modal, 
   Badge, 
   ProgressBar, 
-  PageHeader,
   AnimatedNumber,
   TactileCheckbox
 } from '../../components/ui';
@@ -30,6 +32,10 @@ export function StudyPlannerPage({
   onRefreshData,
   showToast
 }) {
+  // Calendar month state
+  const [viewDate, setViewDate] = useState(() => new Date());
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+
   // Modal states
   const [isNewPlanOpen, setIsNewPlanOpen] = useState(false);
   const [isLogHoursOpen, setIsLogHoursOpen] = useState(false);
@@ -57,9 +63,9 @@ export function StudyPlannerPage({
     return studyPlans.reduce((sum, p) => sum + (p.topics ? p.topics.filter(t => t.is_completed).length : 0), 0);
   }, [studyPlans]);
 
-  // Today's timeline schedule generated from plans
+  // Today schedule generated from plans
   const todaySchedule = useMemo(() => {
-    const times = ['09:00', '11:30', '14:00', '16:30', '19:00'];
+    const times = ['09:00 AM', '11:30 AM', '02:00 PM', '04:30 PM', '07:00 PM'];
     const schedule = [];
     let idx = 0;
     for (const plan of studyPlans) {
@@ -81,6 +87,21 @@ export function StudyPlannerPage({
     return schedule;
   }, [studyPlans]);
 
+  // Calendar calculations
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthName = viewDate.toLocaleString('default', { month: 'long' });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
+
   // Handle Toggle Topic
   const handleToggleTopic = async (topicId, planSubject) => {
     try {
@@ -98,7 +119,7 @@ export function StudyPlannerPage({
 
     try {
       const topicList = topicsInput
-        .split('\n')
+        .split('\\n')
         .map(t => t.trim())
         .filter(Boolean);
 
@@ -168,422 +189,389 @@ export function StudyPlannerPage({
   };
 
   return (
-    <div className="space-y-8 pb-20 md:pb-8">
-      {/* 1. Page Header */}
-      <PageHeader
-        title="Study Planner"
-        description="Structured study habits, topic checklists, and session logging for your courses."
-        actions={
-          <>
-            {studyPlans.length > 0 && (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={Timer}
-                onClick={() => openLogHoursModal(studyPlans[0])}
-              >
-                Log Study Session
-              </Button>
-            )}
-            <Button
-              variant="academic"
-              size="sm"
-              icon={Plus}
-              onClick={() => setIsNewPlanOpen(true)}
+    <div className="w-full space-y-6 pb-20 md:pb-8">
+      {/* ── 1. HEADER (Matching Section 2_1) ───────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight font-sans">
+            Study Plans
+          </h1>
+          <p className="text-xs sm:text-sm text-[#667085] dark:text-white/70 mt-0.5">
+            Organize your daily study schedule and track topic mastery
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          {studyPlans.length > 0 && (
+            <button
+              type="button"
+              onClick={() => openLogHoursModal(studyPlans[0])}
+              className="px-3.5 py-2 rounded-xl bg-white/70 dark:bg-white/10 border border-gray-200 dark:border-gray-800 text-[#111827] dark:text-white text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-all shadow-sm flex items-center gap-1.5"
             >
-              New Study Plan
-            </Button>
-          </>
-        }
-      />
-
-      {/* 2. Overview Strip (Velocity & Habit Consistency) */}
-      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 divide-y md:divide-y-0 md:divide-x divide-border">
-          {/* Consistency Streak */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <Flame className="w-4 h-4 text-gold-600 fill-gold-600 streak-breathing" />
-              <span>Study Streak</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-mono">{streakData.streak}</span>
-              <span className="text-xs text-muted font-medium">days active</span>
-            </div>
-            <p className="text-[11px] text-muted">Daily review cadence</p>
-          </div>
-
-          {/* Total Time Logged */}
-          <div className="space-y-1 pt-4 md:pt-0 md:pl-6">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <Clock className="w-4 h-4 text-academic" />
-              <span>Hours Logged</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-mono">{streakData.totalHours}</span>
-              <span className="text-xs text-muted font-medium">hours total</span>
-            </div>
-            <p className="text-[11px] text-muted">Tracked study sessions</p>
-          </div>
-
-          {/* Topics Completed */}
-          <div className="space-y-1 pt-4 md:pt-0 md:pl-6">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <CheckCircle2 className="w-4 h-4 text-academic" />
-              <span>Topics Mastered</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-mono">{completedTopics}</span>
-              <span className="text-xs text-muted font-medium font-mono">of {totalTopics}</span>
-            </div>
-            <p className="text-[11px] text-muted font-mono">{totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0}% syllabus covered</p>
-          </div>
-
-          {/* Active Plans */}
-          <div className="space-y-1 pt-4 md:pt-0 md:pl-6">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <BookOpen className="w-4 h-4 text-navy" />
-              <span>Active Plans</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-3xl font-extrabold text-ink font-mono">{studyPlans.length}</span>
-              <span className="text-xs text-muted font-medium">courses</span>
-            </div>
-            <p className="text-[11px] text-muted">Current semester load</p>
-          </div>
+              <Timer className="w-4 h-4 text-[#176B4D]" />
+              <span>Log Hours</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsNewPlanOpen(true)}
+            className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] transition-all shadow-sm flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Task</span>
+          </button>
         </div>
       </div>
 
-      {/* 3. Today's Timeline Schedule — Physical Rail */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-ink">
-              Today's Timeline
-            </h2>
-            <p className="text-xs text-muted">
-              Chronological study objectives and focus blocks
-            </p>
+      {/* ── 2. METRIC STRIP (Matching Section 2_1) ────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="glass-stat rounded-2xl p-4 flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-[#667085] dark:text-white/60">Study Streak</span>
+          <div className="flex items-baseline gap-2 my-1">
+            <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">{streakData.streak}</span>
+            <span className="text-xs text-[#176B4D] dark:text-[#A7F3D0] font-semibold">days active</span>
           </div>
-          <span className="text-xs font-semibold text-muted font-mono">
-            {todaySchedule.filter(s => !s.isCompleted).length} pending
-          </span>
+          <span className="text-[10px] text-[#667085] dark:text-white/50">Daily review cadence</span>
         </div>
 
-        <div className="bg-white border border-border rounded-card p-5 sm:p-6 shadow-tactile-raised">
-          {todaySchedule.length === 0 ? (
-            <div className="py-8 text-center text-xs text-muted">
-              No study tasks scheduled for today. Create a plan below to set up your schedule.
+        <div className="glass-stat rounded-2xl p-4 flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-[#667085] dark:text-white/60">Hours Logged</span>
+          <div className="flex items-baseline gap-2 my-1">
+            <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">{streakData.totalHours}</span>
+            <span className="text-xs text-[#176B4D] dark:text-[#A7F3D0] font-semibold">hours total</span>
+          </div>
+          <span className="text-[10px] text-[#667085] dark:text-white/50">Tracked study sessions</span>
+        </div>
+
+        <div className="glass-stat rounded-2xl p-4 flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-[#667085] dark:text-white/60">Topics Mastered</span>
+          <div className="flex items-baseline gap-2 my-1">
+            <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">{completedTopics}</span>
+            <span className="text-xs text-[#667085] dark:text-white/60 font-mono">of {totalTopics}</span>
+          </div>
+          <span className="text-[10px] text-[#667085] dark:text-white/50">{totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0}% syllabus covered</span>
+        </div>
+
+        <div className="glass-stat rounded-2xl p-4 flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-[#667085] dark:text-white/60">Active Plans</span>
+          <div className="flex items-baseline gap-2 my-1">
+            <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">{studyPlans.length}</span>
+            <span className="text-xs text-[#176B4D] dark:text-[#A7F3D0] font-semibold">courses</span>
+          </div>
+          <span className="text-[10px] text-[#667085] dark:text-white/50">Current semester load</span>
+        </div>
+      </div>
+
+      {/* ── 3. MAIN WORKSPACE (2-COLUMN REFERENCE LAYOUT) ─────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left Column: Interactive Monthly Study Calendar & Schedule (span 7) */}
+        <div className="lg:col-span-7 space-y-5">
+          <div className="glass-panel rounded-2xl p-5 sm:p-6 shadow-sm">
+            {/* Calendar Month Navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-[#667085] transition-colors"
+                aria-label="Previous month"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-bold text-[#111827] dark:text-white">
+                {monthName} {year}
+              </span>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-[#667085] transition-colors"
+                aria-label="Next month"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-          ) : (
-            <div className="space-y-6 relative before:absolute before:left-[72px] before:top-3 before:bottom-3 before:w-[2px] before:bg-border">
-              {todaySchedule.map((item, idx) => (
-                <div key={item.id} className="flex items-start gap-4 relative">
-                  {/* Left: Time Column */}
-                  <div className="w-14 text-right pt-1 shrink-0">
-                    <span className="font-mono text-xs font-bold text-ink">
-                      {item.time}
-                    </span>
-                  </div>
 
-                  {/* Center: Tactile Rail Node */}
-                  <div className="relative pt-1.5 z-10 flex items-center justify-center shrink-0">
-                    <div 
-                      className={`w-3.5 h-3.5 rounded-full transition-all ${
-                        item.isCompleted 
-                          ? 'tactile-rail-node-active' 
-                          : idx === 0 
-                            ? 'bg-academic ring-4 ring-academic-100' 
-                            : 'tactile-rail-node-inactive'
-                      }`} 
-                    />
-                  </div>
-
-                  {/* Right: Task Details Card */}
-                  <div className={`flex-1 p-4 rounded-btn border transition-all ${
-                    item.isCompleted 
-                      ? 'bg-canvas/60 border-border text-muted opacity-65' 
-                      : 'bg-white border-border shadow-tactile-surface hover:shadow-tactile-raised hover:border-gray-300'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <TactileCheckbox
-                          checked={item.isCompleted}
-                          onChange={() => handleToggleTopic(item.id, item.subject)}
-                          aria-label={`Mark ${item.topicTitle} as completed`}
-                        />
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-academic uppercase tracking-wider">
-                              {item.subject}
-                            </span>
-                            <span className="text-muted text-xs">•</span>
-                            <span className="text-xs text-muted font-mono">
-                              {item.duration}
-                            </span>
-                          </div>
-                          <p className={`text-sm font-semibold truncate transition-all ${item.isCompleted ? 'line-through text-muted' : 'text-ink'}`}>
-                            {item.topicTitle}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        <Badge variant={item.isCompleted ? 'neutral' : 'academic'} size="sm">
-                          {item.isCompleted ? 'Completed' : 'Pending Focus'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
+            {/* Weekday labels */}
+            <div className="grid grid-cols-7 text-center mb-2">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <div key={d} className="text-[11px] font-semibold text-[#667085] dark:text-white/50">
+                  {d}
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* 4. Course Study Schedules (Grouped Plans) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-ink">
-              Course Study Plans
-            </h2>
-            <p className="text-xs text-muted">
-              Structured topics, milestones, and tracked study duration
-            </p>
+            {/* Day cells */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {cells.map((d, i) => {
+                if (!d) return <div key={`empty-${i}`} className="h-9" />;
+                const isSelected = d === selectedDay;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setSelectedDay(d)}
+                    className={`h-9 rounded-xl text-xs font-semibold flex items-center justify-center transition-all ${
+                      isSelected
+                        ? 'bg-[#176B4D] text-white font-bold shadow-sm'
+                        : 'text-[#111827] dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <span className="text-xs text-muted font-medium">
-            {studyPlans.length} Active Plans
-          </span>
-        </div>
 
-        {studyPlans.length === 0 ? (
-          <div className="text-center p-12 border border-dashed border-border rounded-card bg-surface-muted/40">
-            <BookOpen className="w-10 h-10 text-muted mx-auto mb-3 opacity-60" />
-            <h3 className="text-sm font-semibold text-ink">No course study plans yet</h3>
-            <p className="text-xs text-muted mt-1 max-w-sm mx-auto mb-4">
-              Add your current courses and target topics to build a disciplined daily review schedule.
-            </p>
-            <Button variant="academic" size="sm" onClick={() => setIsNewPlanOpen(true)}>
-              Create First Study Plan
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {studyPlans.map((plan) => {
-              const topics = plan.topics || [];
-              const doneCount = topics.filter(t => t.is_completed).length;
-              const percent = topics.length > 0 ? Math.round((doneCount / topics.length) * 100) : 0;
+          {/* Course Study Plans List */}
+          <div className="glass-panel rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#111827] dark:text-white">
+                Active Course Schedules
+              </h3>
+              <span className="text-xs font-mono text-[#667085] dark:text-white/60">
+                {studyPlans.length} Plans
+              </span>
+            </div>
 
-              return (
-                <div key={plan.id} className="bg-white border border-border rounded-card p-5 sm:p-6 shadow-subtle space-y-4">
-                  {/* Plan Top Bar */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-3">
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-ink">
-                          {plan.subject}
-                        </span>
-                        <Badge variant="neutral" size="sm">
-                          {plan.difficulty || 'Medium'}
-                        </Badge>
-                        <span className="text-xs text-muted font-medium">
-                          Due {plan.deadline}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted">
-                        Goal: {plan.goal}
-                      </p>
-                    </div>
+            {studyPlans.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#667085] dark:text-white/50">
+                No active course plans yet. Click "Add Task" to create your first plan.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {studyPlans.map((plan) => {
+                  const topics = plan.topics || [];
+                  const doneCount = topics.filter(t => t.is_completed).length;
+                  const percent = topics.length > 0 ? Math.round((doneCount / topics.length) * 100) : 0;
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={Timer}
-                        onClick={() => openLogHoursModal(plan)}
-                      >
-                        Log Hours
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeletePlan(plan.id, plan.subject)}
-                        title="Delete plan"
-                      >
-                        <Trash2 className="w-4 h-4 text-danger/80 hover:text-danger" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Progress Overview */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-ink">
-                        {doneCount} of {topics.length} topics cleared
-                      </span>
-                      <span className="font-semibold text-academic">{percent}% Complete</span>
-                    </div>
-                    <ProgressBar value={doneCount} max={Math.max(1, topics.length)} showPercentage={false} size="sm" />
-                  </div>
-
-                  {/* Topic Checklist */}
-                  <div className="pt-2">
-                    <p className="text-[11px] font-semibold text-muted uppercase tracking-tight mb-2">
-                      Syllabus Topics
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {topics.map((t) => (
-                        <div
-                          key={t.id}
-                          onClick={() => handleToggleTopic(t.id, plan.subject)}
-                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
-                            t.is_completed
-                              ? 'bg-gray-50 border-gray-200 text-muted line-through'
-                              : 'bg-white border-border text-ink hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {t.is_completed ? (
-                              <CheckCircle2 className="w-4 h-4 text-academic shrink-0" />
-                            ) : (
-                              <Circle className="w-4 h-4 text-muted shrink-0" />
-                            )}
-                            <span className="truncate font-medium">{t.title}</span>
-                          </div>
+                  return (
+                    <div
+                      key={plan.id}
+                      className="p-4 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 shadow-sm space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-[#111827] dark:text-white">{plan.subject}</p>
+                          <p className="text-[11px] text-[#667085] dark:text-white/60">Due: {plan.deadline || 'This Term'}</p>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openLogHoursModal(plan)}
+                            className="px-2.5 py-1 rounded-lg bg-[#DDEFE5] text-[#176B4D] text-[11px] font-bold hover:bg-[#176B4D] hover:text-white transition-colors"
+                          >
+                            Log
+                          </button>
+                          <span className="text-xs font-mono font-bold text-[#176B4D] dark:text-[#8FC9AE]">
+                            {percent}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-black/5 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-[#176B4D] h-full rounded-full transition-all duration-300"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Right Column: Today Tasks Checklist (span 5) */}
+        <div className="lg:col-span-5 space-y-5">
+          <div className="glass-panel rounded-2xl p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between min-h-[460px]">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-base font-bold text-[#111827] dark:text-white">
+                    Today's Tasks
+                  </h2>
+                  <p className="text-xs text-[#667085] dark:text-white/60">
+                    {todaySchedule.filter(s => !s.isCompleted).length} pending focus objectives
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsNewPlanOpen(true)}
+                  className="w-7 h-7 rounded-lg bg-[#DDEFE5] text-[#176B4D] hover:bg-[#176B4D] hover:text-white flex items-center justify-center transition-colors"
+                  title="Add Task"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
+              {todaySchedule.length === 0 ? (
+                <div className="py-16 text-center text-xs text-[#667085] dark:text-white/50">
+                  All tasks cleared for today! Create a new plan to add objectives.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {todaySchedule.slice(0, 7).map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleToggleTopic(item.id, item.subject)}
+                      className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                        item.isCompleted
+                          ? 'bg-black/5 dark:bg-white/5 border-transparent text-[#667085] line-through'
+                          : 'bg-white/70 dark:bg-white/5 border-white/80 dark:border-white/10 text-[#111827] dark:text-white hover:border-[#176B4D]/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                          item.isCompleted
+                            ? 'bg-[#176B4D] border-[#176B4D] text-white'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}>
+                          {item.isCompleted && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold truncate">{item.topicTitle}</p>
+                          <p className="text-[10px] text-[#667085] dark:text-white/50 font-mono truncate">
+                            {item.subject} • {item.duration}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#667085] dark:text-white/50 shrink-0">
+                        {item.time}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Reminder Pill */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs text-[#667085] dark:text-white/60">
+              <span>{completedTopics} of {totalTopics} completed</span>
+              <span className="font-bold text-[#176B4D] dark:text-[#A7F3D0]">
+                {totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0}% Mastered
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* --- MODAL 1: CREATE STUDY PLAN --- */}
-      <Modal
-        isOpen={isNewPlanOpen}
-        onClose={() => setIsNewPlanOpen(false)}
-        title="Create Study Plan"
-        description="Establish goals, schedule study cadence, and list topics to cover."
-      >
-        <form onSubmit={handleCreatePlan} className="space-y-4">
-          <Input
-            label="Course / Subject"
-            placeholder="e.g. Database Systems, Linear Algebra"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            required
-          />
-          <Input
-            label="Target Goal"
-            placeholder="e.g. Master SQL queries and schema normalization"
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            required
-          />
-          <div className="grid grid-cols-2 gap-3">
+      {/* ── Modal: Create Study Plan ─────────────────────────────────── */}
+      {isNewPlanOpen && (
+        <Modal
+          isOpen={isNewPlanOpen}
+          onClose={() => setIsNewPlanOpen(false)}
+          title="Create New Study Plan"
+          description="Add a structured syllabus checklist to pace your academic preparation."
+        >
+          <form onSubmit={handleCreatePlan} className="space-y-4">
             <Input
-              label="Target Deadline"
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              label="Course / Subject Code"
+              placeholder="e.g. CSC 301 or Engineering Mathematics"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
               required
             />
-            <Select
-              label="Review Cadence"
-              value={frequency}
-              onChange={(e) => setFrequency(e.target.value)}
-              options={[
-                { value: 'Daily (2 hours)', label: 'Daily (2 hours)' },
-                { value: '3x Weekly (1.5 hours)', label: '3x Weekly (1.5 hours)' },
-                { value: 'Weekend Marathon (4 hours)', label: 'Weekend Marathon (4 hours)' }
-              ]}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Difficulty Level"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              options={[
-                { value: 'Easy', label: 'Easy' },
-                { value: 'Medium', label: 'Medium' },
-                { value: 'Hard', label: 'Hard' }
-              ]}
-            />
             <Input
-              label="Estimated Total Hours"
+              label="Learning Goal"
+              placeholder="e.g. Master dynamic programming and graph traversals"
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              required
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Target Deadline"
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                required
+              />
+              <Input
+                label="Estimated Hours"
+                type="number"
+                value={estimatedHours}
+                onChange={(e) => setEstimatedHours(e.target.value)}
+                min="1"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#111827] dark:text-white">
+                Topics (One per line)
+              </label>
+              <textarea
+                rows={4}
+                value={topicsInput}
+                onChange={(e) => setTopicsInput(e.target.value)}
+                placeholder="Topic 1: Divide and Conquer&#10;Topic 2: Greedy Methods&#10;Topic 3: Shortest Paths"
+                className="w-full bg-white/70 dark:bg-white/5 text-[#111827] dark:text-white text-xs rounded-xl p-3 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-[#176B4D]"
+              />
+            </div>
+            <div className="pt-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsNewPlanOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#667085] hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C]"
+              >
+                Create Plan
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ── Modal: Log Hours ─────────────────────────────────────────── */}
+      {isLogHoursOpen && selectedPlanForLog && (
+        <Modal
+          isOpen={isLogHoursOpen}
+          onClose={() => setIsLogHoursOpen(false)}
+          title={`Log Study Session: ${selectedPlanForLog.subject}`}
+          description="Record study duration and track your daily velocity."
+        >
+          <form onSubmit={handleSubmitLogHours} className="space-y-4">
+            <Input
+              label="Duration (Minutes)"
               type="number"
-              min="1"
-              max="200"
-              value={estimatedHours}
-              onChange={(e) => setEstimatedHours(e.target.value)}
+              value={logMinutes}
+              onChange={(e) => setLogMinutes(e.target.value)}
+              min="15"
+              step="15"
+              required
             />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-ink">
-              Topic Checklist (One topic per line)
-            </label>
-            <textarea
-              rows={4}
-              placeholder="Introduction to Relational Models&#10;ER Diagrams & Entities&#10;SQL Joins & Aggregations&#10;Normal Forms (1NF, 2NF, 3NF)"
-              value={topicsInput}
-              onChange={(e) => setTopicsInput(e.target.value)}
-              className="w-full bg-white text-ink text-sm rounded-[10px] p-3 border border-border focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-4">
-            <Button variant="secondary" onClick={() => setIsNewPlanOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="academic">
-              Create Plan
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* --- MODAL 2: LOG STUDY HOURS --- */}
-      <Modal
-        isOpen={isLogHoursOpen}
-        onClose={() => setIsLogHoursOpen(false)}
-        title={`Log Study Session: ${selectedPlanForLog?.subject || ''}`}
-        description="Record focused study minutes to keep your streak and habit velocity updated."
-      >
-        <form onSubmit={handleSubmitLogHours} className="space-y-4">
-          <Input
-            label="Duration in Minutes"
-            type="number"
-            min="10"
-            max="600"
-            step="5"
-            value={logMinutes}
-            onChange={(e) => setLogMinutes(e.target.value)}
-            required
-          />
-          <Input
-            label="Session Notes (Optional)"
-            placeholder="e.g. Covered Chapter 4 exercises and sample exam questions."
-            value={logNotes}
-            onChange={(e) => setLogNotes(e.target.value)}
-          />
-
-          <div className="flex items-center justify-end gap-2 pt-4">
-            <Button variant="secondary" onClick={() => setIsLogHoursOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="academic">
-              Save Session
-            </Button>
-          </div>
-        </form>
-      </Modal>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#111827] dark:text-white">
+                Session Notes (Optional)
+              </label>
+              <textarea
+                rows={3}
+                value={logNotes}
+                onChange={(e) => setLogNotes(e.target.value)}
+                placeholder="Key concepts reviewed, formulas practiced, questions resolved..."
+                className="w-full bg-white/70 dark:bg-white/5 text-[#111827] dark:text-white text-xs rounded-xl p-3 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-[#176B4D]"
+              />
+            </div>
+            <div className="pt-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsLogHoursOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#667085] hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C]"
+              >
+                Save Session
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

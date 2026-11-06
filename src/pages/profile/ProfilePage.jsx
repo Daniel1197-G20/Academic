@@ -20,7 +20,12 @@ import {
   Camera,
   Upload,
   Loader2,
-  X
+  X,
+  Moon,
+  Sun,
+  GraduationCap,
+  Award,
+  Settings
 } from 'lucide-react';
 import { Button, Input, Badge, Modal, Avatar, PageHeader, Tabs } from '../../components/ui';
 import { api } from '../../services/api/client';
@@ -64,6 +69,34 @@ export function ProfilePage({
 
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // Appearance / Dark Mode State
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('studora_theme');
+      if (saved) return saved === 'dark';
+      return document.documentElement.classList.contains('dark') ||
+        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    return false;
+  });
+
+  const toggleTheme = (enableDark) => {
+    setIsDarkMode(enableDark);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('studora_theme', enableDark ? 'dark' : 'light');
+      if (enableDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+    showToast?.({
+      type: 'info',
+      title: 'Appearance Updated',
+      message: enableDark ? 'Dark appearance enabled.' : 'Light appearance enabled.'
+    });
+  };
 
   // Avatar Upload States
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -279,7 +312,7 @@ export function ProfilePage({
   };
 
   return (
-    <div className="max-w-4xl space-y-8 pb-20 md:pb-8">
+    <div className="max-w-5xl space-y-6 pb-20 md:pb-8">
       {/* Hidden Native File Input with Camera Support for Mobile */}
       <input
         type="file"
@@ -290,23 +323,29 @@ export function ProfilePage({
         aria-label="Upload profile photo"
       />
 
-      {/* 1. Header */}
-      <PageHeader
-        title="Student Profile & Settings"
-        description="Manage your institutional affiliations, student identity, and privacy rights."
-      />
+      {/* 1. Header matching Dashboard visual tone */}
+      <div className="pt-1">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight font-sans">
+          Profile & Account
+        </h1>
+        <p className="text-xs sm:text-sm text-[#667085] dark:text-white/70 mt-0.5">
+          Manage your personal details, academic information, and settings
+        </p>
+      </div>
 
-      {/* 2. Profile Identity Banner */}
-      <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
+      {/* 2. Profile Identity Banner matching Section 0_1 */}
+      <div className="glass-panel rounded-2xl p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 flex-1 min-w-0">
-            {/* Avatar Avatar Container with Camera Overlay */}
+            {/* Avatar Container with Camera Overlay */}
             <div className="relative group shrink-0">
-              <Avatar
-                name={fullName || 'Student'}
-                src={avatarUrl}
-                size="xl"
-              />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-white/80 dark:border-white/10 shadow-sm bg-[#176B4D] flex items-center justify-center text-white font-bold text-2xl">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={fullName || 'Student'} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(fullName || 'Student').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                )}
+              </div>
               {uploadingAvatar ? (
                 <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center text-white">
                   <Loader2 className="w-6 h-6 animate-spin" />
@@ -315,7 +354,7 @@ export function ProfilePage({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 p-1.5 rounded-full bg-academic text-white shadow-md hover:bg-academic-600 transition-transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-academic"
+                  className="absolute bottom-0 right-0 p-2 rounded-full bg-[#176B4D] text-white shadow-md hover:bg-[#12543C] transition-transform hover:scale-105 active:scale-95 focus:outline-none"
                   title="Upload profile picture"
                   aria-label="Upload profile picture"
                 >
@@ -324,68 +363,88 @@ export function ProfilePage({
               )}
             </div>
 
-            <div className="space-y-1 flex-1 min-w-0">
+            <div className="space-y-1.5 flex-1 min-w-0">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h2 className="text-xl sm:text-2xl font-bold text-ink truncate">{fullName}</h2>
-                <Badge variant="academic">Verified Student</Badge>
+                <h2 className="text-xl sm:text-2xl font-bold text-[#111827] dark:text-white truncate">{fullName || 'Alex Johnson'}</h2>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#DDEFE5] dark:bg-[#176B4D]/40 text-[#176B4D] dark:text-[#A7F3D0] text-xs font-bold">
+                  {userProfile?.role === 'tutor' ? 'Verified Tutor' : 'Verified Student'}
+                </span>
               </div>
-              <p className="text-xs sm:text-sm text-muted">
+              <p className="text-xs sm:text-sm text-[#667085] dark:text-white/70">
                 {institution || 'University Member'} • {department || 'Department Member'}
               </p>
-              <p className="text-xs text-muted">
-                ID / Matric: <strong className="text-ink font-mono font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
+              <p className="text-xs text-[#667085] dark:text-white/60">
+                ID / Matric: <strong className="text-[#111827] dark:text-white font-mono font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
               </p>
 
               {/* Upload & Remove Picture Action Row */}
-              <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-
+              <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] transition-all shadow-sm"
+                >
+                  Upload Picture
+                </button>
                 {avatarUrl && (
-                  <Button
-                    variant="ghost"
-                    size="xs"
+                  <button
+                    type="button"
                     onClick={handleRemoveAvatar}
                     disabled={uploadingAvatar}
-                    icon={Trash2}
-                    className="text-muted hover:text-danger"
+                    className="px-3 py-1 rounded-xl bg-white/70 dark:bg-white/10 text-[#667085] dark:text-white/70 text-xs font-semibold hover:text-[#EF4444] transition-all border border-gray-200 dark:border-gray-800"
                   >
                     Remove Photo
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
           </div>
           {onLogout && (
             <div className="pt-2 sm:pt-0 shrink-0">
-              <Button
-                variant="secondary"
-                size="sm"
+              <button
+                type="button"
                 onClick={() => setShowLogoutModal(true)}
-                icon={LogOut}
-                className="text-danger hover:text-danger hover:bg-danger-50 hover:border-danger-200"
+                className="px-3.5 py-1.5 rounded-xl border border-[#EF4444]/40 text-[#EF4444] text-xs font-bold hover:bg-[#EF4444]/10 transition-colors flex items-center gap-1.5"
               >
-                Sign Out
-              </Button>
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* 3. Section Tabs — Physical Sliding Tile */}
-      <div className="flex justify-start">
-        <Tabs
-          tabs={[
-            { id: 'academic', label: 'Academic Identity', icon: User },
-            { id: 'subscription', label: 'Plan & Billing', icon: CreditCard },
-            { id: 'privacy', label: 'Privacy & Data Rights', icon: Shield }
-          ]}
-          activeTab={activeSubTab}
-          onChange={setActiveSubTab}
-        />
+      {/* 3. Section Tabs matching Section 0_1 */}
+      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2 overflow-x-auto no-scrollbar">
+        {[
+          { id: 'personal', label: 'Personal Info', icon: User },
+          { id: 'academic', label: 'Academic Details', icon: GraduationCap },
+          { id: 'achievements', label: 'Achievements', icon: Award },
+          { id: 'settings', label: 'Settings', icon: Settings }
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeSubTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSubTab(tab.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
+                isActive
+                  ? 'bg-[#176B4D] text-white shadow-sm'
+                  : 'text-[#667085] dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 4. Tab 1: Academic Form */}
-      {activeSubTab === 'academic' && (
-        <div className="bg-white border border-border rounded-card p-6 shadow-tactile-raised">
+      {/* 4. Tab: Personal / Academic Form */}
+      {(activeSubTab === 'academic' || activeSubTab === 'personal') && (
+        <div className="glass-panel rounded-2xl p-5 sm:p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
@@ -394,7 +453,12 @@ export function ProfilePage({
                 onChange={(e) => setFullName(e.target.value)}
                 required
               />
-
+              <Input
+                label="Student Matriculation ID"
+                value={matricNumber}
+                onChange={(e) => setMatricNumber(e.target.value)}
+                placeholder="e.g. AIT/2023/CS/084"
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -416,15 +480,8 @@ export function ProfilePage({
               />
             </div>
 
-            <Input
-              label="Student Matriculation ID"
-              value={matricNumber}
-              onChange={(e) => setMatricNumber(e.target.value)}
-              placeholder="e.g. AIT/2023/CS/084"
-            />
-
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-ink">
+              <label className="block text-xs font-semibold text-[#111827] dark:text-white">
                 Academic Bio & Research Focus
               </label>
               <textarea
@@ -432,7 +489,7 @@ export function ProfilePage({
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Academic interests, research areas, or study focus..."
-                className="w-full bg-white text-ink text-sm rounded-[10px] p-3 border border-border focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic"
+                className="w-full bg-white/70 dark:bg-white/5 text-[#111827] dark:text-white text-sm rounded-xl p-3 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-[#176B4D] focus:ring-1 focus:ring-[#176B4D]"
               />
             </div>
 
@@ -451,30 +508,169 @@ export function ProfilePage({
               />
             </div>
 
-            <div className="pt-4 border-t border-border flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-muted">
-                <ShieldCheck className="w-4 h-4 text-academic" />
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-[#667085] dark:text-white/60">
+                <ShieldCheck className="w-4 h-4 text-[#176B4D]" />
                 <span>All changes synchronized to your secure database profile</span>
               </div>
-              <Button
+              <button
                 type="submit"
-                variant="academic"
-                loading={saving}
-                icon={Save}
+                disabled={saving}
+                className="px-5 py-2.5 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] transition-all shadow-sm flex items-center gap-1.5"
               >
-                Save Profile
-              </Button>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save Profile</span>
+              </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Tab 2: Subscription & Billing */}
-      {activeSubTab === 'subscription' && (
-        <SubscriptionSettingsSection
-          onNavigatePricing={onNavigatePricing}
-          showToast={showToast}
-        />
+      {/* Tab: Achievements */}
+      {activeSubTab === 'achievements' && (
+        <div className="glass-panel rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-[#111827] dark:text-white">Academic Badges & Credentials</h3>
+            <span className="text-xs font-mono text-[#176B4D] dark:text-[#8FC9AE]">3 Earned</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center font-bold text-lg">
+                🏆
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#111827] dark:text-white">Honor Roll</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">First Class Standing</p>
+              </div>
+            </div>
+            <div className="p-4 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#F6E6C2] text-[#78350F] flex items-center justify-center font-bold text-lg">
+                🔥
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#111827] dark:text-white">Focus Master</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">10+ Study Streak</p>
+              </div>
+            </div>
+            <div className="p-4 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-lg">
+                ⭐
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#111827] dark:text-white">Verified Scholar</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">Identity Confirmed</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Settings */}
+      {activeSubTab === 'settings' && (
+        <div className="space-y-6">
+          <div className="glass-panel rounded-2xl p-6 shadow-sm space-y-5">
+            <div>
+              <h3 className="text-base font-bold text-[#111827] dark:text-white flex items-center gap-2">
+                <Settings className="w-4 h-4 text-[#176B4D]" />
+                Account & Appearance Settings
+              </h3>
+              <p className="text-xs text-[#667085] dark:text-white/60 mt-0.5">
+                Manage your theme appearance, data privacy rights, and account security.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Light Appearance Option */}
+              <button
+                type="button"
+                onClick={() => toggleTheme(false)}
+                className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between space-y-3 ${
+                  !isDarkMode
+                    ? 'border-[#176B4D] bg-[#DDEFE5]/50 shadow-sm ring-2 ring-[#176B4D]/20'
+                    : 'border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-white/5 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                      <Sun className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#111827] dark:text-white">Light Appearance</h4>
+                      <p className="text-[11px] text-[#667085] dark:text-white/60">Soft off-white canvas with dark ink</p>
+                    </div>
+                  </div>
+                  {!isDarkMode && (
+                    <Badge variant="academic" size="sm">Active</Badge>
+                  )}
+                </div>
+              </button>
+
+              {/* Dark Appearance Option */}
+              <button
+                type="button"
+                onClick={() => toggleTheme(true)}
+                className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between space-y-3 ${
+                  isDarkMode
+                    ? 'border-[#176B4D] bg-[#176B4D]/30 shadow-sm ring-2 ring-[#176B4D]/20'
+                    : 'border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-white/5 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-navy-950 border border-navy-800 flex items-center justify-center text-white">
+                      <Moon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#111827] dark:text-white">Dark Appearance</h4>
+                      <p className="text-[11px] text-[#667085] dark:text-white/60">Deep navy & ink surfaces for low light</p>
+                    </div>
+                  </div>
+                  {isDarkMode && (
+                    <Badge variant="academic" size="sm">Active</Badge>
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Account Privacy & Security Controls */}
+          <div className="glass-panel rounded-2xl p-6 shadow-sm space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#667085] dark:text-white/60">
+              Data & Security
+            </h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div>
+                <p className="text-xs font-bold text-[#111827] dark:text-white">Export Academic Archive</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">Download a JSON record of all course history and study logs.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportData}
+                disabled={exporting}
+                className="px-3.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-800 text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 shrink-0 flex items-center gap-1.5"
+              >
+                {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                <span>Download Archive</span>
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+              <div>
+                <p className="text-xs font-bold text-[#EF4444]">Permanent Account Deletion</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">Erase all academic records, messages, and profile data.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="px-3.5 py-1.5 rounded-xl border border-[#EF4444]/40 text-[#EF4444] text-xs font-bold hover:bg-[#EF4444]/10 shrink-0 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Account</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 5. Tab 2: Privacy & Data Rights */}
