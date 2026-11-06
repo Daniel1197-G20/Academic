@@ -446,7 +446,7 @@ export function DashboardPage({
                   />
                   <path
                     className="text-[#176B4D]"
-                    strokeDasharray={`${overallStudyProgress || 85}, 100`}
+                    strokeDasharray={`${overallStudyProgress}, 100`}
                     strokeWidth="3.8"
                     strokeLinecap="round"
                     stroke="currentColor"
@@ -456,11 +456,11 @@ export function DashboardPage({
                 </svg>
               </div>
               <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">
-                {overallStudyProgress || 85}%
+                {overallStudyProgress}%
               </span>
             </div>
             <p className="text-[10px] text-[#667085] dark:text-white/50 truncate">
-              Based on active plans
+              {studyPlans.length > 0 ? `${studyPlans.length} active study plan${studyPlans.length > 1 ? 's' : ''}` : 'No active study plans'}
             </p>
           </div>
 
@@ -479,7 +479,7 @@ export function DashboardPage({
             </div>
             <div className="flex items-baseline gap-2 my-2">
               <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">
-                {courseCount || 6}
+                {courseCount}
               </span>
             </div>
             <p className="text-[10px] text-[#667085] dark:text-white/50 truncate">
@@ -502,7 +502,7 @@ export function DashboardPage({
             </div>
             <div className="flex items-baseline gap-1 my-2">
               <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">
-                {studyStreakDays > 0 ? studyStreakDays : 12}
+                {studyStreakDays}
               </span>
               <span className="text-sm font-bold text-[#111827] dark:text-white">Days</span>
             </div>
@@ -522,8 +522,30 @@ export function DashboardPage({
           <span className="text-xs text-[#176B4D]">⚡</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Action 1: Find a Tutor */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* Action 1: Messages & Chat */}
+          <button
+            type="button"
+            onClick={() => onNavigateTab('messages')}
+            className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group relative"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
+                Messages
+              </p>
+              <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
+                Chat with tutors
+              </p>
+            </div>
+            {unreadMessages > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#176B4D]" />
+            )}
+          </button>
+
+          {/* Action 2: Find a Tutor */}
           <button
             type="button"
             onClick={() => onNavigateTab('tutors')}
@@ -542,7 +564,7 @@ export function DashboardPage({
             </div>
           </button>
 
-          {/* Action 2: My Courses */}
+          {/* Action 3: My Courses */}
           <button
             type="button"
             onClick={() => onNavigateTab('cgpa')}
@@ -561,7 +583,7 @@ export function DashboardPage({
             </div>
           </button>
 
-          {/* Action 3: Study Plan */}
+          {/* Action 4: Study Plan */}
           <button
             type="button"
             onClick={() => onNavigateTab('study')}
@@ -580,7 +602,7 @@ export function DashboardPage({
             </div>
           </button>
 
-          {/* Action 4: Take Assessment */}
+          {/* Action 5: Take Assessment */}
           <button
             type="button"
             onClick={() => onNavigateTab('test-prep')}
@@ -591,10 +613,10 @@ export function DashboardPage({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                Take Assessment
+                Assessment
               </p>
               <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
-                Test your knowledge
+                Test knowledge
               </p>
             </div>
           </button>
@@ -643,12 +665,12 @@ export function DashboardPage({
                     <div className="p-2.5">
                       <div className="flex items-center justify-between text-[10px] text-[#667085] dark:text-white/60 mb-1">
                         <span>Progress</span>
-                        <span className="font-bold text-[#176B4D]">{c.progress || 50}%</span>
+                        <span className="font-bold text-[#176B4D]">{c.progress ?? 0}%</span>
                       </div>
                       <div className="w-full h-1.5 rounded-full bg-gray-200 dark:bg-navy-700 overflow-hidden">
                         <div
                           className="h-full bg-[#176B4D] rounded-full transition-all"
-                          style={{ width: `${c.progress || 50}%` }}
+                          style={{ width: `${c.progress ?? 0}%` }}
                         />
                       </div>
                     </div>
