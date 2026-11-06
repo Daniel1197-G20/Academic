@@ -365,7 +365,7 @@ export function ProfilePage({
 
             <div className="space-y-1.5 flex-1 min-w-0">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h2 className="text-xl sm:text-2xl font-bold text-[#111827] dark:text-white truncate">{fullName || 'Alex Johnson'}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-[#111827] dark:text-white truncate">{fullName || 'Student'}</h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-[#DDEFE5] dark:bg-[#176B4D]/40 text-[#176B4D] dark:text-[#A7F3D0] text-xs font-bold">
                   {userProfile?.role === 'tutor' ? 'Verified Tutor' : 'Verified Student'}
                 </span>

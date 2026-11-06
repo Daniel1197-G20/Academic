@@ -55,8 +55,8 @@ function TutorCard({ tutor, onBook, onNavigate }) {
   const priceFormatted = tutor.sessionPriceKobo
     ? `₦${(tutor.sessionPriceKobo / 100).toLocaleString()}`
     : '₦10,000';
-  const ratingValue = tutor.rating ? tutor.rating.toFixed(1) : '4.9';
-  const sessionCount = tutor.reviewCount > 0 ? tutor.reviewCount : 120;
+  const ratingValue = tutor.rating ? tutor.rating.toFixed(1) : null;
+  const sessionCount = tutor.reviewCount || 0;
 
   return (
     <div className="glass-panel rounded-2xl p-5 flex flex-col items-center text-center justify-between hover:shadow-lg transition-all duration-200">
@@ -104,9 +104,17 @@ function TutorCard({ tutor, onBook, onNavigate }) {
 
       {/* Star Rating & Session Count */}
       <div className="flex items-center justify-center gap-1 text-xs text-[#667085] dark:text-white/70 mb-4">
-        <span className="font-bold text-[#111827] dark:text-white font-mono">{ratingValue}</span>
-        <Star className="w-3.5 h-3.5 text-[#F59E0B] fill-[#F59E0B]" />
-        <span className="text-[11px] font-mono">({sessionCount} sessions)</span>
+        {ratingValue ? (
+          <>
+            <span className="font-bold text-[#111827] dark:text-white font-mono">{ratingValue}</span>
+            <Star className="w-3.5 h-3.5 text-[#F59E0B] fill-[#F59E0B]" />
+          </>
+        ) : (
+          <span className="text-[11px] text-[#176B4D] dark:text-[#A7F3D0] font-semibold">New Tutor</span>
+        )}
+        <span className="text-[11px] font-mono text-muted dark:text-white/50">
+          ({sessionCount} {sessionCount === 1 ? 'session' : 'sessions'})
+        </span>
       </div>
 
       {/* View Profile / Book Action Button */}

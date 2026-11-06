@@ -150,9 +150,20 @@ function ErrorAlert({ message, onDismiss }) {
 }
 
 // ── Assessment timer ─────────────────────────────────────────────────────────
-function AssessmentTimer({ limitMinutes, onTimeout }) {
-  const [secondsLeft, setSecondsLeft] = useState(limitMinutes * 60);
+function AssessmentTimer({ limitMinutes, startTime, onTimeout }) {
+  const getSecondsLeft = useCallback(() => {
+    if (!startTime) return limitMinutes * 60;
+    const elapsedSeconds = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000);
+    const totalSeconds = limitMinutes * 60;
+    return Math.max(0, totalSeconds - elapsedSeconds);
+  }, [limitMinutes, startTime]);
+
+  const [secondsLeft, setSecondsLeft] = useState(getSecondsLeft);
   const timedOut = useRef(false);
+
+  useEffect(() => {
+    setSecondsLeft(getSecondsLeft());
+  }, [getSecondsLeft]);
 
   useEffect(() => {
     if (secondsLeft <= 0) {
@@ -631,6 +642,10 @@ function AssessmentView({ applicationId, showToast, onComplete, onBack }) {
   const [localError, setLocalError] = useState(null);
   const timedOut = useRef(false);
 
+  // Storage key for resilient in-progress attempt recovery
+  const storageKey = `studora_assessment_${applicationId}`;
+
+  // Restore saved state from localStorage or initialize
   useEffect(() => {
     let mounted = true;
     async function init() {
@@ -643,6 +658,32 @@ function AssessmentView({ applicationId, showToast, onComplete, onBack }) {
           setPhase('error');
           return;
         }
+
+        // Check for active cached session in localStorage
+        try {
+          const cached = localStorage.getItem(storageKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed?.attempt_id && parsed?.questions?.length > 0 && parsed?.startTime) {
+              const elapsedSeconds = Math.floor((Date.now() - new Date(parsed.startTime).getTime()) / 1000);
+              const totalLimitSeconds = (parsed.time_limit_minutes || 20) * 60;
+              if (elapsedSeconds < totalLimitSeconds) {
+                // Resume ongoing attempt!
+                setSessionData(parsed);
+                setAnswers(parsed.answers || {});
+                setCurrentQ(parsed.currentQ || 0);
+                setPhase('answering');
+                return;
+              } else {
+                // Session expired while away
+                localStorage.removeItem(storageKey);
+              }
+            }
+          }
+        } catch (storageErr) {
+          console.warn('Failed to parse cached assessment session:', storageErr);
+        }
+
         setPhase('ready');
       } catch (err) {
         if (mounted) { setLocalError(err.message); setPhase('error'); }
@@ -650,7 +691,23 @@ function AssessmentView({ applicationId, showToast, onComplete, onBack }) {
     }
     init();
     return () => { mounted = false; };
-  }, [applicationId, fetchAttemptCount]);
+  }, [applicationId, fetchAttemptCount, storageKey]);
+
+  // Persist current session progress (answers, currentQ) to localStorage
+  useEffect(() => {
+    if (phase === 'answering' && sessionData?.attempt_id) {
+      try {
+        const payload = {
+          ...sessionData,
+          answers,
+          currentQ,
+        };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch (e) {
+        console.warn('Failed to persist assessment progress:', e);
+      }
+    }
+  }, [phase, sessionData, answers, currentQ, storageKey]);
 
   const handleStart = async () => {
     setLocalError(null);
@@ -661,10 +718,19 @@ function AssessmentView({ applicationId, showToast, onComplete, onBack }) {
       if (data?.questions?.some((q) => q.correct_answer !== undefined)) {
         throw new Error('Assessment data integrity error. Please contact support.');
       }
-      setSessionData(data);
+      const newSession = {
+        ...data,
+        startTime: new Date().toISOString(),
+      };
+      setSessionData(newSession);
       setAnswers({});
       setCurrentQ(0);
       timedOut.current = false;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({ ...newSession, answers: {}, currentQ: 0 }));
+      } catch (e) {
+        console.warn('Failed to write assessment session to localStorage:', e);
+      }
       setPhase('answering');
     } catch (err) {
       setLocalError(err.message);
@@ -686,6 +752,11 @@ function AssessmentView({ applicationId, showToast, onComplete, onBack }) {
     setLocalError(null);
     try {
       const result = await submitAssessment(sessionData.attempt_id, answers);
+      try {
+        localStorage.removeItem(storageKey);
+      } catch (e) {
+        // ignore
+      }
       setResult(result);
       setPhase('done');
       onComplete(result);
@@ -822,7 +893,7 @@ function AssessmentView({ applicationId, showToast, onComplete, onBack }) {
                 {question.difficulty}
               </span>
             </div>
-            <AssessmentTimer limitMinutes={sessionData.time_limit_minutes} onTimeout={handleTimeout} />
+            <AssessmentTimer limitMinutes={sessionData.time_limit_minutes} startTime={sessionData.startTime} onTimeout={handleTimeout} />
           </div>
           <div className="mt-2 h-1 bg-border rounded-full overflow-hidden">
             <div

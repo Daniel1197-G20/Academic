@@ -83,42 +83,6 @@ export function MyCoursesPage({
       });
     });
 
-    // Fallback courses strictly matching the visual reference mockup if user hasn't added courses yet
-    if (list.length === 0) {
-      return [
-        {
-          id: 'ref-1',
-          title: 'Advanced Mathematics',
-          description: 'Calculus, vectors, and differential equations',
-          progress: 75,
-          isCompleted: false,
-          image: '/campus-background.png',
-          topicsCount: 12,
-          completedCount: 9
-        },
-        {
-          id: 'ref-2',
-          title: 'Computer Science',
-          description: 'Data structures, algorithms, and system design',
-          progress: 60,
-          isCompleted: false,
-          image: '/campus-background.png',
-          topicsCount: 15,
-          completedCount: 9
-        },
-        {
-          id: 'ref-3',
-          title: 'Physics Fundamentals',
-          description: 'Classical mechanics, thermodynamics, and optics',
-          progress: 40,
-          isCompleted: false,
-          image: '/campus-background.png',
-          topicsCount: 10,
-          completedCount: 4
-        }
-      ];
-    }
-
     return list;
   }, [studyPlans, semesters]);
 
@@ -217,62 +181,81 @@ export function MyCoursesPage({
           </div>
 
           {/* ── 3. COURSE CARDS GRID (Matches Section 2_0) ──────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredCourses.map((course) => (
-              <div
-                key={course.id}
-                className="glass-panel rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-              >
-                {/* Architectural / topic banner image */}
-                <div className="h-36 w-full overflow-hidden relative bg-gray-100 dark:bg-navy-800">
-                  <img
-                    src={course.image}
-                    alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <span className="absolute bottom-2.5 left-3 text-sm font-bold text-white drop-shadow-sm truncate max-w-[85%]">
-                    {course.title}
-                  </span>
-                </div>
-
-                {/* Course Details & Progress Bar */}
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#667085] dark:text-white/60 font-medium">
-                      Progress: {course.progress}%
-                    </span>
-                    <span className="text-[11px] font-mono text-[#667085] dark:text-white/50">
-                      {course.completedCount}/{course.topicsCount} topics
-                    </span>
-                  </div>
-
-                  {/* Emerald Progress Bar */}
-                  <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-navy-700 overflow-hidden">
-                    <div
-                      className="h-full bg-[#176B4D] rounded-full transition-all duration-300"
-                      style={{ width: `${course.progress}%` }}
+          {filteredCourses.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredCourses.map((course) => (
+                <div
+                  key={course.id}
+                  className="glass-panel rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                >
+                  {/* Architectural / topic banner image */}
+                  <div className="h-36 w-full overflow-hidden relative bg-gray-100 dark:bg-navy-800">
+                    <img
+                      src={course.image}
+                      alt={course.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <span className="absolute bottom-2.5 left-3 text-sm font-bold text-white drop-shadow-sm truncate max-w-[85%]">
+                      {course.title}
+                    </span>
                   </div>
 
-                  {/* Actions Row */}
-                  <div className="flex items-center justify-between pt-1">
-                    <p className="text-[11px] text-[#667085] dark:text-white/50 truncate max-w-[180px]">
-                      {course.description}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab ? onNavigateTab('study') : null}
-                      className="w-8 h-8 rounded-full bg-[#176B4D] text-white flex items-center justify-center hover:bg-[#12543C] transition-colors shadow-sm"
-                      title="Continue Learning"
-                    >
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                  {/* Course Details & Progress Bar */}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#667085] dark:text-white/60 font-medium">
+                        Progress: {course.progress}%
+                      </span>
+                      <span className="text-[11px] font-mono text-[#667085] dark:text-white/50">
+                        {course.completedCount}/{course.topicsCount} topics
+                      </span>
+                    </div>
+
+                    {/* Emerald Progress Bar */}
+                    <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-navy-700 overflow-hidden">
+                      <div
+                        className="h-full bg-[#176B4D] rounded-full transition-all duration-300"
+                        style={{ width: `${course.progress}%` }}
+                      />
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[11px] text-[#667085] dark:text-white/50 truncate max-w-[180px]">
+                        {course.description}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab ? onNavigateTab('study') : null}
+                        className="w-8 h-8 rounded-full bg-[#176B4D] text-white flex items-center justify-center hover:bg-[#12543C] transition-colors shadow-sm"
+                        title="Continue Learning"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass-panel rounded-2xl p-8 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center mx-auto">
+                <BookOpen className="w-6 h-6" />
               </div>
-            ))}
-          </div>
+              <h3 className="text-base font-bold text-[#111827] dark:text-white">No courses registered</h3>
+              <p className="text-xs text-[#667085] dark:text-white/60 max-w-sm mx-auto">
+                You have not registered any courses for this semester yet. Add your courses under CGPA records or create study plans to see them here.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAcademicGrades(true)}
+                className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C]"
+              >
+                Register Course
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

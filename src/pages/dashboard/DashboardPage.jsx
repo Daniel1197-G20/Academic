@@ -403,7 +403,7 @@ export function DashboardPage({
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-base sm:text-lg font-bold text-[#111827] dark:text-white truncate">
-              {userProfile?.full_name || 'Alex Johnson'}
+              {userProfile?.full_name || 'Studora Scholar'}
             </h3>
             <p className="text-xs text-[#667085] dark:text-white/60 mb-2.5">
               {roleLabel}
@@ -621,43 +621,55 @@ export function DashboardPage({
             </div>
 
             {/* Architectural Course Thumbnails matching the reference */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(enrolledCourses.length > 0 ? enrolledCourses.slice(0, 3) : [
-                { id: 'c1', name: 'Advanced Mathematics', next: 'Calculus & Vectors', progress: 75 },
-                { id: 'c2', name: 'Computer Science', next: 'Data Structures & Algorithms', progress: 60 },
-                { id: 'c3', name: 'Physics Fundamentals', next: 'Classical Mechanics', progress: 40 }
-              ]).map((c, i) => (
-                <div
-                  key={c.id || i}
-                  onClick={() => onNavigateTab('cgpa')}
-                  className="rounded-xl overflow-hidden bg-white/80 dark:bg-white/5 border border-white/80 dark:border-white/10 shadow-sm cursor-pointer hover:shadow-md transition-all group"
-                >
-                  <div className="h-20 w-full overflow-hidden bg-gray-100 dark:bg-navy-800 relative">
-                    <img
-                      src={`/campus-background.png`}
-                      alt={c.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <span className="absolute bottom-1.5 left-2 text-[10px] font-bold text-white truncate max-w-[90%]">
-                      {c.name}
-                    </span>
-                  </div>
-                  <div className="p-2.5">
-                    <div className="flex items-center justify-between text-[10px] text-[#667085] dark:text-white/60 mb-1">
-                      <span>Progress</span>
-                      <span className="font-bold text-[#176B4D]">{c.progress || 50}%</span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-gray-200 dark:bg-navy-700 overflow-hidden">
-                      <div
-                        className="h-full bg-[#176B4D] rounded-full transition-all"
-                        style={{ width: `${c.progress || 50}%` }}
+            {enrolledCourses.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {enrolledCourses.slice(0, 3).map((c, i) => (
+                  <div
+                    key={c.id || i}
+                    onClick={() => onNavigateTab('cgpa')}
+                    className="rounded-xl overflow-hidden bg-white/80 dark:bg-white/5 border border-white/80 dark:border-white/10 shadow-sm cursor-pointer hover:shadow-md transition-all group"
+                  >
+                    <div className="h-20 w-full overflow-hidden bg-gray-100 dark:bg-navy-800 relative">
+                      <img
+                        src={`/campus-background.png`}
+                        alt={c.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <span className="absolute bottom-1.5 left-2 text-[10px] font-bold text-white truncate max-w-[90%]">
+                        {c.name}
+                      </span>
+                    </div>
+                    <div className="p-2.5">
+                      <div className="flex items-center justify-between text-[10px] text-[#667085] dark:text-white/60 mb-1">
+                        <span>Progress</span>
+                        <span className="font-bold text-[#176B4D]">{c.progress || 50}%</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-gray-200 dark:bg-navy-700 overflow-hidden">
+                        <div
+                          className="h-full bg-[#176B4D] rounded-full transition-all"
+                          style={{ width: `${c.progress || 50}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 text-center space-y-2">
+                <p className="text-xs font-semibold text-[#111827] dark:text-white">No courses registered yet</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">
+                  Add courses to your semester records or create a study plan to track progress here.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('cgpa')}
+                  className="px-3 py-1.5 rounded-lg bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C]"
+                >
+                  Add Courses
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -709,26 +721,17 @@ export function DashboardPage({
                 ))}
               </div>
             ) : (
-              <div className="p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 flex items-center justify-between gap-3 shadow-sm">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#111827] dark:text-white truncate">
-                      Math Tutoring Session
-                    </p>
-                    <p className="text-[11px] text-[#667085] dark:text-white/50 truncate">
-                      Today, 2:00 PM
-                    </p>
-                  </div>
-                </div>
+              <div className="p-6 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 text-center space-y-2">
+                <p className="text-xs font-semibold text-[#111827] dark:text-white">No upcoming sessions</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">
+                  Book 1-on-1 sessions with verified tutors in the marketplace.
+                </p>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('tutors')}
-                  className="px-2.5 py-1 rounded-lg bg-[#176B4D] text-white text-[11px] font-bold hover:bg-[#12543C] shrink-0"
+                  className="px-3 py-1.5 rounded-lg bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C]"
                 >
-                  Book Tutor
+                  Find a Tutor
                 </button>
               </div>
             )}
