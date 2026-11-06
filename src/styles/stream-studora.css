@@ -237,7 +237,22 @@
 
 /* MessageList: fill the right panel, enable independent scroll */
 .str-chat__message-list-scroll {
-  padding: 1rem 1.25rem !important;
+  padding: 1.25rem 1.5rem !important;
+  background-color: #FAFBF8 !important;
+}
+
+/* Message list background */
+.str-chat__ul,
+.str-chat__list {
+  background-color: #FAFBF8 !important;
+}
+
+.str-chat__theme-dark .str-chat__message-list-scroll {
+  background-color: #0F1624 !important;
+}
+.str-chat__theme-dark .str-chat__ul,
+.str-chat__theme-dark .str-chat__list {
+  background-color: #0F1624 !important;
 }
 
 /* Message bubbles: rounded like the existing Studora style */
@@ -280,7 +295,14 @@
 .str-chat__message-input {
   background-color: var(--str-chat__background-core-surface-default) !important;
   border-top: 1px solid var(--str-chat__border-primary) !important;
-  padding: 0.75rem 1rem !important;
+  padding: 0.875rem 1.25rem !important;
+}
+
+/* Composer inner container: align items vertically centered */
+.str-chat__message-composer-container,
+.str-chat__message-input-inner {
+  align-items: center !important;
+  gap: 0.5rem !important;
 }
 
 /* Composer textarea */
@@ -296,18 +318,24 @@
   line-height: 1.6 !important;
 }
 
-/* Send button: Studora green */
+/* Send button: circular green, matches reference */
 .str-chat__send-button,
 .str-chat__message-send-button {
   background-color: #176B4D !important;
   color: #FFFFFF !important;
-  border-radius: 0.75rem !important;
+  border-radius: 9999px !important;
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  min-width: 2.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   transition: background-color 140ms ease, transform 140ms ease !important;
 }
 .str-chat__send-button:hover,
 .str-chat__message-send-button:hover {
   background-color: #13583F !important;
-  transform: translateY(-1px) !important;
+  transform: scale(1.05) !important;
 }
 .str-chat__theme-dark .str-chat__send-button,
 .str-chat__theme-dark .str-chat__message-send-button {
@@ -365,9 +393,11 @@
   font-size: 0.8125rem !important;
 }
 
-/* Avatar: match Studora avatar design */
-.str-chat__avatar {
-  border-radius: 0.625rem !important;
+/* Avatar: circular to match reference design */
+.str-chat__avatar,
+.str-chat__avatar-fallback,
+.str-chat__avatar img {
+  border-radius: 9999px !important;
 }
 
 /* Unread separator */
@@ -418,8 +448,10 @@
 /* Quoted message bubble */
 .str-chat__quoted-message-bubble {
   border-radius: 0.75rem !important;
-  border-left: 3px solid var(--str-chat__accent-primary) !important;
+  border-left: 1px solid var(--str-chat__accent-primary) !important;
+  border-top: 1px solid var(--str-chat__border-primary) !important;
   font-size: 0.6875rem !important;
+  opacity: 0.85;
 }
 
 /* Attachment selector icons */

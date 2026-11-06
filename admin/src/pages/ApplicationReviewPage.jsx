@@ -198,15 +198,12 @@ export function ApplicationReviewPage() {
       supabase
         .from('tutor_applications')
         .select(`
-          id, status, academic_level, programme, graduation_year, institution, department,
+          id, user_id, status, academic_level, programme, graduation_year, institution, department,
           selected_subject_ids, has_teaching_experience, experience_types, experience_description,
           teaching_level, bio, teaching_approach, areas_of_expertise,
           assessment_score, assessment_passed,
           submitted_at, reviewed_at, reviewed_by,
-          rejection_reason, admin_notes, created_at, updated_at,
-          profiles:user_id (
-            id, full_name, role
-          )
+          rejection_reason, admin_notes, created_at, updated_at
         `)
         .eq('id', id)
         .single(),
@@ -221,7 +218,16 @@ export function ApplicationReviewPage() {
     if (appRes.error) {
       setError(appRes.error.message);
     } else {
-      setApp(appRes.data);
+      const appData = appRes.data;
+      if (appData?.user_id) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('id, full_name, role')
+          .eq('id', appData.user_id)
+          .maybeSingle();
+        appData.profiles = prof || { id: appData.user_id, full_name: 'Applicant', role: 'student' };
+      }
+      setApp(appData);
     }
 
     setAttempts(attemptsRes.data || []);

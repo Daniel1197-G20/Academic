@@ -21,6 +21,7 @@ import {
   adminVerifyPayoutProfile,
   getTutorEarningsSummary,
   requestWithdrawal,
+  completeBookingSession,
   getNigerianBanks,
   handleTutorPaystackWebhook
 } from './tutor-financial-service.js';
@@ -1297,6 +1298,23 @@ export async function handleApiRequest(req, res) {
 
       try {
         const result = await verifyAndConfirmTutorPayment(reference);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // POST /api/tutors/booking/complete — tutor or admin completes session & releases earning
+    if (pathname === '/api/tutors/booking/complete' && method === 'POST') {
+      const authHeader = req.headers['authorization'] || '';
+      const supabaseJwt = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+      if (!supabaseJwt) return sendJson(res, 401, { error: 'Supabase JWT required.' });
+
+      const { bookingId } = await parseJsonBody(req);
+      if (!bookingId) return sendJson(res, 400, { error: 'bookingId is required.' });
+
+      try {
+        const result = await completeBookingSession(supabaseJwt, bookingId);
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, err.statusCode || 400, { error: err.message });

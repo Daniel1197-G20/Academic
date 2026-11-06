@@ -694,6 +694,33 @@ export async function getTutorEarningsSummary(supabaseJwt) {
 // ── 9. Request Withdrawal (server proxy) ─────────────────────────────────────
 
 /**
+ * Calls complete_booking_and_release_earning() RPC on behalf of the tutor or admin.
+ * @param {string} supabaseJwt - Caller's Supabase JWT
+ * @param {string} bookingId   - Booking ID
+ */
+export async function completeBookingSession(supabaseJwt, bookingId) {
+  if (!bookingId) {
+    const err = new Error('Booking ID is required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const { data, error } = await supabaseAnon.rpc('complete_booking_and_release_earning', {
+    p_booking_id: bookingId
+  }, {
+    headers: { Authorization: `Bearer ${supabaseJwt}` }
+  });
+
+  if (error) {
+    const err = new Error(error.message || 'Failed to complete session');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return data;
+}
+
+/**
  * Calls request_tutor_withdrawal() RPC on behalf of the authenticated tutor.
  * Server validates; RPC checks balance, payout profile, and duplicate prevention.
  * @param {string} supabaseJwt  - Tutor's Supabase JWT

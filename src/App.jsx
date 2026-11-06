@@ -82,6 +82,7 @@ const PROTECTED_ROUTES = new Set([
   'billing/callback',
   'ai',
   'become-tutor',
+  'tutor-dashboard',
 ]);
 
 export function normalizeRoute(path) {
@@ -106,6 +107,7 @@ export function normalizeRoute(path) {
   if (clean === 'cookie-settings') return 'cookie-settings';
   if (clean === 'privacy-settings') return 'privacy-settings';
   if (clean === 'become-tutor') return 'become-tutor';
+  if (clean === 'tutor-dashboard') return 'tutor-dashboard';
   return '404';
 }
 
@@ -376,6 +378,15 @@ function AppContent() {
       setActiveTab('login');
       if (window.location.pathname !== '/login') {
         window.history.replaceState({}, '', '/login');
+      }
+      return;
+    }
+
+    // Role-based protection: tutor-dashboard requires tutor role
+    if (normalized === 'tutor-dashboard' && currentUser && currentUser.role !== 'tutor') {
+      setActiveTab('become-tutor');
+      if (window.location.pathname !== '/become-tutor') {
+        window.history.replaceState({}, '', '/become-tutor');
       }
       return;
     }
@@ -655,6 +666,7 @@ function AppContent() {
     'privacy-settings': 'Privacy & Data Rights Settings',
     landing: 'Home',
     'become-tutor': currentUser?.role === 'tutor' ? 'Tutor Workspace' : 'Become a Tutor',
+    'tutor-dashboard': 'Tutor Dashboard',
     404: 'Page Not Found'
   };
 
@@ -662,7 +674,7 @@ function AppContent() {
     <BillingProvider currentUser={currentUser} showToast={addToast}>
       <div className={`min-h-screen flex text-ink antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
         {/* Campus background — visible through glass surfaces */}
-        {(activeTab === 'dashboard' || activeTab === 'overview') && (
+        {(activeTab === 'dashboard' || activeTab === 'overview' || activeTab === 'messages' || activeTab === 'community') && (
           <CampusBackground />
         )}
         {/* Background color — used on non-dashboard pages and as fallback */}
@@ -691,23 +703,25 @@ function AppContent() {
             ? 'h-dvh max-h-dvh pb-[calc(62px+env(safe-area-inset-bottom,0px))] md:pb-0'
             : 'min-h-screen'
         }`}>
-          {/* Top Header */}
-          <TopHeader
-            userProfile={userProfile}
-            cgpaMetrics={null}
-            streakDays={streakData.streak}
-            unreadNotifications={unreadNotifications}
-            onOpenProfile={() => navigateRoute('profile')}
-            onOpenPricing={() => navigateRoute('pricing')}
-            onOpenSubscription={() => navigateRoute('settings/subscription')}
-            activeTabTitle={tabTitles[activeTab] || 'Overview'}
-            isDark={isDark}
-            onToggleDark={handleToggleDark}
-          />
+          {/* Top Header - hidden on desktop Messages route to match reference 1:1 */}
+          {activeTab !== 'messages' && activeTab !== 'community' && (
+            <TopHeader
+              userProfile={userProfile}
+              cgpaMetrics={null}
+              streakDays={streakData.streak}
+              unreadNotifications={unreadNotifications}
+              onOpenProfile={() => navigateRoute('profile')}
+              onOpenPricing={() => navigateRoute('pricing')}
+              onOpenSubscription={() => navigateRoute('settings/subscription')}
+              activeTabTitle={tabTitles[activeTab] || 'Overview'}
+              isDark={isDark}
+              onToggleDark={handleToggleDark}
+            />
+          )}
 
           {/* Page Container */}
           <main className={`flex-1 w-full mx-auto ${(activeTab === 'messages' || activeTab === 'community')
-              ? 'p-0 sm:p-3 md:p-6 lg:p-8 max-w-7xl flex flex-col min-h-0'
+              ? 'p-0 sm:p-3 md:p-5 lg:p-6 max-w-[1520px] flex flex-col min-h-0 h-full'
               : 'p-4 sm:p-6 lg:p-8 max-w-7xl'
             }`}>
             <ErrorBoundary onGoHome={() => navigateRoute('dashboard')}>
@@ -822,6 +836,22 @@ function AppContent() {
                 )}
 
                 {activeTab === 'become-tutor' && (
+                  currentUser?.role === 'tutor' ? (
+                    <TutorDashboardPage
+                      userProfile={userProfile}
+                      onNavigate={navigateRoute}
+                      showToast={addToast}
+                    />
+                  ) : (
+                    <BecomeTutorPage
+                      userProfile={userProfile}
+                      onNavigateDashboard={() => navigateRoute('dashboard')}
+                      showToast={addToast}
+                    />
+                  )
+                )}
+
+                {activeTab === 'tutor-dashboard' && (
                   currentUser?.role === 'tutor' ? (
                     <TutorDashboardPage
                       userProfile={userProfile}
@@ -973,26 +1003,15 @@ function AppContent() {
 
                 {/* Messages & Tutor-Student Chat (GetStream) */}
                 {(activeTab === 'messages' || activeTab === 'community') && (
-                  <div className="flex-1 flex flex-col min-h-0 w-full space-y-0 sm:space-y-4">
-                    <div className="hidden sm:flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 shrink-0 px-2 sm:px-0 pt-1 sm:pt-0">
-                      <div>
-                        <h2 className="text-xl sm:text-2xl font-bold text-ink">Messages & Tutoring Chat</h2>
-                        <p className="text-xs sm:text-sm text-muted">
-                          Direct 1-on-1 messaging with verified Studora tutors and live study consultations.
-                        </p>
-                      </div>
-                      <Badge variant="academic">GetStream Chat</Badge>
-                    </div>
-
-                    {/* Integrated GetStream Chat Component */}
-                    <div className="flex-1 min-h-0 flex flex-col">
-                      <StudoraChat
-                        currentUser={currentUser}
-                        userProfile={userProfile}
-                        showToast={addToast}
-                        onNavigate={navigateRoute}
-                      />
-                    </div>
+                  <div className="flex-1 min-h-0 flex flex-col w-full h-full">
+                    <StudoraChat
+                      currentUser={currentUser}
+                      userProfile={userProfile}
+                      showToast={addToast}
+                      onNavigate={navigateRoute}
+                      onToggleDark={handleToggleDark}
+                      isDark={isDark}
+                    />
                   </div>
                 )}
 
@@ -1020,6 +1039,7 @@ function AppContent() {
         <BottomNav
           activeTab={activeTab}
           onSelectTab={navigateRoute}
+          isTutor={currentUser?.role === 'tutor'}
         />
 
         {/* Universal Cookie Settings Modal */}

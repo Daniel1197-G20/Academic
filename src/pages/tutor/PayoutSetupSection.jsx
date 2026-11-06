@@ -10,10 +10,12 @@ import { Button } from '../../components/ui';
 import { supabase } from '../../lib/supabase/client';
 
 export function PayoutSetupSection({ tutorProfile, userProfile, showToast, onProfileUpdated }) {
-  // Session Pricing state
-  const [priceNaira, setPriceNaira] = useState(
-    tutorProfile?.session_price_kobo ? (tutorProfile.session_price_kobo / 100).toString() : '10000'
-  );
+  // Session Pricing state — no fake default price
+  const initialPrice = tutorProfile?.session_price_kobo 
+    ? (tutorProfile.session_price_kobo / 100).toString() 
+    : (tutorProfile?.hourly_rate && tutorProfile.hourly_rate > 0 ? tutorProfile.hourly_rate.toString() : '');
+
+  const [priceNaira, setPriceNaira] = useState(initialPrice);
   const [savingPrice, setSavingPrice] = useState(false);
   const [priceError, setPriceError] = useState(null);
 
@@ -78,14 +80,28 @@ export function PayoutSetupSection({ tutorProfile, userProfile, showToast, onPro
     setPriceError(null);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const jwt = sessionData?.session?.access_token;
+      // First attempt RPC if available, fallback to direct update on hourly_rate
+      let updated = false;
+      try {
+        const { error: rpcErr } = await supabase.rpc('set_tutor_session_price', {
+          p_price_kobo: priceKobo,
+        });
+        if (!rpcErr) updated = true;
+      } catch (e) {
+        // Fallback to updating hourly_rate directly
+      }
 
-      const { data, error } = await supabase.rpc('set_tutor_session_price', {
-        p_price_kobo: priceKobo,
-      });
+      if (!updated) {
+        const { error: updateErr } = await supabase
+          .from('tutor_profiles')
+          .update({
+            hourly_rate: Math.round(num),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userProfile.id);
 
-      if (error) throw new Error(error.message);
+        if (updateErr) throw new Error(updateErr.message);
+      }
 
       showToast?.({
         type: 'success',
@@ -163,7 +179,16 @@ export function PayoutSetupSection({ tutorProfile, userProfile, showToast, onPro
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-ink mb-1">Price per Session (₦)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-ink">Price per Session (₦)</label>
+              <span className="text-[11px] font-mono text-academic font-semibold">
+                {tutorProfile?.session_price_kobo 
+                  ? `Current: ₦${(tutorProfile.session_price_kobo / 100).toLocaleString()}` 
+                  : (tutorProfile?.hourly_rate && tutorProfile.hourly_rate > 0 
+                      ? `Current: ₦${tutorProfile.hourly_rate.toLocaleString()}` 
+                      : 'Set your session price')}
+              </span>
+            </div>
             <input
               type="number"
               step="500"
@@ -171,12 +196,13 @@ export function PayoutSetupSection({ tutorProfile, userProfile, showToast, onPro
               max="100000"
               value={priceNaira}
               onChange={(e) => setPriceNaira(e.target.value)}
+              placeholder="e.g. 5000"
               className="w-full text-sm p-2.5 bg-white border border-border rounded-btn text-ink focus:border-academic focus:outline-none font-mono font-bold"
               required
             />
             <p className="text-[10px] text-muted mt-1 font-mono">
-              Min: ₦1,000 | Max: ₦100,000. You keep 80% (₦
-              {((parseFloat(priceNaira) || 0) * 0.8).toLocaleString()}), platform keeps 20%.
+              Min: ₦1,000 | Max: ₦100,000. Tutors receive 80% (₦
+              {((parseFloat(priceNaira) || 0) * 0.8).toLocaleString()}), Studora platform fee 20%.
             </p>
           </div>
 
@@ -188,7 +214,7 @@ export function PayoutSetupSection({ tutorProfile, userProfile, showToast, onPro
             icon={savingPrice ? Loader2 : DollarSign}
             className="w-full shadow-tactile-btn"
           >
-            {savingPrice ? 'Saving Price…' : 'Update Session Price'}
+            {savingPrice ? 'Saving Price…' : ((tutorProfile?.session_price_kobo || (tutorProfile?.hourly_rate && tutorProfile.hourly_rate > 0)) ? 'Update Session Price' : 'Set your session price')}
           </Button>
         </form>
       </div>

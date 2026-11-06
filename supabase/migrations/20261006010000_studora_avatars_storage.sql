@@ -19,8 +19,8 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
 
 -- 2. Storage RLS Policies for `avatars` bucket
--- Enable RLS on storage.objects if not already enabled
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Note: RLS on storage.objects is managed by Supabase platform (superuser-owned table).
+-- We only create bucket-scoped policies here.
 
 -- Drop existing policies if re-applying to prevent conflict errors
 DROP POLICY IF EXISTS "Avatars are publicly viewable" ON storage.objects;

@@ -45,6 +45,7 @@ export function Sidebar({
   // 10. Settings
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ...(isTutor ? [{ id: 'tutor-dashboard', label: 'Tutor Dashboard', icon: Sparkles }] : []),
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'tutors', label: 'Find Tutor', icon: Compass },
     { id: 'messages', label: 'Chat & Calls', icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages : null },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Search,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -89,6 +90,7 @@ function ApplicationRow({ app, onClick }) {
 export function ApplicationsPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('pending_review');
+  const [searchTerm, setSearchTerm] = useState('');
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -108,11 +110,7 @@ export function ApplicationsPage() {
         assessment_passed,
         submitted_at,
         created_at,
-        profiles:user_id (
-          id,
-          full_name,
-          role
-        )
+        user_id
       `)
       .order('submitted_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
@@ -127,7 +125,23 @@ export function ApplicationsPage() {
       setError(err.message);
       setApplications([]);
     } else {
-      setApplications(data || []);
+      const apps = data || [];
+      const userIds = [...new Set(apps.map((a) => a.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, full_name, role')
+          .in('id', userIds);
+        const profMap = Object.fromEntries((profs || []).map((p) => [p.id, p]));
+        setApplications(
+          apps.map((a) => ({
+            ...a,
+            profiles: profMap[a.user_id] || { id: a.user_id, full_name: 'Applicant', role: 'student' },
+          }))
+        );
+      } else {
+        setApplications(apps);
+      }
     }
     setLoading(false);
   }, [filter]);
@@ -136,43 +150,68 @@ export function ApplicationsPage() {
     fetchApplications();
   }, [fetchApplications]);
 
+  const filteredApplications = useMemo(() => {
+    if (!searchTerm.trim()) return applications;
+    const term = searchTerm.toLowerCase();
+    return applications.filter((app) => {
+      const name = app.profiles?.full_name?.toLowerCase() || '';
+      const level = app.academic_level?.toLowerCase() || '';
+      return name.includes(term) || level.includes(term);
+    });
+  }, [applications, searchTerm]);
+
   return (
     <div className="p-6 sm:p-8 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink">Tutor Applications</h1>
-          <p className="text-sm text-muted mt-1">Review and action pending applications</p>
+          <p className="text-sm text-muted mt-0.5">Review, assess, and action prospective tutors</p>
         </div>
         <button
           onClick={fetchApplications}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-btn border border-border text-xs font-semibold text-muted hover:text-ink hover:border-ink transition-colors disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-btn border border-border text-xs font-semibold text-muted hover:text-ink hover:border-ink transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto"
         >
           <RefreshCw className={clsx('w-3.5 h-3.5', loading && 'animate-spin')} />
           Refresh
         </button>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 p-1 bg-border/40 rounded-btn w-fit">
-        {FILTER_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setFilter(tab.value)}
-            className={clsx(
-              'px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors cursor-pointer',
-              filter === tab.value
-                ? 'bg-surface text-ink shadow-subtle'
-                : 'text-muted hover:text-ink'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Filter tabs */}
+        <div className="flex gap-1 p-1 bg-border/40 rounded-btn w-fit overflow-x-auto">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setFilter(tab.value)}
+              className={clsx(
+                'px-3 py-1.5 rounded-[8px] text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+                filter === tab.value
+                  ? 'bg-surface text-ink shadow-subtle'
+                  : 'text-muted hover:text-ink'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search input */}
+        <div className="relative w-full sm:w-64">
+          <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search applicant name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 rounded-btn border border-border text-xs text-ink bg-surface focus:outline-none focus:ring-2 focus:ring-academic/20 focus:border-academic"
+          />
+        </div>
       </div>
 
-      {/* Content */}
+      {/* Content Table Card */}
       <div className="bg-surface rounded-card border border-border shadow-subtle overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -190,20 +229,24 @@ export function ApplicationsPage() {
               Retry
             </button>
           </div>
-        ) : applications.length === 0 ? (
+        ) : filteredApplications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-6">
-            {filter === 'pending_review' ? (
+            {searchTerm ? (
+              <Search className="w-8 h-8 text-muted" />
+            ) : filter === 'pending_review' ? (
               <CheckCircle2 className="w-8 h-8 text-academic" />
             ) : (
               <Clock className="w-8 h-8 text-muted" />
             )}
             <p className="text-sm font-semibold text-ink">
-              {filter === 'pending_review' ? 'All caught up!' : 'No applications found'}
+              {searchTerm ? 'No matching applicants found' : filter === 'pending_review' ? 'All caught up!' : 'No applications found'}
             </p>
             <p className="text-xs text-muted">
-              {filter === 'pending_review'
-                ? 'No applications are pending review.'
-                : `No applications with status "${filter}".`}
+              {searchTerm
+                ? `No applications matched "${searchTerm}".`
+                : filter === 'pending_review'
+                ? 'No applications are currently awaiting administrative review.'
+                : `No applications currently have status "${filter}".`}
             </p>
           </div>
         ) : (
@@ -215,7 +258,7 @@ export function ApplicationsPage() {
               <p className="w-24 text-right text-[10px] font-bold text-muted uppercase tracking-wider">Score</p>
               <div className="w-4" />
             </div>
-            {applications.map((app) => (
+            {filteredApplications.map((app) => (
               <ApplicationRow
                 key={app.id}
                 app={app}
@@ -226,9 +269,9 @@ export function ApplicationsPage() {
         )}
       </div>
 
-      {!loading && !error && applications.length > 0 && (
+      {!loading && !error && filteredApplications.length > 0 && (
         <p className="text-xs text-muted text-right">
-          {applications.length} application{applications.length !== 1 ? 's' : ''}
+          Showing {filteredApplications.length} of {applications.length} application{applications.length !== 1 ? 's' : ''}
         </p>
       )}
     </div>

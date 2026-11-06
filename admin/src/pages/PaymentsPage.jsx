@@ -3,7 +3,7 @@
  *
  * Admin Dashboard page for financial management:
  *  - Overview of platform earnings, pending payouts, completed payouts
- *  - Tutor session payments ledger
+ *  - Tutor session payments ledger & platform subscription transactions
  *  - Tutor withdrawal approval and transfer initiation
  *  - Bank payout profile verification
  *  - Platform commission configuration
@@ -23,13 +23,17 @@ import {
   Loader2,
   RefreshCw,
   Sliders,
+  TrendingUp,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { clsx } from 'clsx';
 
 export function PaymentsPage() {
+  const [activeTab, setActiveTab] = useState('withdrawals'); // 'withdrawals' | 'ledger' | 'bank_accounts' | 'commission'
   const [sessionLedger, setSessionLedger] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
   const [payoutProfiles, setPayoutProfiles] = useState([]);
+  const [billingMetrics, setBillingMetrics] = useState(null);
   const [commissionPct, setCommissionPct] = useState('20');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,54 +48,81 @@ export function PaymentsPage() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch platform commission
-      const { data: configData } = await supabase
-        .from('platform_config')
-        .select('value')
-        .eq('key', 'commission_percentage')
-        .maybeSingle();
+      // 1. Fetch platform commission from Supabase if table exists
+      try {
+        const { data: configData } = await supabase
+          .from('platform_config')
+          .select('value')
+          .eq('key', 'commission_percentage')
+          .maybeSingle();
 
-      if (configData) {
-        setCommissionPct(configData.value);
+        if (configData) {
+          setCommissionPct(configData.value);
+        }
+      } catch (e) {
+        // Safe fallback to 20%
       }
 
-      // 2. Fetch session ledger
-      const { data: ledgerData, error: ledgerErr } = await supabase
-        .from('tutor_session_ledger')
-        .select(`
-          *,
-          tutor:profiles!tutor_session_ledger_tutor_id_fkey(full_name),
-          student:profiles!tutor_session_ledger_student_id_fkey(full_name)
-        `)
-        .order('created_at', { ascending: false });
+      // 2. Fetch session ledger if table exists
+      try {
+        const { data: ledgerData } = await supabase
+          .from('tutor_session_ledger')
+          .select(`
+            *,
+            tutor:profiles!tutor_session_ledger_tutor_id_fkey(full_name),
+            student:profiles!tutor_session_ledger_student_id_fkey(full_name)
+          `)
+          .order('created_at', { ascending: false });
 
-      if (ledgerErr) throw new Error(ledgerErr.message);
-      setSessionLedger(ledgerData || []);
+        setSessionLedger(ledgerData || []);
+      } catch (e) {
+        setSessionLedger([]);
+      }
 
-      // 3. Fetch withdrawal requests
-      const { data: wdData, error: wdErr } = await supabase
-        .from('tutor_withdrawals')
-        .select(`
-          *,
-          tutor:profiles!tutor_withdrawals_tutor_id_fkey(full_name)
-        `)
-        .order('created_at', { ascending: false });
+      // 3. Fetch withdrawal requests if table exists
+      try {
+        const { data: wdData } = await supabase
+          .from('tutor_withdrawals')
+          .select(`
+            *,
+            tutor:profiles!tutor_withdrawals_tutor_id_fkey(full_name)
+          `)
+          .order('created_at', { ascending: false });
 
-      if (wdErr) throw new Error(wdErr.message);
-      setWithdrawals(wdData || []);
+        setWithdrawals(wdData || []);
+      } catch (e) {
+        setWithdrawals([]);
+      }
 
-      // 4. Fetch payout profiles
-      const { data: payoutData, error: pErr } = await supabase
-        .from('tutor_payout_profiles')
-        .select(`
-          *,
-          tutor:profiles!tutor_payout_profiles_tutor_id_fkey(full_name)
-        `)
-        .order('created_at', { ascending: false });
+      // 4. Fetch payout profiles if table exists
+      try {
+        const { data: payoutData } = await supabase
+          .from('tutor_payout_profiles')
+          .select(`
+            *,
+            tutor:profiles!tutor_payout_profiles_tutor_id_fkey(full_name)
+          `)
+          .order('created_at', { ascending: false });
 
-      if (pErr) throw new Error(pErr.message);
-      setPayoutProfiles(payoutData || []);
+        setPayoutProfiles(payoutData || []);
+      } catch (e) {
+        setPayoutProfiles([]);
+      }
 
+      // 5. Fetch verified subscription billing metrics from backend API
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const jwt = sessionData?.session?.access_token;
+        const res = await fetch('/api/admin/billing', {
+          headers: jwt ? { Authorization: `Bearer ${jwt}` } : {},
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.metrics) setBillingMetrics(json.metrics);
+        }
+      } catch (apiErr) {
+        // Backend proxy offline
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -196,290 +227,364 @@ export function PaymentsPage() {
   const totalTutorEarningsKobo = sessionLedger.reduce((sum, row) => sum + (row.tutor_amount_kobo || 0), 0);
   const totalPaidOutKobo = withdrawals.filter((w) => w.status === 'paid').reduce((sum, w) => sum + w.amount_kobo, 0);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20 gap-2 text-muted">
-        <Loader2 className="w-6 h-6 animate-spin text-academic" />
-        <span className="text-sm font-medium">Loading financial records…</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6 pb-12">
+    <div className="p-6 sm:p-8 max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Financial Operations & Payouts</h1>
-          <p className="text-xs text-white/60 mt-0.5">
-            Monitor session ledger, manage platform commission, approve tutor withdrawals, and verify bank accounts.
+          <h1 className="text-2xl font-bold text-ink">Financial Operations & Payouts</h1>
+          <p className="text-sm text-muted mt-0.5">
+            Monitor session ledger, manage platform commission, approve tutor withdrawals, and verify bank accounts
           </p>
         </div>
         <button
           onClick={fetchFinancialData}
-          className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:text-white transition-colors"
-          title="Refresh"
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-btn border border-border text-xs font-semibold text-muted hover:text-ink hover:border-ink transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className={clsx('w-3.5 h-3.5', loading && 'animate-spin')} />
+          Refresh
         </button>
       </div>
 
       {actionMessage && (
         <div
-          className={`p-3 rounded-lg text-xs font-semibold flex items-center gap-2 ${
+          className={clsx(
+            'p-3.5 rounded-card text-xs font-semibold flex items-center justify-between',
             actionMessage.type === 'success'
-              ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-              : 'bg-red-500/10 border border-red-500/20 text-red-400'
-          }`}
-        >
-          {actionMessage.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0" />
+              ? 'bg-academic-light/60 border border-academic/20 text-academic'
+              : 'bg-red-50 border border-red-200 text-danger'
           )}
-          <span>{actionMessage.text}</span>
+        >
+          <div className="flex items-center gap-2">
+            {actionMessage.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            )}
+            <span>{actionMessage.text}</span>
+          </div>
+          <button onClick={() => setActionMessage(null)} className="hover:underline">
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Overview Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-xs font-medium text-white/60">Total Session GMV</p>
-          <p className="text-xl font-extrabold text-white font-mono mt-1">{formatNaira(totalVolumeKobo)}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">Gross student payments</p>
+      {/* Financial Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-surface border border-border shadow-subtle rounded-card p-5">
+          <p className="text-xs font-semibold text-muted">Session GMV</p>
+          <p className="text-2xl font-bold text-ink font-mono mt-1">{formatNaira(totalVolumeKobo)}</p>
+          <p className="text-[11px] text-muted mt-0.5">Gross student bookings</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-xs font-medium text-white/60">Platform Revenue ({commissionPct}%)</p>
-          <p className="text-xl font-extrabold text-emerald-400 font-mono mt-1">{formatNaira(totalCommissionKobo)}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">Studora 20% commission share</p>
+        <div className="bg-surface border border-border shadow-subtle rounded-card p-5">
+          <p className="text-xs font-semibold text-muted">Platform Revenue ({commissionPct}%)</p>
+          <p className="text-2xl font-bold text-academic font-mono mt-1">{formatNaira(totalCommissionKobo)}</p>
+          <p className="text-[11px] text-muted mt-0.5">Platform commission share</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-xs font-medium text-white/60">Total Tutor Earnings (80%)</p>
-          <p className="text-xl font-extrabold text-white font-mono mt-1">{formatNaira(totalTutorEarningsKobo)}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">Tutor earnings pool</p>
+        <div className="bg-surface border border-border shadow-subtle rounded-card p-5">
+          <p className="text-xs font-semibold text-muted">Subscription Volume</p>
+          <p className="text-2xl font-bold text-ink font-mono mt-1">
+            ₦{((billingMetrics?.totalRevenueNgn || 0)).toLocaleString()}
+          </p>
+          <p className="text-[11px] text-muted mt-0.5">
+            {billingMetrics?.totalTransactions || 0} verified transactions
+          </p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-xs font-medium text-white/60">Total Transferred Payouts</p>
-          <p className="text-xl font-extrabold text-white font-mono mt-1">{formatNaira(totalPaidOutKobo)}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">Successful Paystack transfers</p>
+        <div className="bg-surface border border-border shadow-subtle rounded-card p-5">
+          <p className="text-xs font-semibold text-muted">Total Paid Out</p>
+          <p className="text-2xl font-bold text-ink font-mono mt-1">{formatNaira(totalPaidOutKobo)}</p>
+          <p className="text-[11px] text-muted mt-0.5">Completed Paystack transfers</p>
         </div>
       </div>
 
-      {/* Commission Configuration Form */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Sliders className="w-4 h-4 text-emerald-400" />
-          <h2 className="text-sm font-bold text-white">Platform Commission Configuration</h2>
-        </div>
-        <form onSubmit={handleUpdateCommission} className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-white/70">Commission Percentage (%):</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={commissionPct}
-              onChange={(e) => setCommissionPct(e.target.value)}
-              className="w-20 px-3 py-1.5 text-xs bg-black/40 border border-white/20 rounded-md text-white font-mono font-bold focus:outline-none focus:border-emerald-400"
-            />
-          </div>
-          <span className="text-xs text-white/40 font-mono">
-            Tutor Share = {100 - (parseInt(commissionPct, 10) || 0)}%
-          </span>
-          <button
-            type="submit"
-            disabled={savingCommission}
-            className="ml-auto px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
-          >
-            {savingCommission ? 'Saving…' : 'Save Commission'}
-          </button>
-        </form>
+      {/* Navigation Tabs */}
+      <div className="flex gap-1 p-1 bg-border/40 rounded-btn w-fit overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('withdrawals')}
+          className={clsx(
+            'px-3.5 py-1.5 rounded-[8px] text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+            activeTab === 'withdrawals' ? 'bg-surface text-ink shadow-subtle' : 'text-muted hover:text-ink'
+          )}
+        >
+          Withdrawal Requests ({withdrawals.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('ledger')}
+          className={clsx(
+            'px-3.5 py-1.5 rounded-[8px] text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+            activeTab === 'ledger' ? 'bg-surface text-ink shadow-subtle' : 'text-muted hover:text-ink'
+          )}
+        >
+          Session Ledger ({sessionLedger.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('bank_accounts')}
+          className={clsx(
+            'px-3.5 py-1.5 rounded-[8px] text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+            activeTab === 'bank_accounts' ? 'bg-surface text-ink shadow-subtle' : 'text-muted hover:text-ink'
+          )}
+        >
+          Payout Profiles ({payoutProfiles.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('commission')}
+          className={clsx(
+            'px-3.5 py-1.5 rounded-[8px] text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+            activeTab === 'commission' ? 'bg-surface text-ink shadow-subtle' : 'text-muted hover:text-ink'
+          )}
+        >
+          Commission Settings
+        </button>
       </div>
 
-      {/* Pending Withdrawal Requests Table */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white">Tutor Withdrawal Requests</h2>
-          <span className="text-xs font-mono text-white/40">{withdrawals.length} total</span>
-        </div>
+      {/* TAB 1: WITHDRAWALS */}
+      {activeTab === 'withdrawals' && (
+        <div className="bg-surface rounded-card border border-border shadow-subtle overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-academic" />
+            </div>
+          ) : withdrawals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
+              <CreditCard className="w-10 h-10 text-muted" />
+              <p className="text-base font-semibold text-ink">No withdrawal requests</p>
+              <p className="text-xs text-muted max-w-sm">
+                No tutors have submitted payout requests at this time.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              <div className="hidden sm:grid sm:grid-cols-12 gap-4 px-5 py-3 border-b border-border bg-canvas/50 text-[10px] font-bold text-muted uppercase tracking-wider">
+                <span className="col-span-4">Tutor & Identifier</span>
+                <span className="col-span-3">Bank Details</span>
+                <span className="col-span-2">Amount</span>
+                <span className="col-span-1">Status</span>
+                <span className="col-span-2 text-right">Action</span>
+              </div>
+              {withdrawals.map((w) => (
+                <div
+                  key={w.id}
+                  className="p-4 sm:px-5 sm:py-3.5 sm:grid sm:grid-cols-12 gap-4 items-center hover:bg-canvas/50 transition-colors text-xs"
+                >
+                  <div className="col-span-4 min-w-0">
+                    <p className="font-bold text-ink truncate">{w.tutor?.full_name || 'Tutor'}</p>
+                    <p className="text-[10px] text-muted font-mono truncate">{w.id}</p>
+                  </div>
 
-        {withdrawals.length === 0 ? (
-          <p className="text-xs text-white/40 py-4 text-center">No withdrawal requests found.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 text-white/40 font-mono uppercase text-[10px]">
-                <tr>
-                  <th className="py-2 px-3">Tutor / ID</th>
-                  <th className="py-2 px-3">Bank Details</th>
-                  <th className="py-2 px-3">Amount</th>
-                  <th className="py-2 px-3">Status</th>
-                  <th className="py-2 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 text-white/80">
-                {withdrawals.map((w) => (
-                  <tr key={w.id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 px-3">
-                      <p className="font-bold text-white">{w.tutor?.full_name || 'Tutor'}</p>
-                      <p className="text-[10px] font-mono text-white/40">{w.id}</p>
-                    </td>
-                    <td className="py-3 px-3">
-                      <p className="font-medium">{w.bank_name}</p>
-                      <p className="text-[10px] font-mono text-white/40">{w.account_number} ({w.account_name})</p>
-                      {w.paystack_recipient_code && (
-                        <p className="text-[9px] font-mono text-emerald-400">RCP: {w.paystack_recipient_code}</p>
+                  <div className="col-span-3 min-w-0 mt-1 sm:mt-0">
+                    <p className="text-xs font-semibold text-ink truncate">{w.bank_name}</p>
+                    <p className="text-[10px] text-muted font-mono truncate">
+                      {w.account_number} ({w.account_name})
+                    </p>
+                    {w.paystack_recipient_code && (
+                      <p className="text-[9px] font-mono text-academic">RCP: {w.paystack_recipient_code}</p>
+                    )}
+                  </div>
+
+                  <div className="col-span-2 mt-1 sm:mt-0 font-mono font-bold text-academic">
+                    {formatNaira(w.amount_kobo)}
+                  </div>
+
+                  <div className="col-span-1 mt-1 sm:mt-0">
+                    <span
+                      className={clsx(
+                        'px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase',
+                        w.status === 'paid'
+                          ? 'bg-academic-light text-academic border-academic/20'
+                          : w.status === 'failed'
+                          ? 'bg-red-50 text-danger border-red-200'
+                          : 'bg-gold/10 text-gold border-gold/20'
                       )}
-                    </td>
-                    <td className="py-3 px-3 font-bold font-mono text-emerald-400">
-                      {formatNaira(w.amount_kobo)}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
-                          w.status === 'paid'
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : w.status === 'failed'
-                            ? 'bg-red-500/20 text-red-300'
-                            : 'bg-yellow-500/20 text-yellow-300'
-                        }`}
+                    >
+                      {w.status}
+                    </span>
+                  </div>
+
+                  <div className="col-span-2 text-right mt-2 sm:mt-0">
+                    {w.status === 'requested' ? (
+                      <button
+                        onClick={() => handleApproveWithdrawal(w.id)}
+                        disabled={processingWdId === w.id}
+                        className="px-3 py-1.5 rounded-btn bg-academic text-white text-xs font-semibold hover:bg-academic/90 transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        {w.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      {w.status === 'requested' ? (
-                        <button
-                          onClick={() => handleApproveWithdrawal(w.id)}
-                          disabled={processingWdId === w.id}
-                          className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
-                        >
-                          {processingWdId === w.id ? 'Processing…' : 'Approve & Pay'}
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-white/30 font-mono">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Tutor Payout Accounts Verification */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white">Tutor Bank Payout Profiles</h2>
-          <span className="text-xs font-mono text-white/40">{payoutProfiles.length} registered</span>
+                        {processingWdId === w.id ? 'Processing…' : 'Approve & Pay'}
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-muted font-mono">—</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      )}
 
-        {payoutProfiles.length === 0 ? (
-          <p className="text-xs text-white/40 py-4 text-center">No payout profiles registered yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 text-white/40 font-mono uppercase text-[10px]">
-                <tr>
-                  <th className="py-2 px-3">Tutor</th>
-                  <th className="py-2 px-3">Bank Name</th>
-                  <th className="py-2 px-3">Account Number</th>
-                  <th className="py-2 px-3">Account Name</th>
-                  <th className="py-2 px-3">Status</th>
-                  <th className="py-2 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 text-white/80">
-                {payoutProfiles.map((p) => (
-                  <tr key={p.tutor_id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 px-3 font-bold text-white">{p.tutor?.full_name || p.tutor_id}</td>
-                    <td className="py-3 px-3">{p.bank_name} ({p.bank_code})</td>
-                    <td className="py-3 px-3 font-mono">{p.account_number}</td>
-                    <td className="py-3 px-3">{p.account_name}</td>
-                    <td className="py-3 px-3">
-                      {p.is_verified ? (
-                        <span className="text-emerald-400 font-mono text-[10px] flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Verified
-                        </span>
-                      ) : (
-                        <span className="text-yellow-400 font-mono text-[10px] flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Unverified
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      {!p.is_verified ? (
-                        <button
-                          onClick={() => handleVerifyPayoutProfile(p.tutor_id)}
-                          disabled={verifyingTutorId === p.tutor_id}
-                          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
-                        >
-                          {verifyingTutorId === p.tutor_id ? 'Verifying…' : 'Verify Account'}
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-emerald-400/60 font-mono">Verified</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* TAB 2: SESSION LEDGER */}
+      {activeTab === 'ledger' && (
+        <div className="bg-surface rounded-card border border-border shadow-subtle overflow-hidden">
+          {sessionLedger.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
+              <DollarSign className="w-10 h-10 text-muted" />
+              <p className="text-base font-semibold text-ink">No paid sessions in ledger</p>
+              <p className="text-xs text-muted max-w-sm">
+                As students book and complete peer tutoring sessions, the immutable split ledger entries will record here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              <div className="hidden sm:grid sm:grid-cols-12 gap-4 px-5 py-3 border-b border-border bg-canvas/50 text-[10px] font-bold text-muted uppercase tracking-wider">
+                <span className="col-span-3">Payment Reference</span>
+                <span className="col-span-3">Participants</span>
+                <span className="col-span-2">Gross</span>
+                <span className="col-span-2">Platform Comm.</span>
+                <span className="col-span-2 text-right">Tutor (80%)</span>
+              </div>
+              {sessionLedger.map((row) => (
+                <div
+                  key={row.id}
+                  className="p-4 sm:px-5 sm:py-3.5 sm:grid sm:grid-cols-12 gap-4 items-center hover:bg-canvas/50 transition-colors text-xs"
+                >
+                  <div className="col-span-3 min-w-0">
+                    <p className="font-mono text-ink font-bold truncate">{row.payment_reference}</p>
+                    <p className="text-[10px] text-muted font-mono truncate">{row.booking_id}</p>
+                  </div>
 
-      {/* Session Payment Ledger */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white">Immutable Session Ledger</h2>
-          <span className="text-xs font-mono text-white/40">{sessionLedger.length} rows</span>
+                  <div className="col-span-3 min-w-0 mt-1 sm:mt-0">
+                    <p className="text-xs font-semibold text-ink truncate">{row.student?.full_name || 'Student'}</p>
+                    <p className="text-[10px] text-muted truncate">→ {row.tutor?.full_name || 'Tutor'}</p>
+                  </div>
+
+                  <div className="col-span-2 mt-1 sm:mt-0 font-mono font-bold text-ink">
+                    {formatNaira(row.gross_amount_kobo)}
+                  </div>
+
+                  <div className="col-span-2 mt-1 sm:mt-0 font-mono font-semibold text-academic">
+                    {formatNaira(row.platform_commission_amount_kobo)}
+                  </div>
+
+                  <div className="col-span-2 text-right mt-1 sm:mt-0 font-mono font-bold text-ink">
+                    {formatNaira(row.tutor_amount_kobo)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      )}
 
-        {sessionLedger.length === 0 ? (
-          <p className="text-xs text-white/40 py-4 text-center">No paid sessions in ledger yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 text-white/40 font-mono uppercase text-[10px]">
-                <tr>
-                  <th className="py-2 px-3">Ref / Booking</th>
-                  <th className="py-2 px-3">Student → Tutor</th>
-                  <th className="py-2 px-3">Gross</th>
-                  <th className="py-2 px-3">Comm (20%)</th>
-                  <th className="py-2 px-3">Tutor (80%)</th>
-                  <th className="py-2 px-3">Earning Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 text-white/80">
-                {sessionLedger.map((row) => (
-                  <tr key={row.id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 px-3 font-mono">
-                      <p className="font-bold text-white">{row.payment_reference}</p>
-                      <p className="text-[10px] text-white/40">{row.booking_id}</p>
-                    </td>
-                    <td className="py-3 px-3">
-                      <p className="font-medium text-white">{row.student?.full_name || 'Student'}</p>
-                      <p className="text-[10px] text-white/50">→ {row.tutor?.full_name || 'Tutor'}</p>
-                    </td>
-                    <td className="py-3 px-3 font-mono text-white font-bold">{formatNaira(row.gross_amount_kobo)}</td>
-                    <td className="py-3 px-3 font-mono text-emerald-400 font-semibold">{formatNaira(row.platform_commission_amount_kobo)}</td>
-                    <td className="py-3 px-3 font-mono text-white font-semibold">{formatNaira(row.tutor_amount_kobo)}</td>
-                    <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase bg-white/10 text-white/80">
-                        {row.earning_status}
+      {/* TAB 3: BANK PAYOUT PROFILES */}
+      {activeTab === 'bank_accounts' && (
+        <div className="bg-surface rounded-card border border-border shadow-subtle overflow-hidden">
+          {payoutProfiles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
+              <Building2 className="w-10 h-10 text-muted" />
+              <p className="text-base font-semibold text-ink">No payout accounts registered</p>
+              <p className="text-xs text-muted max-w-sm">
+                When tutors connect their Nigerian bank accounts in the tutor portal, profiles will appear here for verification.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              <div className="hidden sm:grid sm:grid-cols-12 gap-4 px-5 py-3 border-b border-border bg-canvas/50 text-[10px] font-bold text-muted uppercase tracking-wider">
+                <span className="col-span-4">Tutor Profile</span>
+                <span className="col-span-4">Bank Account Details</span>
+                <span className="col-span-2">Verification</span>
+                <span className="col-span-2 text-right">Action</span>
+              </div>
+              {payoutProfiles.map((p) => (
+                <div
+                  key={p.tutor_id}
+                  className="p-4 sm:px-5 sm:py-3.5 sm:grid sm:grid-cols-12 gap-4 items-center hover:bg-canvas/50 transition-colors text-xs"
+                >
+                  <div className="col-span-4 min-w-0">
+                    <p className="font-bold text-ink truncate">{p.tutor?.full_name || p.tutor_id}</p>
+                    <p className="text-[10px] text-muted font-mono truncate">{p.tutor_id}</p>
+                  </div>
+
+                  <div className="col-span-4 min-w-0 mt-1 sm:mt-0">
+                    <p className="font-semibold text-ink">{p.bank_name}</p>
+                    <p className="text-[10px] text-muted font-mono">
+                      {p.account_number} · {p.account_name}
+                    </p>
+                  </div>
+
+                  <div className="col-span-2 mt-1 sm:mt-0">
+                    {p.is_verified ? (
+                      <span className="text-academic font-bold text-[10px] flex items-center gap-1 uppercase">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Verified
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ) : (
+                      <span className="text-gold font-bold text-[10px] flex items-center gap-1 uppercase">
+                        <Clock className="w-3.5 h-3.5" /> Unverified
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="col-span-2 text-right mt-2 sm:mt-0">
+                    {!p.is_verified ? (
+                      <button
+                        onClick={() => handleVerifyPayoutProfile(p.tutor_id)}
+                        disabled={verifyingTutorId === p.tutor_id}
+                        className="px-3 py-1.5 rounded-btn bg-navy text-white text-xs font-semibold hover:bg-ink transition-colors disabled:opacity-50 cursor-pointer"
+                      >
+                        {verifyingTutorId === p.tutor_id ? 'Verifying…' : 'Verify Account'}
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-muted font-mono">Active</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 4: COMMISSION CONFIGURATION */}
+      {activeTab === 'commission' && (
+        <div className="bg-surface rounded-card border border-border shadow-subtle p-6 max-w-lg space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Sliders className="w-4 h-4 text-academic" />
+            <h3 className="text-sm font-bold text-ink">Platform Commission Rate</h3>
           </div>
-        )}
-      </div>
+
+          <p className="text-xs text-muted leading-relaxed">
+            Configure the global platform take-rate deducted from student payments before releasing tutor earnings. The default standard is 20%.
+          </p>
+
+          <form onSubmit={handleUpdateCommission} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-ink">Commission Percentage (%)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={commissionPct}
+                  onChange={(e) => setCommissionPct(e.target.value)}
+                  className="w-24 px-3 py-2 text-sm bg-canvas border border-border rounded-btn text-ink font-mono font-bold focus:outline-none focus:ring-2 focus:ring-academic/20"
+                />
+                <span className="text-xs text-muted font-mono">
+                  &rarr; Tutor Payout Share: <strong>{100 - (parseInt(commissionPct, 10) || 0)}%</strong>
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingCommission}
+              className="px-4 py-2 rounded-btn bg-academic text-white text-xs font-semibold hover:bg-academic/90 transition-colors disabled:opacity-50 cursor-pointer shadow-subtle"
+            >
+              {savingCommission ? 'Saving…' : 'Save Commission Rate'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

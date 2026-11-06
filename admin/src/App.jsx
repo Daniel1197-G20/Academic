@@ -8,8 +8,11 @@ import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
 import { ApplicationReviewPage } from './pages/ApplicationReviewPage';
+import { TutorsPage } from './pages/TutorsPage';
+import { UsersPage } from './pages/UsersPage';
+import { AssessmentsPage } from './pages/AssessmentsPage';
 import { PaymentsPage } from './pages/PaymentsPage';
-import { ComingSoonPage } from './pages/ComingSoonPage';
+import { AuditLogsPage } from './pages/AuditLogsPage';
 
 export default function App() {
   return (
@@ -31,16 +34,12 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id" element={<ApplicationReviewPage />} />
-
-            {/* Admin Financial Module */}
+            <Route path="/tutors" element={<TutorsPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/assessments" element={<AssessmentsPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/withdrawals" element={<PaymentsPage />} />
-
-            {/* Coming-soon modules */}
-            <Route path="/tutors" element={<ComingSoonPage title="Tutors" />} />
-            <Route path="/users" element={<ComingSoonPage title="Users" />} />
-            <Route path="/assessments" element={<ComingSoonPage title="Assessments" />} />
-            <Route path="/audit-logs" element={<ComingSoonPage title="Audit Logs" />} />
+            <Route path="/audit-logs" element={<AuditLogsPage />} />
           </Route>
 
           {/* Catch-all */}
@@ -50,4 +49,3 @@ export default function App() {
     </AdminAuthProvider>
   );
 }
-

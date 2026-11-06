@@ -23,7 +23,6 @@ import {
   ArrowLeft,
   User,
   AlertCircle,
-  ShieldCheck,
   WifiOff,
   Phone,
   Video,
@@ -31,6 +30,7 @@ import {
   X,
   Users,
   Loader2,
+  Edit3,
 } from 'lucide-react';
 
 // Official GetStream Chat React SDK — v14 components
@@ -64,6 +64,24 @@ import { rankUserSearchResults } from '../../lib/search/userSearchEngine';
 import { StudoraCallModal } from './StudoraCallModal';
 import { StreamVideo } from '@stream-io/video-react-sdk';
 
+// ─── Relative Time Formatter ──────────────────────────────────────────────────
+function formatRelativeTime(date) {
+  if (!date) return '';
+  const now = Date.now();
+  const ts = typeof date === 'string' ? new Date(date).getTime() : date.getTime?.() ?? date;
+  const diffMs = now - ts;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffMs / 86400000);
+  if (diffDay === 1) return 'yesterday';
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 // ─── Studora Conversation Header ─────────────────────────────────────────────
 /**
  * Custom header rendered above Stream's Window.
@@ -90,10 +108,11 @@ function StudoraConversationHeader({
   const isOnline = channel?.state?.watcher_count > 1;
   const isBookingChannel = !!channel?.data?.booking_id;
   const subject = channel?.data?.subject;
+  const displayName = other?.name || channel?.data?.name || 'Studora Chat';
 
   return (
-    <div className="px-3.5 py-3 sm:px-4 sm:py-3.5 border-b border-border/80 dark:border-navy-800/80 flex items-center justify-between bg-surface dark:bg-navy-900/95 shrink-0 z-10">
-      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+    <div className="px-4 py-3 border-b border-border/60 dark:border-navy-800/80 flex items-center justify-between bg-white dark:bg-navy-900 shrink-0 z-10 shadow-[0_1px_0_0_rgba(17,24,39,0.05)]">
+      <div className="flex items-center gap-3 min-w-0">
         {/* Mobile Back Button */}
         <button
           type="button"
@@ -105,59 +124,59 @@ function StudoraConversationHeader({
         </button>
 
         {/* Participant info */}
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="relative shrink-0">
             <Avatar
-              name={other?.name || channel?.data?.name || 'User'}
+              name={displayName}
               src={other?.image || null}
-              size="md"
+              size="lg"
             />
             {isOnline && (
               <span
-                className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-surface dark:border-navy-900"
+                className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-navy-900 shadow-sm"
                 title="Online"
               />
             )}
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-extrabold text-ink dark:text-white truncate font-sans">
-                {other?.name || channel?.data?.name || 'Studora Chat'}
-              </h3>
-              <Badge variant="academic" size="sm">
-                {isBookingChannel ? 'Tutoring' : 'Direct'}
-              </Badge>
-            </div>
-            <p className="text-[11px] text-muted dark:text-navy-400 truncate mt-0.5">
+            <h3 className="text-sm font-bold text-ink dark:text-white truncate leading-tight">
+              {displayName}
+            </h3>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium truncate">
               {subject
                 ? `Subject: ${subject}`
                 : isOnline
-                  ? 'Active now'
-                  : 'Private 1-on-1 Conversation'}
+                  ? 'Online'
+                  : 'Private conversation'}
             </p>
           </div>
         </div>
       </div>
 
       {/* Call Controls */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
+        {isBookingChannel && (
+          <Badge variant="academic" size="sm" className="mr-2 hidden sm:flex">
+            Tutoring
+          </Badge>
+        )}
         <button
           type="button"
           onClick={onVoiceCall}
           disabled={startingCall}
-          className="p-2 text-muted dark:text-navy-300 hover:text-academic hover:bg-academic-50 dark:hover:bg-academic-950/60 rounded-xl transition-colors disabled:opacity-50"
+          className="w-9 h-9 flex items-center justify-center rounded-full text-muted dark:text-navy-300 hover:text-academic hover:bg-academic-50 dark:hover:bg-academic-950/60 border border-border/60 dark:border-navy-700/60 hover:border-academic/30 transition-all disabled:opacity-50"
           title="Start voice call (Stream Video)"
           aria-label="Start voice call"
         >
-          <Phone className="w-4 h-4" />
+          <Phone className="w-[17px] h-[17px]" />
         </button>
 
         <button
           type="button"
           onClick={onVideoCall}
           disabled={startingCall}
-          className="p-2 text-muted dark:text-navy-300 hover:text-academic hover:bg-academic-50 dark:hover:bg-academic-950/60 rounded-xl transition-colors disabled:opacity-50"
+          className="w-9 h-9 flex items-center justify-center rounded-full text-muted dark:text-navy-300 hover:text-academic hover:bg-academic-50 dark:hover:bg-academic-950/60 border border-border/60 dark:border-navy-700/60 hover:border-academic/30 transition-all disabled:opacity-50"
           title={
             isBookingChannel
               ? 'Join Live Video Tutoring Room'
@@ -165,7 +184,7 @@ function StudoraConversationHeader({
           }
           aria-label="Start video call"
         >
-          <Video className="w-4 h-4" />
+          <Video className="w-[17px] h-[17px]" />
         </button>
       </div>
     </div>
@@ -190,10 +209,8 @@ export function StudoraChat({
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileThreadOpen, setIsMobileThreadOpen] = useState(false);
 
-  // Sidebar tabs: 'conversations' | 'users'
-  const [sidebarTab, setSidebarTab] = useState('conversations');
-
-  // Directory (Find People) search
+  // Find People (directory) — shown via modal/overlay triggered from sidebar header
+  const [showFindPeople, setShowFindPeople] = useState(false);
   const [directorySearchQuery, setDirectorySearchQuery] = useState('');
   const [directoryResults, setDirectoryResults] = useState([]);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
@@ -402,9 +419,9 @@ export function StudoraChat({
     [currentUserId]
   );
 
-  // Debounced directory search
+  // Debounced directory search (for Find People panel)
   useEffect(() => {
-    if (sidebarTab !== 'users') return;
+    if (!showFindPeople) return;
 
     const trimmed = (directorySearchQuery || '').trim();
     if (trimmed.length < 2) {
@@ -424,7 +441,7 @@ export function StudoraChat({
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
-  }, [directorySearchQuery, sidebarTab, searchUsersInDatabase]);
+  }, [directorySearchQuery, showFindPeople, searchUsersInDatabase]);
 
   // Modal search
   useEffect(() => {
@@ -483,7 +500,7 @@ export function StudoraChat({
         setActiveChannel(existingChannel);
         setIsMobileThreadOpen(true);
         setShowNewChatModal(false);
-        setSidebarTab('conversations');
+        setShowFindPeople(false);
         return;
       }
 
@@ -509,7 +526,7 @@ export function StudoraChat({
       }
 
       setShowNewChatModal(false);
-      setSidebarTab('conversations');
+      setShowFindPeople(false);
       showToast?.({
         type: 'success',
         title: 'Chat Ready',
@@ -693,45 +710,37 @@ export function StudoraChat({
       theme={isDark ? 'str-chat__theme-dark' : 'str-chat__theme-light'}
     >
       {/* Shell: two-panel layout on desktop, single-panel stack on mobile */}
-      <div className="relative bg-surface dark:bg-navy-900 border-0 md:border md:border-border dark:md:border-navy-800 rounded-none md:rounded-card shadow-none md:shadow-tactile-surface overflow-hidden flex flex-col md:flex-row flex-1 min-h-0 h-full transition-colors duration-150">
+      <div className="relative bg-white dark:bg-navy-900 border-0 md:border md:border-border/60 dark:md:border-navy-800 rounded-none md:rounded-2xl shadow-none md:shadow-[0_1px_3px_0_rgba(17,24,39,0.06),0_4px_12px_0_rgba(17,24,39,0.04)] overflow-hidden flex flex-col md:flex-row flex-1 min-h-0 h-full transition-colors duration-150">
 
-        {/* ── LEFT: Studora Sidebar (Conversations + Find People) ─────────── */}
+        {/* ── LEFT: Conversation Sidebar ──────────────────────────────────── */}
         <div
-          className={`w-full md:w-80 lg:w-96 border-r border-border dark:border-navy-800 flex flex-col h-full min-h-0 bg-[#FAFBF8] dark:bg-navy-950/90 shrink-0 transition-colors ${
+          className={`w-full md:w-[300px] lg:w-[320px] border-r border-border/60 dark:border-navy-800 flex flex-col h-full min-h-0 bg-white dark:bg-navy-900 shrink-0 ${
             isMobileThreadOpen ? 'hidden md:flex' : 'flex'
           }`}
         >
           {/* Sidebar Header */}
-          <div className="p-3.5 sm:p-4 border-b border-border/80 dark:border-navy-800/80 bg-surface dark:bg-navy-900/95 space-y-3 shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-academic-100 dark:bg-academic-900/50 flex items-center justify-center text-academic">
-                  <MessageSquare className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-sm sm:text-base font-extrabold text-ink dark:text-navy-100 tracking-tight font-sans">
-                    Messages
-                  </h2>
-                </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-academic-50 dark:bg-academic-950 text-academic border border-academic-200 dark:border-academic-800">
-                  {channels.length}
-                </span>
-              </div>
+          <div className="px-4 py-4 border-b border-border/60 dark:border-navy-800/80 bg-white dark:bg-navy-900 shrink-0">
+            <div className="flex items-center justify-between mb-3.5">
+              <h2 className="text-base font-bold text-ink dark:text-navy-100 tracking-tight">
+                Messages
+              </h2>
 
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => setShowNewChatModal(true)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-academic hover:bg-academic-700 active:bg-academic-800 rounded-btn shadow-tactile-btn transition-all"
-                  title="Start a new message"
+                  onClick={() => {
+                    setShowFindPeople(false);
+                    setShowNewChatModal(true);
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-muted dark:text-navy-300 hover:text-academic hover:bg-academic-50 dark:hover:bg-academic-950/60 border border-border/60 dark:border-navy-700/60 hover:border-academic/30 transition-all"
+                  title="New message"
                   aria-label="Start a new chat"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">New Chat</span>
+                  <Edit3 className="w-3.5 h-3.5" />
                 </button>
 
                 <button
                   onClick={initChat}
-                  className="p-1.5 text-muted dark:text-navy-300 hover:text-ink dark:hover:text-white hover:bg-canvas dark:hover:bg-navy-800 rounded-lg transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-muted dark:text-navy-300 hover:text-ink dark:hover:text-white hover:bg-canvas dark:hover:bg-navy-800 border border-border/60 dark:border-navy-700/60 transition-all"
                   title="Refresh conversations"
                   aria-label="Refresh conversations"
                 >
@@ -740,60 +749,20 @@ export function StudoraChat({
               </div>
             </div>
 
-            {/* Segmented Tab: Chats / Find People */}
-            <div className="flex rounded-lg bg-canvas dark:bg-navy-950 p-1 border border-border dark:border-navy-800 text-xs font-semibold">
-              <button
-                onClick={() => setSidebarTab('conversations')}
-                className={`flex-1 py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 select-none ${
-                  sidebarTab === 'conversations'
-                    ? 'bg-surface dark:bg-navy-800 text-ink dark:text-white shadow-tactile-btn font-bold'
-                    : 'text-muted dark:text-navy-400 hover:text-ink dark:hover:text-navy-200'
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Chats</span>
-              </button>
-              <button
-                onClick={() => setSidebarTab('users')}
-                className={`flex-1 py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 select-none ${
-                  sidebarTab === 'users'
-                    ? 'bg-surface dark:bg-navy-800 text-ink dark:text-white shadow-tactile-btn font-bold'
-                    : 'text-muted dark:text-navy-400 hover:text-ink dark:hover:text-navy-200'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Find People</span>
-              </button>
-            </div>
-
             {/* Search Field */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted dark:text-navy-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/60 dark:text-navy-500 pointer-events-none" />
               <input
                 type="text"
-                placeholder={
-                  sidebarTab === 'conversations'
-                    ? 'Search conversations…'
-                    : 'Search students & tutors by name…'
-                }
-                value={sidebarTab === 'conversations' ? searchQuery : directorySearchQuery}
-                onChange={(e) => {
-                  if (sidebarTab === 'conversations') {
-                    setSearchQuery(e.target.value);
-                  } else {
-                    setDirectorySearchQuery(e.target.value);
-                  }
-                }}
-                className="w-full pl-9 pr-8 py-2 text-xs bg-canvas/70 dark:bg-navy-950/80 border border-border dark:border-navy-800 rounded-xl text-ink dark:text-white placeholder:text-muted dark:placeholder:text-navy-500 focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic/20 transition-all"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 text-xs bg-canvas/80 dark:bg-navy-950 border border-border/50 dark:border-navy-800 rounded-full text-ink dark:text-white placeholder:text-muted/50 dark:placeholder:text-navy-500 focus:outline-none focus:border-academic/50 focus:ring-2 focus:ring-academic/10 transition-all"
               />
-              {((sidebarTab === 'conversations' && searchQuery) ||
-                (sidebarTab === 'users' && directorySearchQuery)) && (
+              {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (sidebarTab === 'conversations') setSearchQuery('');
-                    else setDirectorySearchQuery('');
-                  }}
+                  onClick={() => setSearchQuery('')}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-muted dark:text-navy-400 hover:text-ink dark:hover:text-white rounded"
                   aria-label="Clear search"
                 >
@@ -803,41 +772,44 @@ export function StudoraChat({
             </div>
           </div>
 
-          {/* Sidebar Body */}
-          <div className="flex-1 overflow-y-auto divide-y divide-border/40 dark:divide-navy-800/60 overscroll-contain">
-            {sidebarTab === 'conversations' ? (
-              /* TAB A: Conversation list */
-              filteredChannels.length === 0 ? (
-                <div className="p-8 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-canvas dark:bg-navy-900 border border-border dark:border-navy-800 flex items-center justify-center mx-auto text-muted dark:text-navy-400">
-                    <MessageSquare className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-ink dark:text-navy-200">
-                      {searchQuery ? 'No matching conversations' : 'No active conversations yet'}
-                    </p>
-                    <p className="text-[11px] text-muted dark:text-navy-400 mt-1 max-w-xs mx-auto leading-relaxed">
-                      {searchQuery
-                        ? 'Try adjusting your search terms or search for people in the directory.'
-                        : 'Connect with verified Studora tutors or peer students to get started.'}
-                    </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={Users}
-                    onClick={() => setSidebarTab('users')}
-                    className="mt-2 text-xs"
-                  >
-                    Find People to Message
-                  </Button>
+          {/* Conversation List */}
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {filteredChannels.length === 0 ? (
+              <div className="p-8 text-center space-y-3 mt-4">
+                <div className="w-12 h-12 rounded-full bg-canvas dark:bg-navy-800 flex items-center justify-center mx-auto text-muted dark:text-navy-400">
+                  <MessageSquare className="w-5 h-5" />
                 </div>
-              ) : (
-                filteredChannels.map((ch) => {
+                <div>
+                  <p className="text-xs font-semibold text-ink dark:text-navy-200">
+                    {searchQuery ? 'No results found' : 'No conversations yet'}
+                  </p>
+                  <p className="text-[11px] text-muted dark:text-navy-400 mt-1 max-w-xs mx-auto leading-relaxed">
+                    {searchQuery
+                      ? 'Try a different search or find someone new.'
+                      : 'Start a conversation with a tutor or peer student.'}
+                  </p>
+                </div>
+                {!searchQuery && (
+                  <button
+                    onClick={() => setShowNewChatModal(true)}
+                    className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-academic bg-academic-50 dark:bg-academic-950 hover:bg-academic-100 dark:hover:bg-academic-900 rounded-full border border-academic-200/60 dark:border-academic-800 transition-colors"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    Find people
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="py-1">
+                {filteredChannels.map((ch) => {
                   const other = getOtherParticipant(ch);
                   const isActive = activeChannel?.id === ch.id;
                   const unreadCount = ch.countUnread();
                   const lastMsg = ch.state?.messages?.[ch.state.messages.length - 1];
+                  const isGroupChannel = ch.data?.member_count > 2 || ch.data?.type === 'group';
+                  const isOnline = ch.state?.watcher_count > 1;
+                  const displayName = other?.name || ch.data?.name || 'Direct Conversation';
+                  const memberCount = isGroupChannel ? ch.data?.member_count : null;
 
                   return (
                     <button
@@ -846,189 +818,107 @@ export function StudoraChat({
                         setActiveChannel(ch);
                         setIsMobileThreadOpen(true);
                       }}
-                      className={`w-full text-left p-3 sm:p-3.5 flex items-start gap-3 transition-all relative border-l-[3px] ${
+                      className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-all relative ${
                         isActive
-                          ? 'bg-surface dark:bg-navy-900 border-l-academic shadow-tactile-surface'
-                          : 'border-l-transparent hover:bg-surface/80 dark:hover:bg-navy-900/60'
+                          ? 'bg-academic-50/70 dark:bg-academic-950/40'
+                          : 'hover:bg-canvas/80 dark:hover:bg-navy-800/50'
                       }`}
                     >
-                      <div className="relative shrink-0 mt-0.5">
+                      {/* Active indicator */}
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 bg-academic rounded-r-full" />
+                      )}
+
+                      {/* Avatar with online dot */}
+                      <div className="relative shrink-0">
                         <Avatar
-                          name={other?.name || ch.data?.name || 'Studora User'}
+                          name={displayName}
                           src={other?.image || null}
                           size="md"
                         />
-                        {ch.state?.watcher_count > 1 && (
-                          <span
-                            className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-surface dark:border-navy-900"
-                            title="Online"
-                          />
+                        {isOnline && (
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-navy-900" />
                         )}
                       </div>
 
+                      {/* Text content */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
                           <p
-                            className={`text-xs truncate font-sans ${
+                            className={`text-sm truncate ${
                               unreadCount > 0
-                                ? 'font-extrabold text-ink dark:text-white'
+                                ? 'font-bold text-ink dark:text-white'
                                 : 'font-semibold text-ink dark:text-navy-100'
                             }`}
                           >
-                            {other?.name || ch.data?.name || 'Direct Conversation'}
+                            {displayName}
                           </p>
                           {lastMsg?.created_at && (
                             <span
-                              className={`text-[10px] font-mono shrink-0 ${
+                              className={`text-[10px] shrink-0 ${
                                 unreadCount > 0
-                                  ? 'text-academic font-bold'
-                                  : 'text-muted dark:text-navy-400'
+                                  ? 'text-academic font-semibold'
+                                  : 'text-muted/70 dark:text-navy-500'
                               }`}
                             >
-                              {new Date(lastMsg.created_at).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatRelativeTime(lastMsg.created_at)}
                             </span>
                           )}
                         </div>
 
-                        <p
-                          className={`text-[11px] truncate mt-1 leading-snug ${
-                            unreadCount > 0
-                              ? 'font-semibold text-ink dark:text-white'
-                              : 'text-muted dark:text-navy-400'
-                          }`}
-                        >
-                          {lastMsg ? lastMsg.text || '📎 Attachment' : 'No messages yet'}
-                        </p>
-
-                        {ch.data?.subject && (
-                          <div className="mt-1.5 flex items-center gap-1.5">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-academic-50 dark:bg-academic-950 text-academic border border-academic-200/60 dark:border-academic-800 font-medium">
-                              {ch.data.subject}
-                            </span>
-                            {ch.data?.booking_id && (
-                              <span className="text-[9px] font-mono text-muted dark:text-navy-400">
-                                Session
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {unreadCount > 0 && (
-                        <span className="mt-1 px-1.5 py-0.5 rounded-full bg-academic text-white text-[10px] font-mono font-bold shrink-0 shadow-sm">
-                          {unreadCount}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })
-              )
-            ) : (
-              /* TAB B: Find People — Supabase directory search */
-              (directorySearchQuery || '').trim().length < 2 ? (
-                <div className="p-8 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-academic-50 dark:bg-academic-950 border border-academic-200 dark:border-academic-800 flex items-center justify-center mx-auto text-academic">
-                    <Search className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-ink dark:text-navy-100">
-                      Search Studora Directory
-                    </p>
-                    <p className="text-[11px] text-muted dark:text-navy-400 mt-1 max-w-xs mx-auto leading-relaxed">
-                      Type at least 2 characters to discover verified students and tutors by name or subject.
-                    </p>
-                  </div>
-                </div>
-              ) : loadingDirectory ? (
-                <div className="p-8 text-center space-y-2">
-                  <Loader2 className="w-6 h-6 text-academic animate-spin mx-auto" />
-                  <p className="text-xs text-muted dark:text-navy-400">Searching Studora directory…</p>
-                </div>
-              ) : directoryError ? (
-                <div className="p-8 text-center space-y-2">
-                  <AlertCircle className="w-6 h-6 text-rose-500 mx-auto" />
-                  <p className="text-xs font-semibold text-ink dark:text-navy-100">Search failed</p>
-                  <p className="text-[11px] text-muted dark:text-navy-400 max-w-xs mx-auto">
-                    {directoryError}
-                  </p>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() =>
-                      searchUsersInDatabase(directorySearchQuery).then(setDirectoryResults)
-                    }
-                    className="mt-1 text-xs"
-                  >
-                    Retry Search
-                  </Button>
-                </div>
-              ) : directoryResults.length === 0 ? (
-                <div className="p-8 text-center space-y-2">
-                  <User className="w-8 h-8 text-muted dark:text-navy-400 mx-auto" />
-                  <p className="text-xs font-semibold text-ink dark:text-navy-100">No users found</p>
-                  <p className="text-[11px] text-muted dark:text-navy-400 max-w-xs mx-auto">
-                    Try searching for another name or keyword.
-                  </p>
-                </div>
-              ) : (
-                directoryResults.map((u) => {
-                  const isConnecting = connectingUserId === u.id;
-                  return (
-                    <button
-                      key={u.id}
-                      disabled={isConnecting}
-                      onClick={() => handleOpenOrCreateConversation(u)}
-                      className="w-full text-left p-3.5 flex items-center justify-between hover:bg-surface dark:hover:bg-navy-900 transition-colors disabled:opacity-50"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Avatar name={u.full_name} src={u.avatar_url || null} size="md" />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-bold text-ink dark:text-navy-100 truncate">
-                              {u.full_name}
-                            </p>
-                            {u.matchMeta?.priority === 1 && (
-                              <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
-                                Exact
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-muted dark:text-navy-400 truncate">
-                            {u.institution || 'Studora Academy'}
-                            {u.department ? ` • ${u.department}` : ''}
+                        <div className="flex items-center justify-between gap-2">
+                          <p
+                            className={`text-[11px] truncate leading-snug ${
+                              unreadCount > 0
+                                ? 'font-medium text-ink/80 dark:text-navy-200'
+                                : 'text-muted/70 dark:text-navy-400'
+                            }`}
+                          >
+                            {memberCount
+                              ? `${memberCount} members`
+                              : isOnline
+                                ? 'Online'
+                                : lastMsg
+                                  ? (lastMsg.text || '📎 Attachment')
+                                  : 'No messages yet'}
                           </p>
-                          {u.matchMeta?.matchReason && u.matchMeta.priority > 3 && (
-                            <span className="text-[10px] text-academic font-medium">
-                              {u.matchMeta.matchReason}
+
+                          {unreadCount > 0 && (
+                            <span className="shrink-0 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-academic text-white text-[10px] font-bold">
+                              {unreadCount > 99 ? '99+' : unreadCount}
                             </span>
                           )}
                         </div>
-                      </div>
 
-                      <div className="shrink-0 flex items-center gap-2">
-                        <Badge variant={u.role === 'tutor' ? 'accent' : 'secondary'} size="sm">
-                          {u.role === 'tutor' ? 'Tutor' : 'Student'}
-                        </Badge>
-                        {isConnecting ? (
-                          <Loader2 className="w-3.5 h-3.5 text-academic animate-spin" />
-                        ) : (
-                          <span className="text-xs text-academic font-semibold">Message →</span>
+                        {/* Last message preview for groups (when no unread) */}
+                        {isGroupChannel && lastMsg && unreadCount === 0 && (
+                          <p className="text-[10px] text-muted/60 dark:text-navy-500 truncate mt-0.5">
+                            {lastMsg.text || '📎 Attachment'}
+                          </p>
                         )}
                       </div>
                     </button>
                   );
-                })
-              )
+                })}
+              </div>
             )}
+          </div>
+
+          {/* Find People footer button */}
+          <div className="px-4 py-3 border-t border-border/60 dark:border-navy-800 bg-white dark:bg-navy-900 shrink-0">
+            <button
+              onClick={() => setShowNewChatModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-academic bg-academic-50 dark:bg-academic-950/70 hover:bg-academic-100 dark:hover:bg-academic-950 border border-academic-200/60 dark:border-academic-800/60 rounded-full transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New conversation
+            </button>
           </div>
         </div>
 
         {/* ── RIGHT: Stream-native conversation panel ──────────────────────── */}
         <div
-          className={`flex-1 flex flex-col h-full min-h-0 bg-surface dark:bg-navy-900 transition-colors ${
+          className={`flex-1 flex flex-col h-full min-h-0 bg-[#FAFBF8] dark:bg-navy-900 transition-colors ${
             !isMobileThreadOpen ? 'hidden md:flex' : 'flex'
           }`}
         >
@@ -1066,54 +956,46 @@ export function StudoraChat({
           ) : (
             /* Empty state: no conversation selected */
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-academic-50 dark:bg-academic-950/60 border border-academic-200 dark:border-academic-800 flex items-center justify-center text-academic">
+              <div className="w-16 h-16 rounded-full bg-academic-50 dark:bg-academic-950/60 border border-academic-200/60 dark:border-academic-800 flex items-center justify-center text-academic">
                 <MessageSquare className="w-7 h-7" />
               </div>
               <div className="max-w-sm">
-                <h3 className="text-base font-bold text-ink dark:text-navy-100 font-sans">
+                <h3 className="text-base font-bold text-ink dark:text-navy-100">
                   Select a Conversation
                 </h3>
-                <p className="text-xs text-muted dark:text-navy-400 mt-1 leading-relaxed">
-                  Choose an existing chat from the left panel, or search for tutors and peers using
-                  Find People.
+                <p className="text-xs text-muted dark:text-navy-400 mt-1.5 leading-relaxed">
+                  Choose an existing chat from the left panel, or start a new conversation with a tutor or peer.
                 </p>
               </div>
-              <Button
-                variant="academic"
-                size="sm"
-                icon={Plus}
+              <button
                 onClick={() => setShowNewChatModal(true)}
-                className="mt-1"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-academic hover:bg-academic-700 rounded-full shadow-sm transition-colors"
               >
+                <Plus className="w-4 h-4" />
                 Start New Chat
-              </Button>
+              </button>
             </div>
           )}
         </div>
 
         {/* ── MODAL: New Message / User Discovery ─────────────────────────── */}
         {showNewChatModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 dark:bg-navy-950/70 backdrop-blur-xs">
-            <div className="bg-surface dark:bg-navy-900 rounded-card border border-border dark:border-navy-800 shadow-tactile-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 dark:bg-navy-950/70 backdrop-blur-sm">
+            <div className="bg-white dark:bg-navy-900 rounded-2xl border border-border/60 dark:border-navy-800 shadow-[0_8px_32px_rgba(17,24,39,0.12),0_1px_4px_rgba(17,24,39,0.06)] w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
               {/* Modal Header */}
-              <div className="p-4 border-b border-border dark:border-navy-800 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-academic-50 dark:bg-academic-950 text-academic flex items-center justify-center">
-                    <Plus className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-ink dark:text-white font-sans">
-                      New Message
-                    </h3>
-                    <p className="text-[11px] text-muted dark:text-navy-400">
-                      Message any eligible student or tutor on Studora
-                    </p>
-                  </div>
+              <div className="px-5 py-4 border-b border-border/60 dark:border-navy-800 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-ink dark:text-white">
+                    New Message
+                  </h3>
+                  <p className="text-[11px] text-muted dark:text-navy-400 mt-0.5">
+                    Find a student or tutor to message
+                  </p>
                 </div>
 
                 <button
                   onClick={() => setShowNewChatModal(false)}
-                  className="p-1.5 text-muted dark:text-navy-400 hover:text-ink dark:hover:text-white hover:bg-canvas dark:hover:bg-navy-800 rounded-lg transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-muted dark:text-navy-400 hover:text-ink dark:hover:text-white hover:bg-canvas dark:hover:bg-navy-800 border border-border/60 dark:border-navy-700 transition-all"
                   aria-label="Close modal"
                 >
                   <X className="w-4 h-4" />
@@ -1121,16 +1003,16 @@ export function StudoraChat({
               </div>
 
               {/* Modal Search */}
-              <div className="p-4 border-b border-border dark:border-navy-800 bg-canvas/40 dark:bg-navy-950/50">
+              <div className="px-5 py-3 border-b border-border/60 dark:border-navy-800 bg-canvas/40 dark:bg-navy-950/50">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted dark:text-navy-400 pointer-events-none" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/60 dark:text-navy-400 pointer-events-none" />
                   <input
                     type="text"
-                    placeholder="Search by full or partial name…"
+                    placeholder="Search by name…"
                     value={modalSearchQuery}
                     onChange={(e) => setModalSearchQuery(e.target.value)}
                     autoFocus
-                    className="w-full pl-9 pr-8 py-2 text-xs bg-surface dark:bg-navy-900 border border-border dark:border-navy-800 rounded-xl text-ink dark:text-white placeholder:text-muted dark:placeholder:text-navy-500 focus:outline-none focus:border-academic"
+                    className="w-full pl-9 pr-8 py-2 text-xs bg-white dark:bg-navy-900 border border-border/60 dark:border-navy-800 rounded-full text-ink dark:text-white placeholder:text-muted/50 dark:placeholder:text-navy-500 focus:outline-none focus:border-academic/50 focus:ring-2 focus:ring-academic/10 transition-all"
                   />
                   {modalSearchQuery && (
                     <button
@@ -1146,18 +1028,18 @@ export function StudoraChat({
               </div>
 
               {/* Results */}
-              <div className="max-h-72 overflow-y-auto divide-y divide-border/60 dark:divide-navy-800/60 p-2">
+              <div className="max-h-72 overflow-y-auto divide-y divide-border/40 dark:divide-navy-800/60">
                 {(modalSearchQuery || '').trim().length < 2 ? (
                   <div className="p-8 text-center space-y-3">
-                    <div className="w-10 h-10 rounded-xl bg-canvas dark:bg-navy-950 border border-border dark:border-navy-800 flex items-center justify-center mx-auto text-muted dark:text-navy-400">
-                      <Search className="w-5 h-5 text-academic" />
+                    <div className="w-10 h-10 rounded-full bg-canvas dark:bg-navy-800 flex items-center justify-center mx-auto text-muted dark:text-navy-400">
+                      <Search className="w-4 h-4 text-academic" />
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-ink dark:text-navy-100">
                         Search for people
                       </p>
                       <p className="text-[11px] text-muted dark:text-navy-400 mt-1 max-w-xs mx-auto">
-                        Type at least 2 characters to find students and tutors to start messaging.
+                        Type at least 2 characters to find students and tutors.
                       </p>
                     </div>
                   </div>
@@ -1165,7 +1047,7 @@ export function StudoraChat({
                   <div className="p-8 text-center space-y-2">
                     <Loader2 className="w-6 h-6 text-academic animate-spin mx-auto" />
                     <p className="text-xs text-muted dark:text-navy-400">
-                      Searching Studora directory…
+                      Searching…
                     </p>
                   </div>
                 ) : modalUsers.length === 0 ? (
@@ -1186,17 +1068,17 @@ export function StudoraChat({
                         key={u.id}
                         disabled={isConnecting}
                         onClick={() => handleOpenOrCreateConversation(u)}
-                        className="w-full text-left p-2.5 rounded-xl flex items-center justify-between hover:bg-canvas dark:hover:bg-navy-950 transition-colors disabled:opacity-50"
+                        className="w-full text-left px-5 py-3 flex items-center justify-between hover:bg-canvas dark:hover:bg-navy-800/60 transition-colors disabled:opacity-50"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <Avatar name={u.full_name} src={u.avatar_url || null} size="md" />
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-xs font-bold text-ink dark:text-navy-100 truncate">
+                              <p className="text-xs font-semibold text-ink dark:text-navy-100 truncate">
                                 {u.full_name}
                               </p>
                               {u.matchMeta?.priority === 1 && (
-                                <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
+                                <span className="text-[9px] px-1 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
                                   Exact
                                 </span>
                               )}
@@ -1209,10 +1091,7 @@ export function StudoraChat({
                         </div>
 
                         <div className="shrink-0 flex items-center gap-2">
-                          <Badge
-                            variant={u.role === 'tutor' ? 'accent' : 'secondary'}
-                            size="sm"
-                          >
+                          <Badge variant={u.role === 'tutor' ? 'accent' : 'secondary'} size="sm">
                             {u.role === 'tutor' ? 'Tutor' : 'Student'}
                           </Badge>
                           {isConnecting ? (
@@ -1228,14 +1107,13 @@ export function StudoraChat({
               </div>
 
               {/* Footer */}
-              <div className="p-3 border-t border-border dark:border-navy-800 bg-canvas/30 dark:bg-navy-950/40 text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <div className="px-5 py-3 border-t border-border/60 dark:border-navy-800 bg-canvas/30 dark:bg-navy-950/40 flex justify-end">
+                <button
                   onClick={() => setShowNewChatModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-muted dark:text-navy-300 hover:text-ink dark:hover:text-white hover:bg-canvas dark:hover:bg-navy-800 rounded-full border border-border/60 dark:border-navy-700 transition-all"
                 >
                   Cancel
-                </Button>
+                </button>
               </div>
             </div>
           </div>
