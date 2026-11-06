@@ -19,7 +19,8 @@ import {
   Search,
   Sparkles,
   AlertCircle,
-  FolderOpen
+  FolderOpen,
+  Award
 } from 'lucide-react';
 import { AnimatedNumber, Skeleton, LoadingSpinner } from '../../components/ui';
 import { calculateCumulativeMetrics, DEFAULT_GRADING_SCALES } from '../../services/academic/cgpaEngine';
@@ -528,21 +529,16 @@ export function DashboardPage({
             <button
               type="button"
               onClick={() => onNavigateTab('tutor-dashboard')}
-              className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-[#DDEFE5]/90 to-white/80 dark:from-[#176B4D]/25 dark:to-white/5 border border-[#176B4D]/30 dark:border-[#176B4D]/40 hover:border-[#176B4D] transition-all text-left shadow-sm group relative"
+              className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group relative"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#176B4D] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-sm">
-                <Sparkles className="w-5 h-5 text-amber-300" />
+              <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Award className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                    Tutor Hub
-                  </p>
-                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-[#176B4D] text-white tracking-wide">
-                    Tutor
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#176B4D] dark:text-[#A7F3D0] font-medium mt-0.5 truncate">
+                <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
+                  Tutor Dashboard
+                </p>
+                <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
                   Manage sessions
                 </p>
               </div>

@@ -443,6 +443,24 @@
 .str-chat__channel,
 .str-chat__channel-inner {
   background: transparent !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Ensure .str-chat__container stacks vertically so Header is at top, Main panel below */
+.str-chat__channel .str-chat__container {
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+.str-chat__channel .str-chat__container .str-chat__main-panel {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  height: 100% !important;
 }
 
 /* Quoted message bubble */
