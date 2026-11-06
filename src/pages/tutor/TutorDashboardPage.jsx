@@ -79,12 +79,12 @@ function StatCard({ label, value, sub, icon: Icon, accent = 'academic' }) {
 
 function SectionHeader({ title, subtitle, action }) {
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
       <div>
         <h2 className="text-base font-bold text-ink dark:text-white">{title}</h2>
         {subtitle && <p className="text-xs text-muted dark:text-gray-400 mt-0.5">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
@@ -382,12 +382,12 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
     <div className="max-w-6xl space-y-8 pb-20 md:pb-8">
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-border dark:border-gray-800 pb-5">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-academic-100 dark:bg-academic/20 border border-academic-200 dark:border-academic/30 flex items-center justify-center text-academic shrink-0 shadow-tactile-surface">
-            <Award className="w-6 h-6" />
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-academic-100 dark:bg-academic/20 border border-academic-200 dark:border-academic/30 flex items-center justify-center text-academic shrink-0 shadow-tactile-surface">
+            <Award className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
+            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
               <Badge variant="academic">Tutor Workspace</Badge>
               {isProfileActive && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-academic-50 dark:bg-academic/20 border border-academic-200 dark:border-academic/30 text-academic">
@@ -404,12 +404,13 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
           </div>
         </div>
 
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="w-full sm:w-auto shrink-0 flex items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
             onClick={() => onNavigate('messages')}
             icon={MessageSquare}
+            className="flex-1 sm:flex-none justify-center"
           >
             Messages & Chat
           </Button>
@@ -418,7 +419,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
             size="sm"
             onClick={() => onNavigate('tutors')}
             icon={Compass}
-            className="shadow-tactile-btn"
+            className="flex-1 sm:flex-none justify-center shadow-tactile-btn"
           >
             View Marketplace
           </Button>
@@ -431,7 +432,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
           title="Tutor Overview"
           subtitle="Real, verified statistics based on actual student tutoring records"
         />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
             label="Total Students"
             value={distinctStudents}
@@ -469,13 +470,13 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
           title="Student Bookings"
           subtitle="Manage incoming session requests and scheduled lessons"
           action={
-            <div className="flex items-center gap-1.5 bg-canvas dark:bg-navy-900 border border-border dark:border-gray-800 p-1 rounded-xl text-xs">
+            <div className="flex items-center gap-1 bg-canvas dark:bg-navy-900 border border-border dark:border-gray-800 p-1 rounded-xl text-xs overflow-x-auto max-w-full scrollbar-none">
               {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setBookingFilter(tab)}
-                  className={`px-2.5 py-1 rounded-lg font-semibold capitalize transition-all ${
+                  className={`px-2.5 py-1 rounded-lg font-semibold capitalize whitespace-nowrap transition-all ${
                     bookingFilter === tab
                       ? 'bg-academic text-white shadow-sm'
                       : 'text-muted dark:text-gray-400 hover:text-ink dark:hover:text-white'
@@ -558,7 +559,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
                   </div>
 
                   {/* Actions depending on booking status */}
-                  <div className="shrink-0 flex items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border dark:border-gray-800">
+                  <div className="shrink-0 flex items-center gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-border dark:border-gray-800 w-full md:w-auto justify-end">
                     {b.status === 'pending' && (
                       <>
                         <Button
@@ -566,7 +567,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
                           size="sm"
                           disabled={isActioning}
                           onClick={() => handleBookingResponse(b.id, 'reject')}
-                          className="text-danger hover:bg-danger-50 dark:hover:bg-danger/20"
+                          className="flex-1 md:flex-none justify-center text-danger hover:bg-danger-50 dark:hover:bg-danger/20"
                         >
                           Reject
                         </Button>
@@ -576,6 +577,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
                           disabled={isActioning}
                           icon={isActioning ? Loader2 : CheckCircle2}
                           onClick={() => handleBookingResponse(b.id, 'accept')}
+                          className="flex-1 md:flex-none justify-center"
                         >
                           Accept Booking
                         </Button>
@@ -589,6 +591,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
                           size="sm"
                           icon={MessageSquare}
                           onClick={() => onNavigate('messages')}
+                          className="flex-1 md:flex-none justify-center"
                         >
                           Chat
                         </Button>
@@ -597,6 +600,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
                           size="sm"
                           icon={CheckCircle2}
                           onClick={() => handleCompleteBooking(b.id)}
+                          className="flex-1 md:flex-none justify-center"
                         >
                           Complete Session
                         </Button>

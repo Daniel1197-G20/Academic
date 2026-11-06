@@ -153,7 +153,7 @@ export function EarningsSection({ userProfile, showToast }) {
   return (
     <div className="space-y-6">
       {/* ── Stats Overview Grid ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white border border-border rounded-card p-4 shadow-tactile-surface">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted">Available Balance</span>
