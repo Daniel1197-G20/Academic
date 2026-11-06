@@ -4,11 +4,10 @@ import {
   BookOpen, 
   CheckSquare, 
   Compass, 
-  User,
-  Sparkles
+  User
 } from 'lucide-react';
 
-export function BottomNav({ activeTab, onSelectTab, isTutor = false }) {
+export function BottomNav({ activeTab, onSelectTab }) {
   const items = [
     { 
       id: 'dashboard', 
@@ -16,12 +15,6 @@ export function BottomNav({ activeTab, onSelectTab, isTutor = false }) {
       icon: LayoutDashboard,
       isActive: (tab) => tab === 'dashboard' || tab === 'overview'
     },
-    ...(isTutor ? [{
-      id: 'tutor-dashboard',
-      label: 'Tutor',
-      icon: Sparkles,
-      isActive: (tab) => tab === 'tutor-dashboard' || tab === 'become-tutor'
-    }] : []),
     { 
       id: 'study', 
       label: 'Study', 

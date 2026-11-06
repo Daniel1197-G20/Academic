@@ -1039,7 +1039,6 @@ function AppContent() {
         <BottomNav
           activeTab={activeTab}
           onSelectTab={navigateRoute}
-          isTutor={currentUser?.role === 'tutor'}
         />
 
         {/* Universal Cookie Settings Modal */}
