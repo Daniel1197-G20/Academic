@@ -28,6 +28,21 @@ import {
 import { generateAiTutorResponse } from './ai-tutor-service.js';
 import { generateStreamUserToken, getOrCreateDirectConversation, isStreamConfigured } from './stream-service.js';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import {
+  startStudySession,
+  processSessionHeartbeat,
+  pauseStudySession,
+  resumeStudySession,
+  completeStudySession,
+  recordSessionVisibilityChange,
+  startStudentPracticeAttempt,
+  submitStudentPracticeAttempt,
+  getStudentAcademicProfile
+} from './academic-intelligence-service.js';
+import {
+  generateStudentAcademicAnalysis,
+  formatAcademicContextForAi
+} from './academic-analysis-engine.js';
 
 // Secret configuration
 // APP_SECRET is required when creating or verifying legacy HMAC session tokens.
@@ -953,6 +968,180 @@ export async function handleApiRequest(req, res) {
       return sendJson(res, 200, { streak, totalHours, activeDays: dates.length });
     }
 
+    // ── 4B. ACADEMIC INTELLIGENCE FOUNDATION ENDPOINTS ─────────────────────────
+
+    // POST /api/study/sessions/start — Start a telemetry-tracked study session
+    if (pathname === '/api/study/sessions/start' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const body = await parseJsonBody(req).catch(() => ({}));
+      try {
+        const session = await startStudySession(authUser.userId, body);
+        return sendJson(res, 201, { success: true, session });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/sessions/:id/heartbeat — 30-second server-validated heartbeat
+    if (pathname.startsWith('/api/study/sessions/') && pathname.endsWith('/heartbeat') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const sessionId = pathname.replace('/api/study/sessions/', '').replace('/heartbeat', '');
+      const body = await parseJsonBody(req).catch(() => ({}));
+      try {
+        const result = await processSessionHeartbeat(authUser.userId, sessionId, body);
+        return sendJson(res, 200, { success: true, ...result });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/sessions/:id/pause — Pause study session
+    if (pathname.startsWith('/api/study/sessions/') && pathname.endsWith('/pause') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const sessionId = pathname.replace('/api/study/sessions/', '').replace('/pause', '');
+      const body = await parseJsonBody(req).catch(() => ({}));
+      try {
+        const result = await pauseStudySession(authUser.userId, sessionId, body);
+        return sendJson(res, 200, { success: true, ...result });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/sessions/:id/resume — Resume study session
+    if (pathname.startsWith('/api/study/sessions/') && pathname.endsWith('/resume') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const sessionId = pathname.replace('/api/study/sessions/', '').replace('/resume', '');
+      try {
+        const result = await resumeStudySession(authUser.userId, sessionId);
+        return sendJson(res, 200, { success: true, ...result });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/sessions/:id/complete — Complete study session
+    if (pathname.startsWith('/api/study/sessions/') && pathname.endsWith('/complete') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const sessionId = pathname.replace('/api/study/sessions/', '').replace('/complete', '');
+      try {
+        const result = await completeStudySession(authUser.userId, sessionId);
+        return sendJson(res, 200, { success: true, ...result });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/sessions/:id/visibility — Record tab blur/focus
+    if (pathname.startsWith('/api/study/sessions/') && pathname.endsWith('/visibility') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const sessionId = pathname.replace('/api/study/sessions/', '').replace('/visibility', '');
+      const { isVisible } = await parseJsonBody(req).catch(() => ({ isVisible: true }));
+      try {
+        const result = await recordSessionVisibilityChange(authUser.userId, sessionId, isVisible);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // GET /api/study/sessions/history — List completed study sessions
+    if (pathname === '/api/study/sessions/history' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const sessionsRes = await db.query(`
+        SELECT id, subject_id, topic_id, source, started_at, ended_at, active_duration_seconds, status
+        FROM student_study_sessions
+        WHERE student_id = $1
+        ORDER BY created_at DESC
+        LIMIT 50;
+      `, [authUser.userId]);
+
+      return sendJson(res, 200, { sessions: sessionsRes.rows });
+    }
+
+    // POST /api/practice/start — Start practice drill (safely, no answer leak)
+    if (pathname === '/api/practice/start' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const body = await parseJsonBody(req).catch(() => ({}));
+      try {
+        // Enforce TEST_PREP_BASIC entitlement and usage
+        await atomicIncrementUsage(authUser.userId, 'TEST_PREP_BASIC');
+        const drill = await startStudentPracticeAttempt(authUser.userId, body);
+        return sendJson(res, 201, { success: true, drill });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // POST /api/practice/submit — Submit practice drill for server-side evaluation & mastery update
+    if (pathname === '/api/practice/submit' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const { attemptId, answers, timeSpentSeconds } = await parseJsonBody(req).catch(() => ({}));
+      if (!attemptId) return sendJson(res, 400, { error: 'attemptId is required' });
+
+      try {
+        const evaluation = await submitStudentPracticeAttempt(authUser.userId, attemptId, { answers, timeSpentSeconds });
+        return sendJson(res, 200, { success: true, ...evaluation });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // GET /api/academic/profile — Aggregate evidence-based student profile
+    if (pathname === '/api/academic/profile' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const profile = await getStudentAcademicProfile(authUser.userId);
+        return sendJson(res, 200, { success: true, ...profile });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
+    // GET /api/academic/curriculum — List available subjects & topics for practice
+    if (pathname === '/api/academic/curriculum' && method === 'GET') {
+      const subjsRes = await db.query(`SELECT id, name, code, description, category FROM subjects WHERE is_active = true ORDER BY display_order ASC;`);
+      const topicsRes = await db.query(`SELECT id, subject_id, name, code, description FROM topics WHERE is_active = true ORDER BY display_order ASC;`);
+
+      return sendJson(res, 200, {
+        subjects: subjsRes.rows,
+        topics: topicsRes.rows
+      });
+    }
+
+    // GET /api/academic/analysis — Personal Academic Intelligence Analysis (Phase 2)
+    if (pathname === '/api/academic/analysis' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
+
+      try {
+        const analysis = await generateStudentAcademicAnalysis(authUser.userId);
+        return sendJson(res, 200, { success: true, ...analysis });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 500, { error: err.message });
+      }
+    }
+
     // --- 5. SUBSCRIPTION & BILLING (PAYSTACK & ENTITLEMENTS) ---
     if (pathname === '/api/billing/plans' && method === 'GET') {
       const plans = await getSubscriptionPlans();
@@ -1148,8 +1337,17 @@ export async function handleApiRequest(req, res) {
           msgHistory = [{ role: 'user', content: prompt.trim() }];
         }
 
-        // Call AI Service (Grok API or Academic Fallback)
-        const aiResult = await generateAiTutorResponse(msgHistory);
+        // Phase 2: Compute verified academic intelligence analysis and ground the AI context
+        let academicContextBrief = null;
+        try {
+          const analysis = await generateStudentAcademicAnalysis(authUser.userId);
+          academicContextBrief = formatAcademicContextForAi(analysis);
+        } catch (analysisErr) {
+          console.warn('[api.js] Notice: Could not compute academic analysis brief:', analysisErr.message);
+        }
+
+        // Call AI Service (Grok API or Academic Fallback with Grounded Context)
+        const aiResult = await generateAiTutorResponse(msgHistory, academicContextBrief);
         const fullAnswer = aiResult.answer;
 
         // Save AI response message

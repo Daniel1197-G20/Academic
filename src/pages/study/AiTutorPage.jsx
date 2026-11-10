@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge } from '../../components/ui';
 import { api } from '../../services/api/client';
+import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { FeatureGate } from '../../components/billing/FeatureGate';
 
 const STARTER_PROMPTS = [
@@ -70,6 +71,12 @@ export function AiTutorPage({ onNavigate, showToast }) {
 
   useEffect(() => {
     fetchConversations();
+
+    const unsub = syncEngine.subscribe(SYNC_EVENTS.ACADEMIC_UPDATED, () => {
+      fetchConversations();
+    });
+
+    return () => unsub();
   }, [fetchConversations]);
 
   // Fetch messages for active conversation
@@ -138,11 +145,12 @@ export function AiTutorPage({ onNavigate, showToast }) {
         { id: streamAssistantId, sender: 'assistant', content: '', created_at: new Date().toISOString() }
       ]);
 
+      const token = api.getToken() || localStorage.getItem('academic_platform_token') || localStorage.getItem('token') || '';
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
           prompt: text,

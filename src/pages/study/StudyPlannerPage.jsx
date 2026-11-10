@@ -25,6 +25,9 @@ import {
   TactileCheckbox
 } from '../../components/ui';
 import { api } from '../../services/api/client';
+import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
+import { useStudySessionTracker } from '../../hooks/useStudySessionTracker';
+import { StudySessionTimerWidget } from '../../components/study/StudySessionTimerWidget';
 
 export function StudyPlannerPage({
   studyPlans = [],
@@ -41,6 +44,14 @@ export function StudyPlannerPage({
   const [isNewPlanOpen, setIsNewPlanOpen] = useState(false);
   const [isLogHoursOpen, setIsLogHoursOpen] = useState(false);
   const [selectedPlanForLog, setSelectedPlanForLog] = useState(null);
+
+  // Active study session telemetry tracker hook
+  const studyTracker = useStudySessionTracker({
+    showToast,
+    onSessionCompleted: () => {
+      onRefreshData?.();
+    }
+  });
 
   // Optimistic local topics map for immediate instant visual feedback
   const [optimisticOverrides, setOptimisticOverrides] = useState({});
@@ -174,6 +185,7 @@ export function StudyPlannerPage({
         topics: topicList
       });
 
+      syncEngine.broadcastUpdate(SYNC_EVENTS.STUDY_PLAN_UPDATED, { action: 'create_plan', subject });
       showToast({ type: 'success', title: 'Study Plan Created', message: `${subject} plan ready.` });
       setIsNewPlanOpen(false);
       setSubject('');
@@ -191,6 +203,7 @@ export function StudyPlannerPage({
     if (!window.confirm(`Delete study plan for "${planSubject}"?`)) return;
     try {
       await api.deleteStudyPlan(planId);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.STUDY_PLAN_UPDATED, { action: 'delete_plan', planId });
       showToast({ type: 'info', title: 'Plan Deleted', message: `${planSubject} removed.` });
       onRefreshData();
     } catch (err) {
@@ -217,6 +230,7 @@ export function StudyPlannerPage({
         Number(logMinutes),
         logNotes
       );
+      syncEngine.broadcastUpdate(SYNC_EVENTS.STUDY_PLAN_UPDATED, { action: 'log_hours', planId: selectedPlanForLog.id });
       showToast({ 
         type: 'success', 
         title: 'Study Session Logged', 
@@ -262,6 +276,13 @@ export function StudyPlannerPage({
           </button>
         </div>
       </div>
+
+      {/* ── 1B. ACTIVE STUDY SESSION TRACKER WIDGET ─────────────────────── */}
+      <StudySessionTimerWidget
+        tracker={studyTracker}
+        studyPlans={studyPlans}
+        onFinish={onRefreshData}
+      />
 
       {/* ── 2. METRIC STRIP (Matching Section 2_1) ────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">

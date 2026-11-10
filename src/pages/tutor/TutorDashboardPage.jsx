@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Avatar } from '../../components/ui';
 import { supabase } from '../../lib/supabase/client';
+import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { EarningsSection } from './EarningsSection';
 import { PayoutSetupSection } from './PayoutSetupSection';
 
@@ -231,6 +232,13 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
 
   useEffect(() => {
     fetchTutorData();
+
+    // Subscribe to tutor updates across devices
+    const unsub = syncEngine.subscribe(SYNC_EVENTS.TUTOR_DATA_UPDATED, () => {
+      fetchTutorData();
+    });
+
+    return () => unsub();
   }, [fetchTutorData]);
 
   // Handle Accept / Reject booking

@@ -10,6 +10,7 @@ export function TopHeader({
   onOpenProfile,
   onOpenPricing,
   onOpenSubscription,
+  onOpenNotifications,
   activeTabTitle,
   isDark,
   onToggleDark,
@@ -39,6 +40,7 @@ export function TopHeader({
         {/* Notification Bell */}
         <button
           type="button"
+          onClick={onOpenNotifications}
           className="relative w-10 h-10 rounded-full glass-icon-btn flex items-center justify-center text-[#111827] dark:text-white transition-all shadow-sm"
           title="Notifications"
           aria-label="Notifications"

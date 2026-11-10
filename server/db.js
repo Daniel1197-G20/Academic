@@ -329,6 +329,143 @@ export async function initializeDatabase() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_subscription_usage_lookup ON subscription_usage(user_id, feature_code, period_start);
+
+    -- =========================================================================
+    -- ACADEMIC INTELLIGENCE FOUNDATION TABLES (PHASE 1)
+    -- =========================================================================
+
+    -- SUBJECTS (Taxonomy catalog mirror)
+    CREATE TABLE IF NOT EXISTS subjects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      code TEXT NOT NULL UNIQUE,
+      description TEXT,
+      category TEXT DEFAULT 'General',
+      display_order INT DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- TOPICS (Granular concept taxonomy mirror)
+    CREATE TABLE IF NOT EXISTS topics (
+      id TEXT PRIMARY KEY,
+      subject_id TEXT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      code TEXT,
+      description TEXT,
+      display_order INT DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- QUESTION BANK (Practice drills & evaluations mirror)
+    CREATE TABLE IF NOT EXISTS question_bank (
+      id TEXT PRIMARY KEY,
+      subject_id TEXT REFERENCES subjects(id) ON DELETE SET NULL,
+      topic_id TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      question TEXT NOT NULL,
+      question_type TEXT NOT NULL DEFAULT 'multiple_choice',
+      difficulty TEXT NOT NULL DEFAULT 'intermediate',
+      options TEXT NOT NULL,
+      correct_answer TEXT NOT NULL,
+      explanation TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- STUDENT STUDY SESSIONS (Active heartbeat-validated study telemetry)
+    CREATE TABLE IF NOT EXISTS student_study_sessions (
+      id TEXT PRIMARY KEY,
+      student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject_id TEXT REFERENCES subjects(id) ON DELETE SET NULL,
+      topic_id TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      study_plan_id TEXT,
+      source TEXT NOT NULL DEFAULT 'study_timer',
+      started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ended_at TIMESTAMPTZ,
+      last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      active_duration_seconds INT NOT NULL DEFAULT 0,
+      idle_duration_seconds INT NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'active',
+      client_session_key TEXT,
+      device_info TEXT DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_student_study_sessions_student ON student_study_sessions(student_id, status);
+    CREATE INDEX IF NOT EXISTS idx_student_study_sessions_created ON student_study_sessions(student_id, created_at DESC);
+
+    -- STUDY SESSION EVENTS (Fine-grained telemetry lifecycle audit)
+    CREATE TABLE IF NOT EXISTS study_session_events (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES student_study_sessions(id) ON DELETE CASCADE,
+      student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL,
+      event_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      metadata TEXT DEFAULT '{}'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_study_session_events_session ON study_session_events(session_id, event_timestamp ASC);
+    CREATE INDEX IF NOT EXISTS idx_study_session_events_student ON study_session_events(student_id);
+
+    -- STUDENT PRACTICE ATTEMPTS (Self-directed practice drills)
+    CREATE TABLE IF NOT EXISTS student_practice_attempts (
+      id TEXT PRIMARY KEY,
+      student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject_id TEXT REFERENCES subjects(id) ON DELETE SET NULL,
+      topic_id TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      session_id TEXT REFERENCES student_study_sessions(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'in_progress',
+      score NUMERIC(5, 2),
+      passed BOOLEAN,
+      total_questions INT NOT NULL DEFAULT 0,
+      correct_answers_count INT NOT NULL DEFAULT 0,
+      time_spent_seconds INT DEFAULT 0,
+      question_ids TEXT NOT NULL DEFAULT '[]',
+      source TEXT NOT NULL DEFAULT 'practice_drill',
+      started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_student_practice_attempts_student ON student_practice_attempts(student_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_student_practice_attempts_topic ON student_practice_attempts(student_id, topic_id);
+
+    -- STUDENT PRACTICE ANSWERS (Granular item responses)
+    CREATE TABLE IF NOT EXISTS student_practice_answers (
+      id TEXT PRIMARY KEY,
+      attempt_id TEXT NOT NULL REFERENCES student_practice_attempts(id) ON DELETE CASCADE,
+      student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      question_id TEXT NOT NULL REFERENCES question_bank(id) ON DELETE CASCADE,
+      selected_option TEXT,
+      is_correct BOOLEAN NOT NULL DEFAULT false,
+      answered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_student_practice_answers_attempt ON student_practice_answers(attempt_id);
+    CREATE INDEX IF NOT EXISTS idx_student_practice_answers_student ON student_practice_answers(student_id);
+
+    -- STUDENT TOPIC MASTERY (Empirical mastery ledger)
+    CREATE TABLE IF NOT EXISTS student_topic_mastery (
+      id TEXT PRIMARY KEY,
+      student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject_id TEXT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+      topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+      total_questions_attempted INT NOT NULL DEFAULT 0,
+      correct_answers_count INT NOT NULL DEFAULT 0,
+      incorrect_answers_count INT NOT NULL DEFAULT 0,
+      accuracy_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.0,
+      mastery_classification TEXT NOT NULL DEFAULT 'not_assessed',
+      performance_trend TEXT NOT NULL DEFAULT 'stable',
+      last_assessed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (student_id, topic_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_student_topic_mastery_student ON student_topic_mastery(student_id);
+    CREATE INDEX IF NOT EXISTS idx_student_topic_mastery_subject ON student_topic_mastery(student_id, subject_id);
   `);
 
   // Seed default grading scales
@@ -843,6 +980,134 @@ export async function initializeDatabase() {
         display_name = COALESCE(display_name, 'Maya Lin')
       WHERE email = 'maya.lin@tech-academy.edu';
     `);
+  }
+
+  // Seed default core academic subjects, topics, and question bank for drills and practice
+  await seedAcademicCurriculumAndQuestions();
+}
+
+/**
+ * Seeds core subjects, topics, and verified question bank items
+ * for student practice drills, diagnostic testing, and topic mastery.
+ */
+async function seedAcademicCurriculumAndQuestions() {
+  const subjectsData = [
+    { id: 'subj_math', name: 'Mathematics', code: 'MTH', description: 'Pure & Applied Mathematics', category: 'STEM', display_order: 1 },
+    { id: 'subj_cs', name: 'Computer Science', code: 'CSC', description: 'Algorithms, Data Structures & Systems', category: 'STEM', display_order: 2 },
+    { id: 'subj_phys', name: 'Physics', code: 'PHY', description: 'Classical Mechanics & Modern Physics', category: 'STEM', display_order: 3 },
+    { id: 'subj_chem', name: 'Chemistry', code: 'CHM', description: 'Organic, Inorganic & Physical Chemistry', category: 'STEM', display_order: 4 },
+  ];
+
+  for (const s of subjectsData) {
+    await db.query(`
+      INSERT INTO subjects (id, name, code, description, category, display_order, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, true)
+      ON CONFLICT (id) DO NOTHING;
+    `, [s.id, s.name, s.code, s.description, s.category, s.display_order]);
+  }
+
+  const topicsData = [
+    { id: 'top_calc_limits', subject_id: 'subj_math', name: 'Limits & Calculus', code: 'MTH-01' },
+    { id: 'top_linear_alg', subject_id: 'subj_math', name: 'Linear Algebra & Matrices', code: 'MTH-02' },
+    { id: 'top_algo_sort', subject_id: 'subj_cs', name: 'Sorting & Divide-and-Conquer', code: 'CSC-01' },
+    { id: 'top_algo_graphs', subject_id: 'subj_cs', name: 'Graph Theory & BFS/DFS', code: 'CSC-02' },
+    { id: 'top_db_sql', subject_id: 'subj_cs', name: 'Database Systems & SQL', code: 'CSC-03' },
+    { id: 'top_phys_kinematics', subject_id: 'subj_phys', name: 'Kinematics & Newton Laws', code: 'PHY-01' },
+    { id: 'top_chem_organic', subject_id: 'subj_chem', name: 'Organic Reaction Mechanisms', code: 'CHM-01' },
+  ];
+
+  for (const t of topicsData) {
+    await db.query(`
+      INSERT INTO topics (id, subject_id, name, code, description, display_order, is_active)
+      VALUES ($1, $2, $3, $4, $5, 1, true)
+      ON CONFLICT (id) DO NOTHING;
+    `, [t.id, t.subject_id, t.name, t.code, t.name]);
+  }
+
+  const sampleQuestions = [
+    // CSC - Sorting & Divide-and-Conquer
+    {
+      id: 'q_cs_sort_1', subject_id: 'subj_cs', topic_id: 'top_algo_sort',
+      question: 'What is the worst-case time complexity of standard QuickSort without randomized pivot?',
+      options: JSON.stringify([{ id: 'A', text: 'O(n)' }, { id: 'B', text: 'O(n log n)' }, { id: 'C', text: 'O(n^2)' }, { id: 'D', text: 'O(log n)' }]),
+      correct_answer: 'C', explanation: 'Worst-case O(n^2) happens when the pivot repeatedly splits elements into 0 and n-1 items.'
+    },
+    {
+      id: 'q_cs_sort_2', subject_id: 'subj_cs', topic_id: 'top_algo_sort',
+      question: 'Which sorting algorithm is guaranteed O(n log n) in worst case and is stable?',
+      options: JSON.stringify([{ id: 'A', text: 'MergeSort' }, { id: 'B', text: 'QuickSort' }, { id: 'C', text: 'HeapSort' }, { id: 'D', text: 'SelectionSort' }]),
+      correct_answer: 'A', explanation: 'MergeSort is a stable divide-and-conquer sorting algorithm with guaranteed O(n log n) runtime.'
+    },
+    {
+      id: 'q_cs_sort_3', subject_id: 'subj_cs', topic_id: 'top_algo_sort',
+      question: 'What is the auxiliary space complexity of MergeSort on an array of size n?',
+      options: JSON.stringify([{ id: 'A', text: 'O(1)' }, { id: 'B', text: 'O(log n)' }, { id: 'C', text: 'O(n)' }, { id: 'D', text: 'O(n^2)' }]),
+      correct_answer: 'C', explanation: 'Standard MergeSort requires O(n) temporary space to merge sub-arrays.'
+    },
+    {
+      id: 'q_cs_sort_4', subject_id: 'subj_cs', topic_id: 'top_algo_sort',
+      question: 'Which sorting method uses the divide-and-conquer strategy?',
+      options: JSON.stringify([{ id: 'A', text: 'Bubble Sort' }, { id: 'B', text: 'QuickSort' }, { id: 'C', text: 'Insertion Sort' }, { id: 'D', text: 'Counting Sort' }]),
+      correct_answer: 'B', explanation: 'QuickSort recursively partitions arrays into smaller subproblems.'
+    },
+    {
+      id: 'q_cs_sort_5', subject_id: 'subj_cs', topic_id: 'top_algo_sort',
+      question: 'What is the lower bound for comparison-based sorting algorithms in worst-case?',
+      options: JSON.stringify([{ id: 'A', text: 'Ω(n)' }, { id: 'B', text: 'Ω(n log n)' }, { id: 'C', text: 'Ω(n^2)' }, { id: 'D', text: 'Ω(log n)' }]),
+      correct_answer: 'B', explanation: 'Decision tree analysis demonstrates comparison sorts require Ω(n log n) comparisons in worst case.'
+    },
+    {
+      id: 'q_cs_sort_6', subject_id: 'subj_cs', topic_id: 'top_algo_sort',
+      question: 'Which pivot selection strategy ensures expected O(n log n) performance for QuickSort?',
+      options: JSON.stringify([{ id: 'A', text: 'Always pick first element' }, { id: 'B', text: 'Randomized pivot selection' }, { id: 'C', text: 'Always pick last element' }, { id: 'D', text: 'Pick zero index' }]),
+      correct_answer: 'B', explanation: 'Randomized pivot selection guarantees expected O(n log n) time regardless of input ordering.'
+    },
+
+    // MTH - Limits & Calculus
+    {
+      id: 'q_mth_calc_1', subject_id: 'subj_math', topic_id: 'top_calc_limits',
+      question: 'What is the value of limit of (sin x)/x as x approaches 0?',
+      options: JSON.stringify([{ id: 'A', text: '0' }, { id: 'B', text: '1' }, { id: 'C', text: 'Infinity' }, { id: 'D', text: 'Undefined' }]),
+      correct_answer: 'B', explanation: 'lim(x->0) (sin x)/x = 1 is a fundamental trigonometric limit.'
+    },
+    {
+      id: 'q_mth_calc_2', subject_id: 'subj_math', topic_id: 'top_calc_limits',
+      question: 'When can L\'Hôpital\'s Rule be applied?',
+      options: JSON.stringify([{ id: 'A', text: 'Any fraction' }, { id: 'B', text: 'Indeterminate forms 0/0 or ±∞/±∞' }, { id: 'C', text: 'Only when denominator is zero' }, { id: 'D', text: 'Linear equations only' }]),
+      correct_answer: 'B', explanation: 'L\'Hôpital\'s Rule requires an indeterminate form of 0/0 or ±∞/±∞.'
+    },
+    {
+      id: 'q_mth_calc_3', subject_id: 'subj_math', topic_id: 'top_calc_limits',
+      question: 'What is the derivative of f(x) = ln(x) with respect to x?',
+      options: JSON.stringify([{ id: 'A', text: 'e^x' }, { id: 'B', text: '1/x' }, { id: 'C', text: 'x' }, { id: 'D', text: '1/(x^2)' }]),
+      correct_answer: 'B', explanation: 'd/dx [ln(x)] = 1/x for x > 0.'
+    },
+    {
+      id: 'q_mth_calc_4', subject_id: 'subj_math', topic_id: 'top_calc_limits',
+      question: 'What is the derivative of f(x) = e^(2x)?',
+      options: JSON.stringify([{ id: 'A', text: 'e^(2x)' }, { id: 'B', text: '2e^(2x)' }, { id: 'C', text: 'e^x' }, { id: 'D', text: '2x e^(2x-1)' }]),
+      correct_answer: 'B', explanation: 'Using chain rule: d/dx [e^(2x)] = 2 * e^(2x).'
+    },
+    {
+      id: 'q_mth_calc_5', subject_id: 'subj_math', topic_id: 'top_calc_limits',
+      question: 'Evaluate lim(x->infinity) (2x^2 + 3)/(5x^2 - 1).',
+      options: JSON.stringify([{ id: 'A', text: '2/5' }, { id: 'B', text: '0' }, { id: 'C', text: '3/-1' }, { id: 'D', text: 'Infinity' }]),
+      correct_answer: 'A', explanation: 'Dividing numerator and denominator by highest power x^2 yields 2/5.'
+    },
+    {
+      id: 'q_mth_calc_6', subject_id: 'subj_math', topic_id: 'top_calc_limits',
+      question: 'What does the First Derivative Test determine for a continuous function?',
+      options: JSON.stringify([{ id: 'A', text: 'Inflection points' }, { id: 'B', text: 'Local extrema (maxima and minima)' }, { id: 'C', text: 'Asymptotes' }, { id: 'D', text: 'Domain of definition' }]),
+      correct_answer: 'B', explanation: 'The first derivative test analyzes sign changes around critical numbers to find local maxima and minima.'
+    }
+  ];
+
+  for (const q of sampleQuestions) {
+    await db.query(`
+      INSERT INTO question_bank (id, subject_id, topic_id, question, question_type, difficulty, options, correct_answer, explanation, status)
+      VALUES ($1, $2, $3, $4, 'multiple_choice', 'intermediate', $5, $6, $7, 'active')
+      ON CONFLICT (id) DO NOTHING;
+    `, [q.id, q.subject_id, q.topic_id, q.question, q.options, q.correct_answer, q.explanation]);
   }
 }
 

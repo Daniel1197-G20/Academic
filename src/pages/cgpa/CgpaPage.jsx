@@ -30,6 +30,7 @@ import {
   DEFAULT_GRADING_SCALES 
 } from '../../services/academic/cgpaEngine';
 import { api } from '../../services/api/client';
+import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { useBilling } from '../../context/BillingContext';
 import { UpgradePrompt } from '../../components/billing/UpgradePrompt';
 
@@ -78,6 +79,7 @@ export function CgpaPage({
   const handleScaleSelect = async (scaleKey) => {
     try {
       await api.updateSelectedScale(scaleKey);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.ACADEMIC_UPDATED, { action: 'scale_change', scaleKey });
       showToast({ type: 'success', title: 'Grading Scale Updated', message: `Applied ${scaleKey} scale calculation rules.` });
       setIsScaleModalOpen(false);
       onRefreshData();
@@ -91,6 +93,7 @@ export function CgpaPage({
     e.preventDefault();
     try {
       await api.createSemester(newYear, newSemesterName);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.ACADEMIC_UPDATED, { action: 'add_semester', year: newYear });
       showToast({ type: 'success', title: 'Semester Created', message: `${newYear} - ${newSemesterName} added.` });
       setIsAddSemesterOpen(false);
       onRefreshData();
@@ -104,6 +107,7 @@ export function CgpaPage({
     if (!window.confirm(`Delete ${label} and all its recorded courses? This action cannot be undone.`)) return;
     try {
       await api.deleteSemester(semId);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.ACADEMIC_UPDATED, { action: 'delete_semester', semId });
       showToast({ type: 'info', title: 'Semester Deleted', message: `${label} removed.` });
       onRefreshData();
     } catch (err) {
@@ -115,6 +119,7 @@ export function CgpaPage({
   const handleDuplicateSemester = async (semId) => {
     try {
       await api.duplicateSemester(semId);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.ACADEMIC_UPDATED, { action: 'duplicate_semester', semId });
       showToast({ type: 'success', title: 'Semester Duplicated', message: 'Created duplicate copy with all courses.' });
       onRefreshData();
     } catch (err) {
@@ -154,6 +159,7 @@ export function CgpaPage({
           creditUnits: Number(newCreditUnits),
           letterGrade: newGrade
         });
+        syncEngine.broadcastUpdate(SYNC_EVENTS.ACADEMIC_UPDATED, { action: 'update_course', courseCode: newCourseCode });
         showToast({ type: 'success', title: 'Course Updated', message: `${newCourseCode.toUpperCase()} saved.` });
       } else {
         await api.addCourse({
@@ -163,6 +169,7 @@ export function CgpaPage({
           creditUnits: Number(newCreditUnits),
           letterGrade: newGrade
         });
+        syncEngine.broadcastUpdate(SYNC_EVENTS.ACADEMIC_UPDATED, { action: 'add_course', courseCode: newCourseCode });
         showToast({ type: 'success', title: 'Course Added', message: `${newCourseCode.toUpperCase()} added to semester.` });
       }
       setIsAddCourseOpen(false);
@@ -176,6 +183,7 @@ export function CgpaPage({
   const handleDeleteCourse = async (courseId, code) => {
     try {
       await api.deleteCourse(courseId);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.ACADEMIC_UPDATED, { action: 'delete_course', courseId });
       showToast({ type: 'info', title: 'Course Removed', message: `${code} deleted.` });
       onRefreshData();
     } catch (err) {

@@ -30,6 +30,7 @@ import {
 import { Button, Input, Badge, Modal, Avatar, PageHeader, Tabs } from '../../components/ui';
 import { api } from '../../services/api/client';
 import { supabase } from '../../lib/supabase/client';
+import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { SubscriptionSettingsSection } from '../billing/SubscriptionSettingsSection';
 
 export function ProfilePage({
@@ -179,6 +180,9 @@ export function ProfilePage({
       setAvatarUrl(publicUrl);
       if (onProfileUpdated) onProfileUpdated(res.profile || { ...userProfile, avatar_url: publicUrl });
 
+      // Notify peer devices of avatar change
+      syncEngine.broadcastUpdate(SYNC_EVENTS.PROFILE_UPDATED, { avatar_url: publicUrl });
+
       showToast({
         type: 'success',
         title: 'Photo Updated',
@@ -203,6 +207,8 @@ export function ProfilePage({
       const res = await api.updateProfile({ avatarUrl: '' });
       setAvatarUrl('');
       if (onProfileUpdated) onProfileUpdated(res.profile || { ...userProfile, avatar_url: '' });
+
+      syncEngine.broadcastUpdate(SYNC_EVENTS.PROFILE_UPDATED, { avatar_url: '' });
 
       showToast({
         type: 'info',
@@ -256,6 +262,7 @@ export function ProfilePage({
 
       showToast({ type: 'success', title: 'Profile Updated', message: 'Your student information has been saved.' });
       if (onProfileUpdated) onProfileUpdated(res.profile);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.PROFILE_UPDATED, res.profile);
     } catch (err) {
       showToast({ type: 'error', title: 'Update Failed', message: err.message });
     } finally {

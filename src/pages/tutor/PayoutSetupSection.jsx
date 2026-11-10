@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Building2, DollarSign, ShieldCheck, AlertCircle, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui';
 import { supabase } from '../../lib/supabase/client';
+import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 
 export function PayoutSetupSection({ tutorProfile, userProfile, showToast, onProfileUpdated }) {
   // Session Pricing state — no fake default price
@@ -109,6 +110,7 @@ export function PayoutSetupSection({ tutorProfile, userProfile, showToast, onPro
         message: `Your session price has been updated to ₦${num.toLocaleString()}.`,
       });
 
+      syncEngine.broadcastUpdate(SYNC_EVENTS.TUTOR_DATA_UPDATED, { action: 'update_price', priceNaira: num });
       onProfileUpdated?.();
     } catch (err) {
       setPriceError(err.message);

@@ -27,19 +27,26 @@ Your Goals:
 6. Be encouraging, precise, and academically rigorous. Never give harmful or non-academic content.`;
 
 /**
- * Sends a multi-turn chat request to Grok API or fallback provider.
+ * Sends a multi-turn chat request to Grok API or fallback provider,
+ * with optional grounded academic intelligence context.
  *
  * @param {Array<{role: string, content: string}>} messages - Conversation history
+ * @param {string} [academicContextBrief=null] - Verified academic context string
  * @returns {Promise<{answer: string, model: string, provider: string}>}
  */
-export async function generateAiTutorResponse(messages = []) {
+export async function generateAiTutorResponse(messages = [], academicContextBrief = null) {
   if (!Array.isArray(messages) || messages.length === 0) {
     throw new Error('Messages array cannot be empty');
   }
 
-  // Prepend System Instruction
+  // Prepend System Instruction with Grounded Academic Intelligence Context
+  let effectiveSystemInstruction = SYSTEM_INSTRUCTION;
+  if (academicContextBrief) {
+    effectiveSystemInstruction += `\n\n${academicContextBrief}`;
+  }
+
   const fullMessages = [
-    { role: 'system', content: SYSTEM_INSTRUCTION },
+    { role: 'system', content: effectiveSystemInstruction },
     ...messages.map((m) => ({
       role: m.role === 'assistant' || m.role === 'model' ? 'assistant' : 'user',
       content: String(m.content || ''),
@@ -63,7 +70,7 @@ export async function generateAiTutorResponse(messages = []) {
 
   // Fallback engine (Dev/Test mode when no key configured)
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
-  const fallbackAnswer = generateFallbackAcademicAnswer(lastUserMsg);
+  const fallbackAnswer = generateFallbackAcademicAnswer(lastUserMsg, academicContextBrief);
 
   return {
     answer: fallbackAnswer,
@@ -135,8 +142,27 @@ function callGrokApi(messages) {
 /**
  * Intelligent academic fallback answer generator for dev/test mode.
  */
-function generateFallbackAcademicAnswer(prompt) {
+function generateFallbackAcademicAnswer(prompt, academicContext = null) {
   const p = prompt.toLowerCase();
+
+  // If student asks about their academic progress, strengths, weaknesses, or hours
+  if (
+    p.includes('strongest') ||
+    p.includes('strength') ||
+    p.includes('weakness') ||
+    p.includes('struggling') ||
+    p.includes('hours') ||
+    p.includes('progress') ||
+    p.includes('focus') ||
+    p.includes('improve') ||
+    p.includes('performance') ||
+    p.includes('diagnostic')
+  ) {
+    if (academicContext) {
+      return `### 📊 Your Grounded Academic Intelligence Brief\n\nBased on your verified Studora academic records:\n\n${academicContext}\n\n---\n**Recommendations:**\n1. Review your identified struggling topics above with targeted practice drills.\n2. Dedicate focused 30-minute active study blocks to unassessed topics to build confidence.\n\nWould you like me to walk you through a specific concept in one of your struggling areas?`;
+    }
+    return `### 📊 Academic Records Assessment\n\nYou currently have no completed practice drills or verified active study sessions on record. All subjects and topics are currently **Unassessed**.\n\nTo build your empirical academic intelligence profile and diagnose your strengths and weaknesses, head over to the **Assessments** tab and complete a diagnostic drill!`;
+  }
 
   if (p.includes('l\'hopital') || p.includes('lhopital') || p.includes('limit') || p.includes('calculus')) {
     return `### 📐 Understanding L'Hôpital's Rule
