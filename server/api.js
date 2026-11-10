@@ -609,8 +609,14 @@ export async function handleApiRequest(req, res) {
     }
 
     // --- 3. ACADEMIC & CGPA RECORDS ---
+    // In-memory cache for grading scales (universal, static configuration)
     if (pathname === '/api/academic/scales' && method === 'GET') {
-      const scalesRes = await db.query(`SELECT * FROM grading_scales;`);
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+      if (global.__STUDORA_SCALES_CACHE) {
+        return sendJson(res, 200, { scales: global.__STUDORA_SCALES_CACHE });
+      }
+      const scalesRes = await db.query(`SELECT id, name, max_scale, rules, classifications FROM grading_scales;`);
+      global.__STUDORA_SCALES_CACHE = scalesRes.rows;
       return sendJson(res, 200, { scales: scalesRes.rows });
     }
 
@@ -618,13 +624,13 @@ export async function handleApiRequest(req, res) {
       const authUser = await getAuthenticatedUser(req);
       if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
 
-      // Row-Level Security: Only fetch records where user_id = authUser.userId
+      // Row-Level Security: Only fetch records where user_id = authUser.userId with selected columns
       const semestersRes = await db.query(`
-        SELECT * FROM semesters WHERE user_id = $1 ORDER BY display_order ASC;
+        SELECT id, academic_year, semester_name, display_order FROM semesters WHERE user_id = $1 ORDER BY display_order ASC;
       `, [authUser.userId]);
 
       const coursesRes = await db.query(`
-        SELECT * FROM student_courses WHERE user_id = $1;
+        SELECT id, semester_id, course_code, course_title, credit_units, letter_grade FROM student_courses WHERE user_id = $1;
       `, [authUser.userId]);
 
       const settingsRes = await db.query(`
@@ -1094,13 +1100,13 @@ export async function handleApiRequest(req, res) {
       }
     }
 
-    // POST /api/ai/chat — multi-turn chat endpoint with Grok API + DB persistence
+    // POST /api/ai/chat — multi-turn chat endpoint with Grok API + DB persistence (supports stream: true)
     if (pathname === '/api/ai/chat' && method === 'POST') {
       const authUser = await getAuthenticatedUser(req);
       if (!authUser) return sendJson(res, 401, { error: 'Unauthorized session.' });
 
       const body = await parseJsonBody(req);
-      const { prompt, conversationId, history } = body;
+      const { prompt, conversationId, history, stream } = body;
 
       if (!prompt || !prompt.trim()) {
         return sendJson(res, 400, { error: 'Prompt is required.' });
@@ -1144,16 +1150,39 @@ export async function handleApiRequest(req, res) {
 
         // Call AI Service (Grok API or Academic Fallback)
         const aiResult = await generateAiTutorResponse(msgHistory);
+        const fullAnswer = aiResult.answer;
 
         // Save AI response message
         const aiMsgId = 'msg_' + Date.now() + '_ai';
         await db.query(`
           INSERT INTO ai_chat_messages (id, conversation_id, user_id, sender, content)
           VALUES ($1, $2, $3, 'assistant', $4);
-        `, [aiMsgId, convId, authUser.userId, aiResult.answer]);
+        `, [aiMsgId, convId, authUser.userId, fullAnswer]);
 
         // Touch conversation updated_at timestamp
         await db.query(`UPDATE ai_chat_conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1;`, [convId]);
+
+        // If client requested word-by-word streaming (Server-Sent Events)
+        if (stream) {
+          res.writeHead(200, {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+          });
+
+          // Send metadata event first
+          res.write(`data: ${JSON.stringify({ type: 'start', conversationId: convId, title: convTitle, messageId: aiMsgId, usage })}\n\n`);
+
+          // Split by words/whitespace preserving pacing
+          const tokens = fullAnswer.split(/(\s+)/);
+          for (let i = 0; i < tokens.length; i++) {
+            res.write(`data: ${JSON.stringify({ type: 'token', token: tokens[i] })}\n\n`);
+          }
+
+          res.write(`data: ${JSON.stringify({ type: 'done', fullContent: fullAnswer })}\n\n`);
+          return res.end();
+        }
 
         return sendJson(res, 200, {
           success: true,
@@ -1162,7 +1191,7 @@ export async function handleApiRequest(req, res) {
           message: {
             id: aiMsgId,
             sender: 'assistant',
-            content: aiResult.answer,
+            content: fullAnswer,
             created_at: new Date().toISOString()
           },
           provider: aiResult.provider,

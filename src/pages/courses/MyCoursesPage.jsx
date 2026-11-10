@@ -58,7 +58,7 @@ export function MyCoursesPage({
           description: plan.goal || 'Curriculum objectives & assignments',
           progress,
           isCompleted: progress >= 100,
-          image: '/campus-background.png',
+          image: '/campus-background.webp',
           topicsCount: total,
           completedCount: completed
         });
@@ -75,7 +75,7 @@ export function MyCoursesPage({
             description: `${c.creditUnits || 3} Credit Units • Semester Course`,
             progress: c.grade ? 100 : 60,
             isCompleted: !!c.grade,
-            image: '/campus-background.png',
+            image: '/campus-background.webp',
             topicsCount: 10,
             completedCount: c.grade ? 10 : 6
           });
@@ -190,11 +190,16 @@ export function MyCoursesPage({
                 >
                   {/* Architectural / topic banner image */}
                   <div className="h-36 w-full overflow-hidden relative bg-gray-100 dark:bg-navy-800">
-                    <img
-                      src={course.image}
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    <picture>
+                      <source srcSet="/campus-background-sm.webp" type="image/webp" />
+                      <img
+                        src={course.image}
+                        alt={course.title}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </picture>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <span className="absolute bottom-2.5 left-3 text-sm font-bold text-white drop-shadow-sm truncate max-w-[85%]">
                       {course.title}

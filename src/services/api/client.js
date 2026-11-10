@@ -1,5 +1,6 @@
 const TOKEN_KEY = 'academic_platform_token';
 const memoryTokenStore = new Map();
+const inFlightRequests = new Map();
 
 class ApiClient {
   constructor() {
@@ -40,6 +41,25 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+
+    // Deduplicate identical GET requests while in-flight (Rule 17)
+    if (method === 'GET' && !options.noDedupe) {
+      const cacheKey = `${endpoint}:${this.token || 'anon'}`;
+      if (inFlightRequests.has(cacheKey)) {
+        return inFlightRequests.get(cacheKey);
+      }
+      const promise = this._executeRequest(endpoint, options).finally(() => {
+        inFlightRequests.delete(cacheKey);
+      });
+      inFlightRequests.set(cacheKey, promise);
+      return promise;
+    }
+
+    return this._executeRequest(endpoint, options);
+  }
+
+  async _executeRequest(endpoint, options = {}) {
     const headers = {
       'Content-Type': 'application/json',
       ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),

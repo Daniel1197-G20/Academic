@@ -128,34 +128,72 @@ export function AiTutorPage({ onNavigate, showToast }) {
         }));
       historyPayload.push({ role: 'user', content: text });
 
-      const data = await api.request('/api/ai/chat', {
+      // Setup placeholder streaming assistant message
+      const streamAssistantId = 'stream_' + Date.now();
+      let streamedContent = '';
+
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== tempUserMsg.id),
+        { id: 'user_' + Date.now(), sender: 'user', content: text, created_at: new Date().toISOString() },
+        { id: streamAssistantId, sender: 'assistant', content: '', created_at: new Date().toISOString() }
+      ]);
+
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
         body: JSON.stringify({
           prompt: text,
           conversationId: activeConvId || null,
           history: historyPayload,
-        }),
+          stream: true
+        })
       });
 
-      if (!data || !data.message) {
-        throw new Error('No response from AI Tutor');
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || `Server responded with ${response.status}`);
       }
 
-      // Update active conversation ID if new conversation was created
-      if (!activeConvId && data.conversationId) {
-        setActiveConvId(data.conversationId);
-        fetchConversations();
-      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
 
-      // Replace optimistic state with official response
-      setMessages((prev) => [
-        ...prev.filter((m) => m.id !== tempUserMsg.id),
-        { id: 'user_' + Date.now(), sender: 'user', content: text, created_at: new Date().toISOString() },
-        data.message,
-      ]);
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop(); // keep remainder
 
-      if (data.usage) {
-        setUsageInfo(data.usage);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(trimmed.slice(6));
+              if (event.type === 'start') {
+                if (!activeConvId && event.conversationId) {
+                  setActiveConvId(event.conversationId);
+                  fetchConversations();
+                }
+                if (event.usage) setUsageInfo(event.usage);
+              } else if (event.type === 'token') {
+                streamedContent += event.token;
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === streamAssistantId ? { ...m, content: streamedContent } : m))
+                );
+              } else if (event.type === 'done') {
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === streamAssistantId ? { ...m, content: event.fullContent } : m))
+                );
+              }
+            } catch (parseErr) {
+              // Ignore non-json lines
+            }
+          }
+        }
       }
     } catch (err) {
       setError(err.message || 'AI request failed');

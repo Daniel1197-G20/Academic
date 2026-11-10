@@ -149,6 +149,8 @@ export async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE INDEX IF NOT EXISTS idx_semesters_user_order ON semesters(user_id, display_order ASC);
+
     -- STUDENT COURSES
     CREATE TABLE IF NOT EXISTS student_courses (
       id TEXT PRIMARY KEY,
@@ -160,6 +162,9 @@ export async function initializeDatabase() {
       letter_grade TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE INDEX IF NOT EXISTS idx_student_courses_user ON student_courses(user_id);
+    CREATE INDEX IF NOT EXISTS idx_student_courses_sem ON student_courses(semester_id);
 
     -- STUDY PLANS
     CREATE TABLE IF NOT EXISTS study_plans (
@@ -176,6 +181,8 @@ export async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE INDEX IF NOT EXISTS idx_study_plans_user ON study_plans(user_id, is_archived, created_at DESC);
+
     -- STUDY TOPICS
     CREATE TABLE IF NOT EXISTS study_topics (
       id TEXT PRIMARY KEY,
@@ -187,6 +194,9 @@ export async function initializeDatabase() {
       display_order INT NOT NULL DEFAULT 1
     );
 
+    CREATE INDEX IF NOT EXISTS idx_study_topics_plan ON study_topics(study_plan_id, display_order ASC);
+    CREATE INDEX IF NOT EXISTS idx_study_topics_user ON study_topics(user_id);
+
     -- STUDY LOGS
     CREATE TABLE IF NOT EXISTS study_logs (
       id TEXT PRIMARY KEY,
@@ -197,6 +207,8 @@ export async function initializeDatabase() {
       logged_at DATE NOT NULL DEFAULT CURRENT_DATE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE INDEX IF NOT EXISTS idx_study_logs_user_date ON study_logs(user_id, logged_at DESC);
 
     -- CONSENT RECORDS (PRIVACY & COMPLIANCE)
     CREATE TABLE IF NOT EXISTS consent_records (

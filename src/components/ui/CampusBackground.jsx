@@ -24,7 +24,7 @@ export function CampusBackground({ className = '' }) {
       <div
         className="absolute top-0 right-0 w-full h-[460px] sm:h-[540px] md:h-[640px] lg:h-[720px] transition-all duration-700"
         style={{
-          backgroundImage: `url('/campus-background.png')`,
+          backgroundImage: `image-set(url('/campus-background.webp') type('image/webp'), url('/campus-background.png') type('image/png'))`,
           backgroundPosition: 'right 20% top 15%',
           backgroundSize: 'cover',
           backgroundRepeat: 'no-repeat',

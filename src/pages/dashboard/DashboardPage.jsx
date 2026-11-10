@@ -674,11 +674,16 @@ export function DashboardPage({
                     className="rounded-xl overflow-hidden bg-white/80 dark:bg-white/5 border border-white/80 dark:border-white/10 shadow-sm cursor-pointer hover:shadow-md transition-all group"
                   >
                     <div className="h-20 w-full overflow-hidden bg-gray-100 dark:bg-navy-800 relative">
-                      <img
-                        src={`/campus-background.png`}
-                        alt={c.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                      <picture>
+                        <source srcSet="/campus-background-sm.webp" type="image/webp" />
+                        <img
+                          src="/campus-background.webp"
+                          alt={c.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </picture>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       <span className="absolute bottom-1.5 left-2 text-[10px] font-bold text-white truncate max-w-[90%]">
                         {c.name}

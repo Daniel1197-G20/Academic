@@ -28,6 +28,8 @@ export function Avatar({
       <img
         src={src}
         alt={`${name}'s avatar`}
+        loading="lazy"
+        decoding="async"
         className={`rounded-full object-cover shrink-0 select-none ${sizeClasses[size] || sizeClasses.md} ${
           border ? 'border border-border shadow-subtle' : ''
         } ${className}`}

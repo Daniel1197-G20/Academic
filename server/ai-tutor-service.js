@@ -90,6 +90,7 @@ function callGrokApi(messages) {
       port: 443,
       path: url.pathname + url.search,
       method: 'POST',
+      timeout: 10000, // 10s strict outside API timeout
       headers: {
         'Authorization': `Bearer ${GROK_API_KEY}`,
         'Content-Type': 'application/json',
@@ -118,6 +119,11 @@ function callGrokApi(messages) {
           reject(new Error(`Failed to parse Grok API response: ${raw.slice(0, 200)}`));
         }
       });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Grok API request timed out after 10000ms'));
     });
 
     req.on('error', reject);

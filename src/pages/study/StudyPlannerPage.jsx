@@ -30,6 +30,7 @@ export function StudyPlannerPage({
   studyPlans = [],
   streakData = { streak: 0, totalHours: 0 },
   onRefreshData,
+  onToggleTopic,
   showToast
 }) {
   // Calendar month state
@@ -40,6 +41,23 @@ export function StudyPlannerPage({
   const [isNewPlanOpen, setIsNewPlanOpen] = useState(false);
   const [isLogHoursOpen, setIsLogHoursOpen] = useState(false);
   const [selectedPlanForLog, setSelectedPlanForLog] = useState(null);
+
+  // Optimistic local topics map for immediate instant visual feedback
+  const [optimisticOverrides, setOptimisticOverrides] = useState({});
+
+  // Merged plans with optimistic state
+  const activeStudyPlans = useMemo(() => {
+    return studyPlans.map(p => {
+      if (!p.topics) return p;
+      return {
+        ...p,
+        topics: p.topics.map(t => ({
+          ...t,
+          is_completed: optimisticOverrides[t.id] !== undefined ? optimisticOverrides[t.id] : t.is_completed
+        }))
+      };
+    });
+  }, [studyPlans, optimisticOverrides]);
 
   // New Plan form states
   const [subject, setSubject] = useState('');
@@ -56,19 +74,19 @@ export function StudyPlannerPage({
 
   // Computed summary metrics
   const totalTopics = useMemo(() => {
-    return studyPlans.reduce((sum, p) => sum + (p.topics ? p.topics.length : 0), 0);
-  }, [studyPlans]);
+    return activeStudyPlans.reduce((sum, p) => sum + (p.topics ? p.topics.length : 0), 0);
+  }, [activeStudyPlans]);
 
   const completedTopics = useMemo(() => {
-    return studyPlans.reduce((sum, p) => sum + (p.topics ? p.topics.filter(t => t.is_completed).length : 0), 0);
-  }, [studyPlans]);
+    return activeStudyPlans.reduce((sum, p) => sum + (p.topics ? p.topics.filter(t => t.is_completed).length : 0), 0);
+  }, [activeStudyPlans]);
 
   // Today schedule generated from plans
   const todaySchedule = useMemo(() => {
     const times = ['09:00 AM', '11:30 AM', '02:00 PM', '04:30 PM', '07:00 PM'];
     const schedule = [];
     let idx = 0;
-    for (const plan of studyPlans) {
+    for (const plan of activeStudyPlans) {
       if (plan.topics) {
         for (const topic of plan.topics) {
           schedule.push({
@@ -85,7 +103,7 @@ export function StudyPlannerPage({
       }
     }
     return schedule;
-  }, [studyPlans]);
+  }, [activeStudyPlans]);
 
   // Calendar calculations
   const year = viewDate.getFullYear();
@@ -102,12 +120,35 @@ export function StudyPlannerPage({
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
   const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
 
-  // Handle Toggle Topic
+  // Handle Toggle Topic with Optimistic UI
   const handleToggleTopic = async (topicId, planSubject) => {
+    // Immediate optimistic toggle
+    setOptimisticOverrides(prev => {
+      let currentVal = false;
+      for (const p of studyPlans) {
+        const found = p.topics?.find(t => t.id === topicId);
+        if (found) {
+          currentVal = prev[topicId] !== undefined ? prev[topicId] : found.is_completed;
+          break;
+        }
+      }
+      return { ...prev, [topicId]: !currentVal };
+    });
+
     try {
-      await api.toggleTopic(topicId);
-      onRefreshData();
+      if (onToggleTopic) {
+        await onToggleTopic(topicId);
+      } else {
+        await api.toggleTopic(topicId);
+        onRefreshData();
+      }
     } catch (err) {
+      // Revert optimistic override
+      setOptimisticOverrides(prev => {
+        const copy = { ...prev };
+        delete copy[topicId];
+        return copy;
+      });
       showToast({ type: 'error', title: 'Update Failed', message: err.message });
     }
   };

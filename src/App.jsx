@@ -13,16 +13,6 @@ import {
   Button,
   AppSplashScreen
 } from './components/ui';
-import { AuthPage } from './pages/auth/AuthPage';
-import { DashboardPage } from './pages/dashboard/DashboardPage';
-import { MyCoursesPage } from './pages/courses/MyCoursesPage';
-import { CgpaPage } from './pages/cgpa/CgpaPage';
-import { StudyPlannerPage } from './pages/study/StudyPlannerPage';
-import { ProfilePage } from './pages/profile/ProfilePage';
-import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage';
-import { TermsPage } from './pages/legal/TermsPage';
-import { CookieSettingsPage } from './pages/legal/CookieSettingsPage';
-import { PrivacySettingsPage } from './pages/legal/PrivacySettingsPage';
 import { CookieSettingsModal } from './components/legal/CookieSettingsModal';
 import { ConsentBanner } from './components/legal/ConsentBanner';
 import { Footer } from './components/common/Footer';
@@ -35,19 +25,32 @@ import { disconnectStreamUser } from './lib/stream/client';
 import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
 import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, BookOpen, Copy, Check, Loader2, CheckCircle2 } from 'lucide-react';
 import { BillingProvider } from './context/BillingContext';
-import { PricingPage } from './pages/billing/PricingPage';
-import { BillingCallbackPage } from './pages/billing/BillingCallbackPage';
-import { SubscriptionPage } from './pages/billing/SubscriptionPage';
-import { LandingPage } from './pages/landing/LandingPage';
-import { FeatureGate } from './components/billing/FeatureGate';
-import { BecomeTutorPage } from './pages/tutor/BecomeTutorPage';
-import { TutorDashboardPage } from './pages/tutor/TutorDashboardPage';
-
-import { TutorMarketplacePage } from './pages/tutor/TutorMarketplacePage';
-import { AiTutorPage } from './pages/study/AiTutorPage';
-import { StudoraChat } from './components/chat/StudoraChat';
-
 import { CampusBackground } from './components/ui/CampusBackground';
+
+// Lazy-loaded routes & heavy pages to code-split bundles
+const AuthPage = React.lazy(() => import('./pages/auth/AuthPage').then(m => ({ default: m.AuthPage })));
+const DashboardPage = React.lazy(() => import('./pages/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const MyCoursesPage = React.lazy(() => import('./pages/courses/MyCoursesPage').then(m => ({ default: m.MyCoursesPage })));
+const CgpaPage = React.lazy(() => import('./pages/cgpa/CgpaPage').then(m => ({ default: m.CgpaPage })));
+const StudyPlannerPage = React.lazy(() => import('./pages/study/StudyPlannerPage').then(m => ({ default: m.StudyPlannerPage })));
+const ProfilePage = React.lazy(() => import('./pages/profile/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const PrivacyPolicyPage = React.lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsPage = React.lazy(() => import('./pages/legal/TermsPage').then(m => ({ default: m.TermsPage })));
+const CookieSettingsPage = React.lazy(() => import('./pages/legal/CookieSettingsPage').then(m => ({ default: m.CookieSettingsPage })));
+const PrivacySettingsPage = React.lazy(() => import('./pages/legal/PrivacySettingsPage').then(m => ({ default: m.PrivacySettingsPage })));
+const PricingPage = React.lazy(() => import('./pages/billing/PricingPage').then(m => ({ default: m.PricingPage })));
+const BillingCallbackPage = React.lazy(() => import('./pages/billing/BillingCallbackPage').then(m => ({ default: m.BillingCallbackPage })));
+const SubscriptionPage = React.lazy(() => import('./pages/billing/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
+const LandingPage = React.lazy(() => import('./pages/landing/LandingPage').then(m => ({ default: m.LandingPage })));
+const BecomeTutorPage = React.lazy(() => import('./pages/tutor/BecomeTutorPage').then(m => ({ default: m.BecomeTutorPage })));
+const TutorDashboardPage = React.lazy(() => import('./pages/tutor/TutorDashboardPage').then(m => ({ default: m.TutorDashboardPage })));
+const TutorMarketplacePage = React.lazy(() => import('./pages/tutor/TutorMarketplacePage').then(m => ({ default: m.TutorMarketplacePage })));
+const AiTutorPage = React.lazy(() => import('./pages/study/AiTutorPage').then(m => ({ default: m.AiTutorPage })));
+
+// Lazy-load heavy chat widget / GetStream SDK to load strictly after initial page render
+const StudoraChat = React.lazy(() =>
+  import('./components/chat/StudoraChat').then(m => ({ default: m.StudoraChat }))
+);
 
 const PUBLIC_ROUTES = new Set([
   'landing',
@@ -499,12 +502,32 @@ function AppContent() {
     });
   };
 
-  // Quick toggle topic from dashboard or study planner
+  // Quick toggle topic from dashboard or study planner with optimistic UI
   const handleToggleTopic = async (topicId) => {
+    // 1. Optimistically toggle the topic state immediately in local state
+    const previousPlans = studyPlans;
+    setStudyPlans(prev =>
+      prev.map(p => {
+        if (!p.topics) return p;
+        const topicExists = p.topics.some(t => t.id === topicId);
+        if (!topicExists) return p;
+        return {
+          ...p,
+          topics: p.topics.map(t =>
+            t.id === topicId ? { ...t, is_completed: !t.is_completed } : t
+          )
+        };
+      })
+    );
+
+    // 2. Perform background server update
     try {
       await api.toggleTopic(topicId);
+      // Re-sync quietly in background to ensure source of truth
       fetchAllData();
     } catch (err) {
+      // Revert optimistic update on failure
+      setStudyPlans(previousPlans);
       addToast({ type: 'error', title: 'Error', message: err.message });
     }
   };
@@ -521,126 +544,131 @@ function AppContent() {
 
   // --- Logged-Out Views (Public Landing Page, Pricing, Auth, Legal & 404 Pages) ---
   if (!currentUser) {
-    if (activeTab === 'privacy') {
-      return (
-        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
-          <PrivacyPolicyPage onBack={() => navigateRoute('landing')} />
-          <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
-          <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
-          <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
-        </div>
-      );
-    }
+    return (
+      <React.Suspense fallback={<PageLoader message="Loading Studora..." />}>
+        {(() => {
+          if (activeTab === 'privacy') {
+            return (
+              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+                <PrivacyPolicyPage onBack={() => navigateRoute('landing')} />
+                <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
+                <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
+                <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
+              </div>
+            );
+          }
 
-    if (activeTab === 'terms') {
-      return (
-        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
-          <TermsPage onBack={() => navigateRoute('landing')} />
-          <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
-          <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
-          <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
-        </div>
-      );
-    }
+          if (activeTab === 'terms') {
+            return (
+              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+                <TermsPage onBack={() => navigateRoute('landing')} />
+                <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
+                <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
+                <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
+              </div>
+            );
+          }
 
-    if (activeTab === 'cookie-settings') {
-      return (
-        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
-          <CookieSettingsPage onBack={() => navigateRoute('landing')} showToast={addToast} />
-          <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
-          <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
-          <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
-        </div>
-      );
-    }
+          if (activeTab === 'cookie-settings') {
+            return (
+              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+                <CookieSettingsPage onBack={() => navigateRoute('landing')} showToast={addToast} />
+                <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
+                <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
+                <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
+              </div>
+            );
+          }
 
-    if (activeTab === 'privacy-settings') {
-      return (
-        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
-          <PrivacySettingsPage
-            currentUser={currentUser}
-            onBack={() => navigateRoute('landing')}
-            onOpenCookieSettings={() => setShowCookieModal(true)}
-            onNavigate={navigateRoute}
-            onAccountDeleted={handleAccountDeleted}
-            showToast={addToast}
-          />
-          <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
-          <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
-          <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
-        </div>
-      );
-    }
+          if (activeTab === 'privacy-settings') {
+            return (
+              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+                <PrivacySettingsPage
+                  currentUser={currentUser}
+                  onBack={() => navigateRoute('landing')}
+                  onOpenCookieSettings={() => setShowCookieModal(true)}
+                  onNavigate={navigateRoute}
+                  onAccountDeleted={handleAccountDeleted}
+                  showToast={addToast}
+                />
+                <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
+                <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
+                <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
+              </div>
+            );
+          }
 
-    if (activeTab === 'pricing') {
-      return (
-        <BillingProvider currentUser={null} showToast={addToast}>
-          <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
-            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-              <PricingPage
-                onBack={() => navigateRoute('landing')}
+          if (activeTab === 'pricing') {
+            return (
+              <BillingProvider currentUser={null} showToast={addToast}>
+                <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+                  <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+                    <PricingPage
+                      onBack={() => navigateRoute('landing')}
+                      onSelectPlan={handleLandingSelectPlan}
+                      showToast={addToast}
+                    />
+                  </div>
+                  <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
+                  <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
+                  <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
+                </div>
+              </BillingProvider>
+            );
+          }
+
+          if (activeTab === 'login' || activeTab === 'register' || activeTab === 'auth') {
+            return (
+              <>
+                <AuthPage
+                  initialMode={activeTab === 'register' ? 'register' : 'login'}
+                  onLoginSuccess={handleLoginSuccess}
+                  onNavigateLegal={navigateRoute}
+                  onBackToLanding={() => navigateRoute('landing')}
+                  selectedPlanCode={selectedPlanForAuth}
+                  onOpenCookieSettings={() => setShowCookieModal(true)}
+                />
+                <CookieSettingsModal
+                  isOpen={showCookieModal}
+                  onClose={() => setShowCookieModal(false)}
+                  showToast={addToast}
+                />
+                <ConsentBanner
+                  onOpenSettings={() => setShowCookieModal(true)}
+                />
+              </>
+            );
+          }
+
+          if (activeTab === '404') {
+            return (
+              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+                <NotFoundPage onBackToStudora={() => navigateRoute('landing')} />
+                <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
+                <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
+              </div>
+            );
+          }
+
+          return (
+            <BillingProvider currentUser={null} showToast={addToast}>
+              <LandingPage
+                onNavigate={navigateRoute}
                 onSelectPlan={handleLandingSelectPlan}
+                onOpenCookieSettings={() => setShowCookieModal(true)}
+              />
+              <CookieSettingsModal
+                isOpen={showCookieModal}
+                onClose={() => setShowCookieModal(false)}
                 showToast={addToast}
               />
-            </div>
-            <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
-            <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
-            <ConsentBanner onOpenSettings={() => setShowCookieModal(true)} />
-          </div>
-        </BillingProvider>
-      );
-    }
-
-    if (activeTab === 'login' || activeTab === 'register' || activeTab === 'auth') {
-      return (
-        <>
-          <AuthPage
-            initialMode={activeTab === 'register' ? 'register' : 'login'}
-            onLoginSuccess={handleLoginSuccess}
-            onNavigateLegal={navigateRoute}
-            onBackToLanding={() => navigateRoute('landing')}
-            selectedPlanCode={selectedPlanForAuth}
-            onOpenCookieSettings={() => setShowCookieModal(true)}
-          />
-          <CookieSettingsModal
-            isOpen={showCookieModal}
-            onClose={() => setShowCookieModal(false)}
-            showToast={addToast}
-          />
-          <ConsentBanner
-            onOpenSettings={() => setShowCookieModal(true)}
-          />
-        </>
-      );
-    }
-
-    if (activeTab === '404') {
-      return (
-        <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
-          <NotFoundPage onBackToStudora={() => navigateRoute('landing')} />
-          <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
-          <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
-        </div>
-      );
-    }
-
-    // Default for unauthenticated visitors is the Public Landing Page!
-    return (
-      <BillingProvider currentUser={null} showToast={addToast}>
-        <LandingPage
-          onNavigate={navigateRoute}
-          onSelectPlan={handleLandingSelectPlan}
-          onOpenCookieSettings={() => setShowCookieModal(true)}
-        />
-        <CookieSettingsModal
-          isOpen={showCookieModal}
-          onClose={() => setShowCookieModal(false)}
-          showToast={addToast}
-        />
-        <ConsentBanner
-          onOpenSettings={() => setShowCookieModal(true)}
-        />
-      </BillingProvider>
+              <ConsentBanner
+                onOpenSettings={() => setShowCookieModal(true)}
+              />
+            </BillingProvider>
+          );
+        })()}
+      </React.Suspense>
     );
   }
 
@@ -772,6 +800,7 @@ function AppContent() {
                     studyPlans={studyPlans}
                     streakData={streakData}
                     onRefreshData={fetchAllData}
+                    onToggleTopic={handleToggleTopic}
                     showToast={addToast}
                   />
                 )}
@@ -1004,14 +1033,23 @@ function AppContent() {
                 {/* Messages & Tutor-Student Chat (GetStream) */}
                 {(activeTab === 'messages' || activeTab === 'community') && (
                   <div className="flex-1 min-h-0 flex flex-col w-full h-full">
-                    <StudoraChat
-                      currentUser={currentUser}
-                      userProfile={userProfile}
-                      showToast={addToast}
-                      onNavigate={navigateRoute}
-                      onToggleDark={handleToggleDark}
-                      isDark={isDark}
-                    />
+                    <React.Suspense
+                      fallback={
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-3">
+                          <Loader2 className="w-8 h-8 text-academic animate-spin" />
+                          <p className="text-sm text-muted">Loading Studora Chat…</p>
+                        </div>
+                      }
+                    >
+                      <StudoraChat
+                        currentUser={currentUser}
+                        userProfile={userProfile}
+                        showToast={addToast}
+                        onNavigate={navigateRoute}
+                        onToggleDark={handleToggleDark}
+                        isDark={isDark}
+                      />
+                    </React.Suspense>
                   </div>
                 )}
 

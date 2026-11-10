@@ -38,6 +38,7 @@ async function paystackRequest(endpoint, method = 'GET', data = null) {
       port: 443,
       path: url.pathname + url.search,
       method: method,
+      timeout: 10000, // 10s strict outside API timeout
       headers: {
         'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
@@ -63,6 +64,11 @@ async function paystackRequest(endpoint, method = 'GET', data = null) {
           reject(new Error(`Failed to parse Paystack response: ${raw}`));
         }
       });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Paystack API request timed out after 10000ms'));
     });
 
     req.on('error', (err) => reject(err));

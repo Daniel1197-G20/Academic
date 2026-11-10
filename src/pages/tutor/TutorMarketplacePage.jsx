@@ -31,8 +31,9 @@ import {
   RefreshCw,
   Compass,
 } from 'lucide-react';
-import { Button, Badge, Avatar, PageHeader, EmptyState } from '../../components/ui';
+import { Button, Badge, Avatar, PageHeader, EmptyState, TutorCardSkeleton } from '../../components/ui';
 import { useTutorMarketplace } from '../../hooks/useTutorMarketplace';
+import { useDebounce } from '../../hooks/useDebounce';
 import { FeatureGate } from '../../components/billing/FeatureGate';
 import { BookingModal } from '../../components/tutor/BookingModal';
 import { api } from '../../services/api/client';
@@ -67,6 +68,8 @@ function TutorCard({ tutor, onBook, onNavigate }) {
             <img
               src={tutor.avatarUrl}
               alt={tutor.fullName}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
             />
           ) : (
@@ -167,9 +170,14 @@ function MarketplaceEmptyState({ hasFilters, onClearFilters }) {
 export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
   const { tutors, loading, error, refetch } = useTutorMarketplace();
 
-  // Search & filter state
+  // Search & filter state with 300ms debounce
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedSubject, setSelectedSubject] = useState('All');
+
+  // Pagination state: 20 results per page
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // Selected tutor for booking modal
   const [selectedTutorForBooking, setSelectedTutorForBooking] = useState(null);
@@ -181,7 +189,7 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
     return ['All', ...Array.from(names).sort()];
   }, [tutors]);
 
-  // Apply search + subject filter
+  // Apply debounced search + subject filter
   const filteredTutors = useMemo(() => {
     let result = tutors;
 
@@ -191,8 +199,8 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
       );
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearchQuery.trim()) {
+      const q = debouncedSearchQuery.toLowerCase();
       result = result.filter(
         (t) =>
           t.fullName.toLowerCase().includes(q) ||
@@ -204,13 +212,21 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
     }
 
     return result;
-  }, [tutors, selectedSubject, searchQuery]);
+  }, [tutors, selectedSubject, debouncedSearchQuery]);
 
   const hasFilters = searchQuery.trim().length > 0 || selectedSubject !== 'All';
+
+  // Slice for 20 per page
+  const totalPages = Math.ceil(filteredTutors.length / PAGE_SIZE) || 1;
+  const paginatedTutors = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredTutors.slice(start, start + PAGE_SIZE);
+  }, [filteredTutors, currentPage, PAGE_SIZE]);
 
   const handleClearFilters = () => {
     setSearchQuery('');
     setSelectedSubject('All');
+    setCurrentPage(1);
   };
 
   const handleBook = (tutor) => {
@@ -311,11 +327,12 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
         </div>
       )}
 
-      {/* Loading state */}
+      {/* Skeleton screen while loading */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 space-y-3">
-          <Loader2 className="w-8 h-8 text-academic animate-spin" />
-          <p className="text-sm text-muted">Loading verified tutors…</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <TutorCardSkeleton key={i} />
+          ))}
         </div>
       )}
 
@@ -333,21 +350,53 @@ export function TutorMarketplacePage({ currentUser, onNavigate, showToast }) {
 
       {/* Tutor Grid */}
       {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredTutors.length === 0 ? (
-            <MarketplaceEmptyState
-              hasFilters={hasFilters}
-              onClearFilters={handleClearFilters}
-            />
-          ) : (
-            filteredTutors.map((tutor) => (
-              <TutorCard
-                key={tutor.tutorId}
-                tutor={tutor}
-                onBook={handleBook}
-                onNavigate={onNavigate}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredTutors.length === 0 ? (
+              <MarketplaceEmptyState
+                hasFilters={hasFilters}
+                onClearFilters={handleClearFilters}
               />
-            ))
+            ) : (
+              paginatedTutors.map((tutor) => (
+                <TutorCard
+                  key={tutor.tutorId}
+                  tutor={tutor}
+                  onBook={handleBook}
+                  onNavigate={onNavigate}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Pagination Controls (20 per page) */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t border-border dark:border-white/10">
+              <p className="text-xs text-muted">
+                Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTutors.length)} of {filteredTutors.length} tutors
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-semibold px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
