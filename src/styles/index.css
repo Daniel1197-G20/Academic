@@ -41,6 +41,12 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Dark mode body background */
+  .dark body {
+    background-color: #0a1510;
+    color: #f0fdf4;
+  }
+
   /* Refined, quiet light scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
@@ -58,6 +64,14 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: #9CA3AF;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #2d4a3a;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #3d6050;
   }
 
   /* Accessible focus ring in Academic Green */
@@ -423,6 +437,100 @@
     box-shadow: inset 2px 2px 5px #f0c3c3, inset -2px -2px 5px #ffffff;
     color: #b91c1c;
     border-radius: 14px;
+  }
+
+  /* ============================================================
+     DARK MODE OVERRIDES — tactile & card surfaces
+     Only colors change; geometry/radii/spacing untouched.
+     ============================================================ */
+
+  /* Surfaces */
+  .dark .tactile-surface {
+    background-color: #111f18;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .tactile-raised {
+    background-color: #131f19;
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 4px 12px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .tactile-raised-hover:hover {
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.5), 0 6px 16px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .dark .tactile-hero {
+    background-color: #111f18;
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.5), 0 8px 20px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .dark .tactile-inset {
+    box-shadow: inset 2px 2px 5px 0 rgba(0, 0, 0, 0.5), inset -2px -2px 5px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .dark .tactile-inset-sm {
+    box-shadow: inset 1px 1px 3px 0 rgba(0, 0, 0, 0.45), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .dark .tactile-track {
+    background-color: #0d1a12;
+    box-shadow: inset 1px 2px 4px 0 rgba(0, 0, 0, 0.5), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .dark .tactile-tab-bar {
+    background-color: #0d1a12;
+    border-color: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 1px 2px 4px 0 rgba(0, 0, 0, 0.5), inset -1px -1px 3px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .dark .tactile-tab-tile-active {
+    background-color: #1b2f23;
+    color: #f0fdf4;
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 3px 6px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Rail nodes */
+  .dark .tactile-rail-line {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .tactile-rail-node-inactive {
+    background-color: #1b2f23;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Buttons */
+  .dark .tactile-btn-secondary {
+    background-color: #1b2f23;
+    color: #e2f4ea;
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.35), 0 3px 8px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  .dark .tactile-btn-secondary:hover:not(:disabled) {
+    background-color: #223828;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.45), 0 5px 12px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  .dark .tactile-btn-secondary:active:not(:disabled) {
+    box-shadow: inset 1px 1px 3px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  /* Legacy card aliases */
+  .dark .card-surface,
+  .dark .card-surface-interactive {
+    background: #111f18;
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 4px 12px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .card-surface-interactive:hover {
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.5), 0 6px 16px 0 rgba(0, 0, 0, 0.4);
   }
 }
 

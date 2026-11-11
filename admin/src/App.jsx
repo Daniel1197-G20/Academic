@@ -12,6 +12,7 @@ import { TutorsPage } from './pages/TutorsPage';
 import { UsersPage } from './pages/UsersPage';
 import { AssessmentsPage } from './pages/AssessmentsPage';
 import { PaymentsPage } from './pages/PaymentsPage';
+import { CampaignsPage } from './pages/CampaignsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/assessments" element={<AssessmentsPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/withdrawals" element={<PaymentsPage />} />
+            <Route path="/campaigns" element={<CampaignsPage />} />
             <Route path="/audit-logs" element={<AuditLogsPage />} />
           </Route>
 

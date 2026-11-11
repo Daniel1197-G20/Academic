@@ -27,9 +27,9 @@ export function Button({
     secondary: "tactile-btn-secondary",
     academic: "tactile-btn-academic",
     primary: "tactile-btn-primary",
-    outline: "bg-transparent text-ink border border-border hover:-translate-y-[1px] hover:bg-white/60 active:translate-y-[1px] active:bg-white/90",
-    ghost: "bg-transparent text-muted hover:text-ink hover:bg-black/[0.03] active:translate-y-[1px]",
-    danger: "bg-danger-50 text-danger border border-danger-100 hover:-translate-y-[1px] hover:bg-danger-100/80 active:translate-y-[1px] active:shadow-[inset_1px_1px_2px_rgba(194,65,65,0.15)]"
+    outline: "bg-transparent text-ink dark:text-white/80 border border-border dark:border-white/20 hover:-translate-y-[1px] hover:bg-white/60 dark:hover:bg-white/[0.06] active:translate-y-[1px] active:bg-white/90",
+    ghost: "bg-transparent text-muted dark:text-white/55 hover:text-ink dark:hover:text-white hover:bg-black/[0.03] dark:hover:bg-white/[0.06] active:translate-y-[1px]",
+    danger: "bg-danger-50 dark:bg-danger-500/15 text-danger dark:text-red-400 border border-danger-100 dark:border-danger-500/30 hover:-translate-y-[1px] hover:bg-danger-100/80 dark:hover:bg-danger-500/25 active:translate-y-[1px] active:shadow-[inset_1px_1px_2px_rgba(194,65,65,0.15)]"
   };
 
   return (

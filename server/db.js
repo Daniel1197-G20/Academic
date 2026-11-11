@@ -222,6 +222,75 @@ export async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- EMAIL PREFERENCES & UNSUBSCRIBE LEDGER
+    CREATE TABLE IF NOT EXISTS user_email_preferences (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      promotional_opt_in BOOLEAN NOT NULL DEFAULT true,
+      academic_digest_opt_in BOOLEAN NOT NULL DEFAULT true,
+      booking_notifications_opt_in BOOLEAN NOT NULL DEFAULT true,
+      security_alerts_opt_in BOOLEAN NOT NULL DEFAULT true,
+      unsubscribe_token TEXT UNIQUE NOT NULL,
+      unsubscribed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- EMAIL SUPPRESSIONS (Bounces, spam complaints, manual exclusions)
+    CREATE TABLE IF NOT EXISTS email_suppressions (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      reason TEXT NOT NULL,
+      details TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- EMAIL CAMPAIGNS (Admin broadcast and targeted communication)
+    CREATE TABLE IF NOT EXISTS email_campaigns (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      campaign_type TEXT NOT NULL,
+      target_audience TEXT NOT NULL,
+      template_id TEXT NOT NULL DEFAULT 'standard_announcement',
+      content_html TEXT NOT NULL,
+      content_text TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      total_recipients INT NOT NULL DEFAULT 0,
+      sent_count INT NOT NULL DEFAULT 0,
+      delivered_count INT NOT NULL DEFAULT 0,
+      bounced_count INT NOT NULL DEFAULT 0,
+      failed_count INT NOT NULL DEFAULT 0,
+      complaint_count INT NOT NULL DEFAULT 0,
+      opened_count INT NOT NULL DEFAULT 0,
+      clicked_count INT NOT NULL DEFAULT 0,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      scheduled_at TIMESTAMPTZ,
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      error_message TEXT,
+      metadata TEXT DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- EMAIL LOGS (Audit trail for transactional and bulk emails)
+    CREATE TABLE IF NOT EXISTS email_logs (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT REFERENCES email_campaigns(id) ON DELETE SET NULL,
+      recipient_email TEXT NOT NULL,
+      recipient_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      template_type TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      resend_message_id TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      error_message TEXT,
+      events_timeline TEXT DEFAULT '[]',
+      sent_at TIMESTAMPTZ,
+      delivered_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- SUBSCRIPTION PLANS (Database-driven pricing and intervals)
     CREATE TABLE IF NOT EXISTS subscription_plans (
       id TEXT PRIMARY KEY,

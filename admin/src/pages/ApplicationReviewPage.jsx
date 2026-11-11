@@ -257,6 +257,43 @@ export function ApplicationReviewPage() {
 
     setModal(null);
     setActionSuccess(modal === 'approve' ? 'Application approved. Tutor authorization granted.' : 'Application rejected. Applicant remains a student.');
+
+    // Asynchronously dispatch Resend email notification via backend
+    try {
+      const { data: sessData } = await supabase.auth.getSession();
+      const token = sessData?.session?.access_token;
+      if (token && app?.profiles) {
+        // Resolve applicant email
+        let targetEmail = null;
+        if (app.user_id) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', app.user_id)
+            .maybeSingle();
+          targetEmail = userData?.email;
+        }
+
+        if (targetEmail) {
+          fetch('/api/admin/tutor-applications/notify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              email: targetEmail,
+              applicantName: app.profiles.full_name || 'Applicant',
+              decision: modal,
+              reason: reason || null
+            })
+          }).catch(mailErr => console.error('Failed to dispatch tutor decision email:', mailErr));
+        }
+      }
+    } catch (e) {
+      // Non-blocking for UI state
+    }
+
     // Reload to reflect new state
     await fetch();
   };

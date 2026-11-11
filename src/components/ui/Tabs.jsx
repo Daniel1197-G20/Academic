@@ -53,7 +53,7 @@ export function Tabs({
     >
       {/* Physical Sliding White Tile */}
       <div
-        className="absolute bg-white rounded-tile border border-border shadow-tactile-tile pointer-events-none transition-all duration-200"
+        className="absolute bg-white dark:bg-[#1b2f23] rounded-tile border border-border dark:border-white/[0.10] shadow-tactile-tile dark:shadow-none pointer-events-none transition-all duration-200"
         style={{
           left: `${sliderStyle.left}px`,
           top: `${sliderStyle.top}px`,
@@ -79,15 +79,15 @@ export function Tabs({
             onClick={() => onChange(tab.id)}
             className={`relative z-10 flex items-center gap-2 px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-tile whitespace-nowrap transition-colors duration-150 select-none ${
               isActive
-                ? 'text-ink font-semibold'
-                : 'text-muted hover:text-ink'
+                ? 'text-ink dark:text-white font-semibold'
+                : 'text-muted dark:text-white/50 hover:text-ink dark:hover:text-white/80'
             }`}
           >
             {Icon && <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-academic' : 'text-muted'}`} />}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                isActive ? 'bg-academic-100 text-academic font-semibold' : 'bg-[#E2E4DE] text-muted'
+                isActive ? 'bg-academic-100 dark:bg-academic/30 text-academic dark:text-academic-200 font-semibold' : 'bg-[#E2E4DE] dark:bg-white/[0.08] text-muted dark:text-white/50'
               }`}>
                 {tab.badge}
               </span>

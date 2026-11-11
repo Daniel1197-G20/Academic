@@ -597,7 +597,7 @@ function AppContent() {
         {(() => {
           if (activeTab === 'privacy') {
             return (
-              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+              <div className="min-h-screen bg-canvas dark:bg-[#0a1510] text-ink dark:text-white/90 flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
                 <PrivacyPolicyPage onBack={() => navigateRoute('landing')} />
                 <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
                 <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -608,7 +608,7 @@ function AppContent() {
 
           if (activeTab === 'terms') {
             return (
-              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+              <div className="min-h-screen bg-canvas dark:bg-[#0a1510] text-ink dark:text-white/90 flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
                 <TermsPage onBack={() => navigateRoute('landing')} />
                 <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
                 <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -619,7 +619,7 @@ function AppContent() {
 
           if (activeTab === 'cookie-settings') {
             return (
-              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+              <div className="min-h-screen bg-canvas dark:bg-[#0a1510] text-ink dark:text-white/90 flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
                 <CookieSettingsPage onBack={() => navigateRoute('landing')} showToast={addToast} />
                 <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
                 <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -630,7 +630,7 @@ function AppContent() {
 
           if (activeTab === 'privacy-settings') {
             return (
-              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+              <div className="min-h-screen bg-canvas dark:bg-[#0a1510] text-ink dark:text-white/90 flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
                 <PrivacySettingsPage
                   currentUser={currentUser}
                   onBack={() => navigateRoute('landing')}
@@ -649,7 +649,7 @@ function AppContent() {
           if (activeTab === 'pricing') {
             return (
               <BillingProvider currentUser={null} showToast={addToast}>
-                <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+                <div className="min-h-screen bg-canvas dark:bg-[#0a1510] text-ink dark:text-white/90 flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
                   <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
                     <PricingPage
                       onBack={() => navigateRoute('landing')}
@@ -690,7 +690,7 @@ function AppContent() {
 
           if (activeTab === '404') {
             return (
-              <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
+              <div className="min-h-screen bg-canvas dark:bg-[#0a1510] text-ink dark:text-white/90 flex flex-col justify-between selection:bg-academic-100 selection:text-academic">
                 <NotFoundPage onBackToStudora={() => navigateRoute('landing')} />
                 <Footer onNavigate={navigateRoute} onOpenCookieSettings={() => setShowCookieModal(true)} />
                 <CookieSettingsModal isOpen={showCookieModal} onClose={() => setShowCookieModal(false)} showToast={addToast} />
@@ -748,13 +748,18 @@ function AppContent() {
 
   return (
     <BillingProvider currentUser={currentUser} showToast={addToast}>
-      <div className={`min-h-screen flex text-ink dark:text-white antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
-        {/* Campus background — consistent presence across all authenticated platform pages */}
-        <CampusBackground />
-
-        {/* Ambient fallback / backdrop layer */}
+      <div className={`min-h-screen flex text-ink antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
+        {/* Campus background — visible across all sections except tutor dashboard */}
+        {activeTab !== 'tutor-dashboard' && (
+          <CampusBackground />
+        )}
+        {/* Background color — used on tutor dashboard and as fallback */}
         <div
-          className="fixed inset-0 -z-10 bg-transparent"
+          className={`fixed inset-0 -z-10 transition-colors duration-500 ${
+            activeTab !== 'tutor-dashboard'
+              ? 'bg-transparent'
+              : isDark ? 'bg-[#0a1510]' : 'bg-canvas'
+          }`}
         />
 
         {/* Desktop Sidebar */}

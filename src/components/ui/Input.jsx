@@ -18,7 +18,7 @@ export const Input = forwardRef(function Input({
       {label && (
         <label 
           htmlFor={inputId} 
-          className="block text-xs font-semibold text-ink tracking-tight"
+          className="block text-xs font-semibold text-ink dark:text-white/80 tracking-tight"
         >
           {label}
         </label>
@@ -34,13 +34,13 @@ export const Input = forwardRef(function Input({
           id={inputId}
           type={type}
           disabled={disabled}
-          className={`w-full bg-white text-ink text-sm rounded-btn px-3.5 py-2.5 
-            border shadow-tactile-inset-sm transition-all duration-150
-            placeholder:text-muted/60
-            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm
-            disabled:opacity-50 disabled:bg-canvas disabled:cursor-not-allowed disabled:shadow-none
+          className={`w-full bg-white dark:bg-[#0f1c14] text-ink dark:text-white/90 text-sm rounded-btn px-3.5 py-2.5 
+            border shadow-tactile-inset-sm dark:shadow-none transition-all duration-150
+            placeholder:text-muted/60 dark:placeholder:text-white/30
+            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm dark:focus:ring-academic/50
+            disabled:opacity-50 disabled:bg-canvas dark:disabled:bg-[#0a1510] disabled:cursor-not-allowed disabled:shadow-none
             ${Icon ? 'pl-9' : ''}
-            ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border hover:border-gray-400'}
+            ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border dark:border-white/[0.12] hover:border-gray-400 dark:hover:border-white/25'}
             ${className}`}
           {...props}
         />
@@ -71,7 +71,7 @@ export const Select = forwardRef(function Select({
       {label && (
         <label 
           htmlFor={selectId} 
-          className="block text-xs font-semibold text-ink tracking-tight"
+          className="block text-xs font-semibold text-ink dark:text-white/80 tracking-tight"
         >
           {label}
         </label>
@@ -81,16 +81,16 @@ export const Select = forwardRef(function Select({
           ref={ref}
           id={selectId}
           disabled={disabled}
-          className={`w-full appearance-none bg-white text-ink text-sm rounded-btn px-3.5 py-2.5 pr-9
-            border shadow-tactile-inset-sm transition-all duration-150
-            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm
-            disabled:opacity-50 disabled:bg-canvas disabled:cursor-not-allowed disabled:shadow-none
-            ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border hover:border-gray-400'}
+          className={`w-full appearance-none bg-white dark:bg-[#0f1c14] text-ink dark:text-white/90 text-sm rounded-btn px-3.5 py-2.5 pr-9
+            border shadow-tactile-inset-sm dark:shadow-none transition-all duration-150
+            focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm dark:focus:ring-academic/50
+            disabled:opacity-50 disabled:bg-canvas dark:disabled:bg-[#0a1510] disabled:cursor-not-allowed disabled:shadow-none
+            ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border dark:border-white/[0.12] hover:border-gray-400 dark:hover:border-white/25'}
             ${className}`}
           {...props}
         >
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-white text-ink">
+            <option key={opt.value} value={opt.value} className="bg-white dark:bg-[#0f1c14] text-ink dark:text-white/90">
               {opt.label}
             </option>
           ))}
@@ -127,7 +127,7 @@ export const Textarea = forwardRef(function Textarea({
       {label && (
         <label 
           htmlFor={textareaId} 
-          className="block text-xs font-semibold text-ink tracking-tight"
+          className="block text-xs font-semibold text-ink dark:text-white/80 tracking-tight"
         >
           {label}
         </label>
@@ -137,12 +137,12 @@ export const Textarea = forwardRef(function Textarea({
         id={textareaId}
         rows={rows}
         disabled={disabled}
-        className={`w-full bg-white text-ink text-sm rounded-btn px-3.5 py-2.5 
-          border shadow-tactile-inset-sm transition-all duration-150
-          placeholder:text-muted/60
-          focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm
-          disabled:opacity-50 disabled:bg-canvas disabled:cursor-not-allowed disabled:shadow-none
-          ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border hover:border-gray-400'}
+        className={`w-full bg-white dark:bg-[#0f1c14] text-ink dark:text-white/90 text-sm rounded-btn px-3.5 py-2.5 
+          border shadow-tactile-inset-sm dark:shadow-none transition-all duration-150
+          placeholder:text-muted/60 dark:placeholder:text-white/30
+          focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic focus:shadow-tactile-inset-sm dark:focus:ring-academic/50
+          disabled:opacity-50 disabled:bg-canvas dark:disabled:bg-[#0a1510] disabled:cursor-not-allowed disabled:shadow-none
+          ${error ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border dark:border-white/[0.12] hover:border-gray-400 dark:hover:border-white/25'}
           ${className}`}
         {...props}
       />

@@ -13,6 +13,7 @@ import {
   LogOut,
   ShieldCheck,
   HelpCircle,
+  Mail,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/users', label: 'Users', icon: Users },
   { to: '/assessments', label: 'Assessments', icon: HelpCircle },
   { to: '/payments', label: 'Payments & Payouts', icon: CreditCard },
+  { to: '/campaigns', label: 'Email Communications', icon: Mail },
   { to: '/audit-logs', label: 'Audit Logs', icon: ShieldCheck },
 ];
 

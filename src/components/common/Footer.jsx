@@ -7,12 +7,12 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
 
   return (
     <>
-      <footer className={`w-full py-8 px-4 sm:px-6 mt-auto text-xs text-muted ${className || 'bg-white border-t border-border'}`}>
+      <footer className={`w-full py-8 px-4 sm:px-6 mt-auto text-xs text-muted ${className || 'bg-white dark:bg-[#0a1510] border-t border-border dark:border-white/[0.08]'}`}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Brand & Legal Disclaimer */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-1">
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-ink tracking-tight font-sans">
+              <span className="font-extrabold text-ink dark:text-white tracking-tight font-sans">
                 Studora
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-academic-50 text-academic border border-academic-100 font-semibold">
@@ -78,29 +78,29 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
         description="Official contact channels for academic inquiries, data protection requests, and platform support."
         size="md"
       >
-        <div className="space-y-4 text-xs text-ink">
-          <div className="p-4 rounded-card bg-canvas border border-border shadow-tactile-surface space-y-1.5">
-            <h4 className="font-semibold text-ink flex items-center gap-1.5">
+        <div className="space-y-4 text-xs text-ink dark:text-white/80">
+          <div className="p-4 rounded-card bg-canvas dark:bg-[#111f18] border border-border dark:border-white/[0.09] shadow-tactile-surface dark:shadow-none space-y-1.5">
+            <h4 className="font-semibold text-ink dark:text-white/90 flex items-center gap-1.5">
               <Mail className="w-4 h-4 text-academic" />
               Privacy & Data Inquiries
             </h4>
-            <p className="text-muted leading-relaxed">
+            <p className="text-muted dark:text-white/55 leading-relaxed">
               For student data export requests, account deletion verification, or questions regarding our data practices:
             </p>
-            <div className="font-mono text-academic bg-white p-2.5 rounded-btn border border-border shadow-tactile-inset-sm text-[11px] select-all">
+            <div className="font-mono text-academic bg-white dark:bg-[#0f1c14] p-2.5 rounded-btn border border-border dark:border-white/[0.10] shadow-tactile-inset-sm dark:shadow-none text-[11px] select-all">
               privacy@studora.app
             </div>
           </div>
 
-          <div className="p-4 rounded-card bg-canvas border border-border shadow-tactile-surface space-y-1.5">
-            <h4 className="font-semibold text-ink flex items-center gap-1.5">
+          <div className="p-4 rounded-card bg-canvas dark:bg-[#111f18] border border-border dark:border-white/[0.09] shadow-tactile-surface dark:shadow-none space-y-1.5">
+            <h4 className="font-semibold text-ink dark:text-white/90 flex items-center gap-1.5">
               <Shield className="w-4 h-4 text-academic" />
               Academic Inquiries & Feedback
             </h4>
-            <p className="text-muted leading-relaxed">
+            <p className="text-muted dark:text-white/55 leading-relaxed">
               For institution partnerships, grading scale adjustments, or bug reports:
             </p>
-            <div className="font-mono text-academic bg-white p-2.5 rounded-btn border border-border shadow-tactile-inset-sm text-[11px] select-all">
+            <div className="font-mono text-academic bg-white dark:bg-[#0f1c14] p-2.5 rounded-btn border border-border dark:border-white/[0.10] shadow-tactile-inset-sm dark:shadow-none text-[11px] select-all">
               support@studora.app
             </div>
           </div>

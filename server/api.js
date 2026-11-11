@@ -61,6 +61,19 @@ import {
   formatDocumentKnowledgeContext,
   getDocumentLearningResources
 } from './document-learning-service.js';
+import {
+  sendEmail,
+  sendStudentWelcomeEmail,
+  sendTutorWelcomeEmail,
+  sendAdminWelcomeEmail,
+  sendTutorApplicationStatusEmail,
+  sendBookingNotifications,
+  resolveCampaignAudience,
+  executeCampaign,
+  processResendWebhook,
+  getOrCreateEmailPreferences,
+  isResendConfigured
+} from './email-service.js';
 
 // Secret configuration
 // APP_SECRET is required when creating or verifying legacy HMAC session tokens.
@@ -415,6 +428,18 @@ export async function handleApiRequest(req, res) {
           VALUES ($1, $2, 'analytics_cookies', 'granted', '1.0', 'registration', $3);
         `, ['c_' + Date.now() + '_analytics', userId, userAgent]);
       }
+
+      // Initialize email preferences with unsubscribe token
+      await getOrCreateEmailPreferences(userId, email.toLowerCase().trim());
+
+      // Send branded welcome email asynchronously without blocking registration response
+      sendStudentWelcomeEmail({
+        email: email.toLowerCase().trim(),
+        firstName: fullName.trim().split(' ')[0],
+        userId
+      }).catch(err => {
+        console.error('[AuthRegister] Failed to send welcome email:', err.message);
+      });
 
       const token = createSessionToken({ userId, email: email.toLowerCase().trim(), role: 'STUDENT' });
       return sendJson(res, 201, {
@@ -1749,6 +1774,27 @@ export async function handleApiRequest(req, res) {
 
       try {
         const result = await verifyAndConfirmTutorPayment(reference);
+
+        // Send booking notification emails asynchronously if confirmed
+        if (result && result.booking) {
+          const b = result.booking;
+          const studentEmail = authUser.email || b.student_email;
+          const studentName = authUser.display_name || 'Student';
+          const tutorEmail = b.tutor_email;
+          const tutorName = b.tutor_name || 'Tutor';
+
+          sendBookingNotifications({
+            studentEmail,
+            studentName,
+            tutorEmail,
+            tutorName,
+            subject: b.subject,
+            bookingTime: b.slot_time
+          }).catch(mailErr => {
+            console.error('[BookingVerify] Failed to dispatch booking emails:', mailErr.message);
+          });
+        }
+
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, err.statusCode || 400, { error: err.message });
@@ -1859,6 +1905,191 @@ export async function handleApiRequest(req, res) {
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // =========================================================================
+    // RESEND EMAIL & CAMPAIGN MANAGEMENT API SUITE
+    // =========================================================================
+
+    // POST /api/email/webhook/resend — provider webhook for delivery events & suppressions
+    if (pathname === '/api/email/webhook/resend' && method === 'POST') {
+      try {
+        const body = await parseJsonBody(req);
+        const result = await processResendWebhook(body);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+
+    // GET /api/email/unsubscribe — user one-click unsubscribe endpoint
+    if (pathname === '/api/email/unsubscribe' && method === 'GET') {
+      const token = url.searchParams.get('token');
+      if (!token) {
+        return sendJson(res, 400, { error: 'Invalid or missing unsubscribe token.' });
+      }
+
+      try {
+        await db.query(
+          `UPDATE user_email_preferences 
+           SET promotional_opt_in = false, unsubscribed_at = CURRENT_TIMESTAMP
+           WHERE unsubscribe_token = $1 OR user_id = $1;`,
+          [token]
+        );
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        return res.end(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>Unsubscribed from Studora</title></head>
+            <body style="font-family: sans-serif; text-align: center; padding: 60px 20px; background-color: #F6F7F3; color: #111827;">
+              <h1 style="color: #176B4D;">Preferences Updated</h1>
+              <p>You have successfully unsubscribed from Studora promotional emails.</p>
+              <p style="font-size: 13px; color: #667085;">You will still receive critical account security and booking notifications.</p>
+              <a href="https://studora.app" style="color: #176B4D; font-weight: bold;">Return to Studora</a>
+            </body>
+          </html>
+        `);
+      } catch (err) {
+        return sendJson(res, 500, { error: 'Failed to update preferences.' });
+      }
+    }
+
+    // POST /api/admin/tutor-applications/notify — send tutor application approval/rejection email
+    if (pathname === '/api/admin/tutor-applications/notify' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'ADMIN')) {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      const { email, applicantName, decision, reason } = await parseJsonBody(req);
+      if (!email || !decision) {
+        return sendJson(res, 400, { error: 'Applicant email and decision are required.' });
+      }
+
+      try {
+        const result = await sendTutorApplicationStatusEmail({
+          email,
+          applicantName,
+          decision,
+          reason
+        });
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // GET /api/admin/campaigns — list campaigns and overall metrics
+    if (pathname === '/api/admin/campaigns' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'ADMIN')) {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      try {
+        const campaignsRes = await db.query(
+          `SELECT * FROM email_campaigns ORDER BY created_at DESC LIMIT 50;`
+        );
+        const metricsRes = await db.query(`
+          SELECT 
+            COUNT(*) as total_campaigns,
+            COALESCE(SUM(total_recipients), 0) as total_queued,
+            COALESCE(SUM(sent_count), 0) as total_sent,
+            COALESCE(SUM(delivered_count), 0) as total_delivered,
+            COALESCE(SUM(failed_count), 0) as total_failed,
+            COALESCE(SUM(bounced_count), 0) as total_bounced,
+            COALESCE(SUM(complaint_count), 0) as total_complaints
+          FROM email_campaigns;
+        `);
+
+        const logsRes = await db.query(
+          `SELECT * FROM email_logs ORDER BY created_at DESC LIMIT 30;`
+        );
+
+        return sendJson(res, 200, {
+          campaigns: campaignsRes.rows,
+          metrics: metricsRes.rows[0],
+          recentLogs: logsRes.rows,
+          isLiveConfigured: isResendConfigured()
+        });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // POST /api/admin/campaigns — create a new campaign
+    if (pathname === '/api/admin/campaigns' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'ADMIN')) {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      const body = await parseJsonBody(req);
+      const { title, subject, campaignType, targetAudience, contentHtml } = body;
+
+      if (!title || !subject || !campaignType || !targetAudience || !contentHtml) {
+        return sendJson(res, 400, { error: 'Title, subject, campaign type, target audience, and content are required.' });
+      }
+
+      // Pre-calculate audience count
+      const isPromotional = campaignType === 'promotional';
+      const recipients = await resolveCampaignAudience(targetAudience, isPromotional);
+
+      const id = crypto.randomUUID();
+      const insertRes = await db.query(
+        `INSERT INTO email_campaigns (
+          id, title, subject, campaign_type, target_audience, content_html,
+          status, total_recipients, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'draft', $7, $8)
+        RETURNING *;`,
+        [id, title, subject, campaignType, targetAudience, contentHtml, recipients.length, authUser.userId]
+      );
+
+      return sendJson(res, 201, {
+        campaign: insertRes.rows[0],
+        eligibleCount: recipients.length
+      });
+    }
+
+    // POST /api/admin/campaigns/:id/send — dispatch campaign
+    if (pathname.startsWith('/api/admin/campaigns/') && pathname.endsWith('/send') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'ADMIN')) {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      const campaignId = pathname.replace('/api/admin/campaigns/', '').replace('/send', '');
+      try {
+        const result = await executeCampaign(campaignId);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // POST /api/admin/campaigns/test — send test email
+    if (pathname === '/api/admin/campaigns/test' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'ADMIN')) {
+        return sendJson(res, 403, { error: 'Forbidden. Administrator authorization required.' });
+      }
+
+      const { testEmail, subject, contentHtml, campaignType } = await parseJsonBody(req);
+      if (!testEmail || !subject || !contentHtml) {
+        return sendJson(res, 400, { error: 'testEmail, subject, and contentHtml are required.' });
+      }
+
+      try {
+        const result = await sendEmail({
+          to: testEmail,
+          subject: `[TEST PREVIEW] ${subject}`,
+          html: contentHtml,
+          templateType: `test_${campaignType || 'promotional'}`
+        });
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
       }
     }
 
