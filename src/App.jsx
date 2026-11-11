@@ -156,6 +156,8 @@ function AppContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showCookieModal, setShowCookieModal] = useState(false);
   const [activePracticeDrill, setActivePracticeDrill] = useState(null);
+  const [assessmentFilterTab, setAssessmentFilterTab] = useState('available'); // 'available' | 'completed'
+  const [completedAttempts, setCompletedAttempts] = useState([]);
   const [isDark, setIsDark] = useState(() => {
     // Respect OS preference or stored preference
     const stored = localStorage.getItem('studora-theme');
@@ -418,11 +420,12 @@ function AppContent() {
     if (!currentUser) return;
     setDataLoading(true);
     try {
-      const [recordsRes, scalesRes, plansRes, streakRes] = await Promise.all([
+      const [recordsRes, scalesRes, plansRes, streakRes, profileRes] = await Promise.all([
         api.getAcademicRecords(),
         api.getScales(),
         api.getStudyPlans(),
-        api.getStreak()
+        api.getStreak(),
+        api.request('/api/academic/profile').catch(() => null)
       ]);
 
       setSemesters(recordsRes.semesters || []);
@@ -430,6 +433,9 @@ function AppContent() {
       setAvailableScales(scalesRes.scales || []);
       setStudyPlans(plansRes.plans || []);
       setStreakData(streakRes || { streak: 0, totalHours: 0 });
+      if (profileRes && Array.isArray(profileRes.recentAttempts)) {
+        setCompletedAttempts(profileRes.recentAttempts);
+      }
     } catch (err) {
       addToast({ type: 'error', title: 'Data Sync Error', message: err.message });
     } finally {
@@ -749,14 +755,14 @@ function AppContent() {
   return (
     <BillingProvider currentUser={currentUser} showToast={addToast}>
       <div className={`min-h-screen flex text-ink antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
-        {/* Campus background — visible across all sections except tutor dashboard */}
-        {activeTab !== 'tutor-dashboard' && (
+        {/* Campus background — visible across overview/dashboard, hidden on focused study, sessions & tutor tools */}
+        {activeTab !== 'tutor-dashboard' && activeTab !== 'study' && activeTab !== 'study-session' && !activePracticeDrill && (
           <CampusBackground />
         )}
-        {/* Background color — used on tutor dashboard and as fallback */}
+        {/* Background color — used on focused pages and as fallback */}
         <div
           className={`fixed inset-0 -z-10 transition-colors duration-500 ${
-            activeTab !== 'tutor-dashboard'
+            activeTab !== 'tutor-dashboard' && activeTab !== 'study' && activeTab !== 'study-session' && !activePracticeDrill
               ? 'bg-transparent'
               : isDark ? 'bg-[#0a1510]' : 'bg-canvas'
           }`}
@@ -965,7 +971,7 @@ function AppContent() {
                         <PracticeDrillRunner
                           drillData={activePracticeDrill}
                           onComplete={() => {
-                            refreshData();
+                            fetchAllData();
                           }}
                           onCancel={() => setActivePracticeDrill(null)}
                           showToast={addToast}
@@ -987,114 +993,211 @@ function AppContent() {
                         <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
                           <button
                             type="button"
-                            className="px-4 py-1.5 rounded-full bg-[#DDEFE5] dark:bg-[#176B4D]/30 text-[#176B4D] dark:text-[#A7F3D0] text-xs font-bold shadow-sm"
+                            onClick={() => setAssessmentFilterTab('available')}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all ${
+                              assessmentFilterTab === 'available'
+                                ? 'bg-[#DDEFE5] dark:bg-[#176B4D]/30 text-[#176B4D] dark:text-[#A7F3D0]'
+                                : 'text-[#667085] dark:text-white/60 hover:text-ink dark:hover:text-white'
+                            }`}
                           >
                             Available Tests
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => setAssessmentFilterTab('completed')}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 ${
+                              assessmentFilterTab === 'completed'
+                                ? 'bg-[#DDEFE5] dark:bg-[#176B4D]/30 text-[#176B4D] dark:text-[#A7F3D0]'
+                                : 'text-[#667085] dark:text-white/60 hover:text-ink dark:hover:text-white'
+                            }`}
+                          >
+                            <span>Completed</span>
+                            {completedAttempts.length > 0 && (
+                              <span className="px-1.5 py-0.2 rounded-full bg-[#176B4D] text-white text-[10px]">
+                                {completedAttempts.length}
+                              </span>
+                            )}
+                          </button>
                         </div>
 
-                        {/* Assessments Content Grid */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                          {/* Left: Test Cards (span 8 on lg) */}
-                          <div className="lg:col-span-8 space-y-4">
-                            <FeatureGate
-                              feature="TEST_PREP_BASIC"
-                              featureTitle="Practice Test Drills"
-                              description="Simulate exam scenarios with timed test drills and diagnostic topic breakdowns."
-                              showRemaining={true}
-                              onUpgrade={() => navigateRoute('pricing')}
-                            >
-                              <div className="space-y-3.5">
-                                {/* Card 1: Mathematics Theory & Limits Drill */}
-                                <div className="glass-panel rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 hover:shadow-md transition-all">
-                                  <div className="flex items-center gap-3.5 min-w-0">
-                                    <div className="w-12 h-12 rounded-2xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0">
-                                      <FileCheck2 className="w-6 h-6" />
+                        {assessmentFilterTab === 'available' ? (
+                          /* Assessments Content Grid */
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                            {/* Left: Test Cards (span 8 on lg) */}
+                            <div className="lg:col-span-8 space-y-4">
+                              <FeatureGate
+                                feature="TEST_PREP_BASIC"
+                                featureTitle="Practice Test Drills"
+                                description="Simulate exam scenarios with timed test drills and diagnostic topic breakdowns."
+                                showRemaining={true}
+                                onUpgrade={() => navigateRoute('pricing')}
+                              >
+                                <div className="space-y-3.5">
+                                  {/* Card 1: Mathematics Theory & Limits Drill */}
+                                  <div className="glass-panel rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 hover:shadow-md transition-all">
+                                    <div className="flex items-center gap-3.5 min-w-0">
+                                      <div className="w-12 h-12 rounded-2xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0">
+                                        <FileCheck2 className="w-6 h-6" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <h3 className="text-sm sm:text-base font-bold text-[#111827] dark:text-white truncate">
+                                          Mathematics: Limits & Calculus Diagnostic
+                                        </h3>
+                                        <p className="text-xs text-[#667085] dark:text-white/60 mt-0.5">
+                                          5 Verified Standardized Questions • Topic: Limits & Calculus
+                                        </p>
+                                      </div>
                                     </div>
-                                    <div className="min-w-0">
-                                      <h3 className="text-sm sm:text-base font-bold text-[#111827] dark:text-white truncate">
-                                        Mathematics: Limits & Calculus Diagnostic
-                                      </h3>
-                                      <p className="text-xs text-[#667085] dark:text-white/60 mt-0.5">
-                                        5 Verified Standardized Questions • Topic: Limits & Calculus
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] shadow-sm transition-all shrink-0"
-                                    onClick={async () => {
-                                      try {
-                                        const res = await api.request('/api/practice/start', {
-                                          method: 'POST',
-                                          body: JSON.stringify({ subjectId: 'subj_math', topicId: 'top_calc_limits', limit: 5 })
-                                        });
-                                        if (res && res.drill) {
-                                          setActivePracticeDrill(res.drill);
-                                          addToast({ type: 'success', title: 'Drill Started', message: 'Diagnostic questions loaded.' });
+                                    <button
+                                      type="button"
+                                      className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] shadow-sm transition-all shrink-0 cursor-pointer"
+                                      onClick={async () => {
+                                        try {
+                                          const res = await api.request('/api/practice/start', {
+                                            method: 'POST',
+                                            body: JSON.stringify({ subjectId: 'subj_math', topicId: 'top_calc_limits', limit: 5 })
+                                          });
+                                          if (res && res.drill) {
+                                            setActivePracticeDrill(res.drill);
+                                            addToast({ type: 'success', title: 'Drill Started', message: 'Diagnostic questions loaded.' });
+                                          }
+                                        } catch (err) {
+                                          addToast({ type: 'error', title: 'Notice', message: err.message });
                                         }
-                                      } catch (err) {
-                                        addToast({ type: 'error', title: 'Notice', message: err.message });
-                                      }
-                                    }}
-                                  >
-                                    Start Assessment
-                                  </button>
-                                </div>
-
-                                {/* Card 2: Algorithms & Sorting Drill */}
-                                <div className="glass-panel rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 hover:shadow-md transition-all">
-                                  <div className="flex items-center gap-3.5 min-w-0">
-                                    <div className="w-12 h-12 rounded-2xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center shrink-0">
-                                      <FileCheck2 className="w-6 h-6" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <h3 className="text-sm sm:text-base font-bold text-[#111827] dark:text-white truncate">
-                                        Computer Science: Sorting & Complexity Drill
-                                      </h3>
-                                      <p className="text-xs text-[#667085] dark:text-white/60 mt-0.5">
-                                        5 Verified Standardized Questions • Topic: Sorting Algorithms
-                                      </p>
-                                    </div>
+                                      }}
+                                    >
+                                      Start Assessment
+                                    </button>
                                   </div>
-                                  <button
-                                    type="button"
-                                    className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] shadow-sm transition-all shrink-0"
-                                    onClick={async () => {
-                                      try {
-                                        const res = await api.request('/api/practice/start', {
-                                          method: 'POST',
-                                          body: JSON.stringify({ subjectId: 'subj_cs', topicId: 'top_algo_sort', limit: 5 })
-                                        });
-                                        if (res && res.drill) {
-                                          setActivePracticeDrill(res.drill);
-                                          addToast({ type: 'success', title: 'Drill Started', message: 'Diagnostic questions loaded.' });
-                                        }
-                                      } catch (err) {
-                                        addToast({ type: 'error', title: 'Notice', message: err.message });
-                                      }
-                                    }}
-                                  >
-                                    Start Assessment
-                                  </button>
-                                </div>
-                              </div>
-                            </FeatureGate>
-                          </div>
 
-                          {/* Right: Decorative Academic Artwork Card (span 4 on lg) */}
-                          <div className="lg:col-span-4 glass-panel rounded-2xl p-5 flex flex-col items-center justify-center text-center">
-                            <div className="w-20 h-20 rounded-2xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center mb-3 shadow-inner">
-                              <CheckCircle2 className="w-10 h-10" />
+                                  {/* Card 2: Algorithms & Sorting Drill */}
+                                  <div className="glass-panel rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 hover:shadow-md transition-all">
+                                    <div className="flex items-center gap-3.5 min-w-0">
+                                      <div className="w-12 h-12 rounded-2xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center shrink-0">
+                                        <FileCheck2 className="w-6 h-6" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <h3 className="text-sm sm:text-base font-bold text-[#111827] dark:text-white truncate">
+                                          Computer Science: Sorting & Complexity Drill
+                                        </h3>
+                                        <p className="text-xs text-[#667085] dark:text-white/60 mt-0.5">
+                                          5 Verified Standardized Questions • Topic: Sorting Algorithms
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="px-4 py-2 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] shadow-sm transition-all shrink-0 cursor-pointer"
+                                      onClick={async () => {
+                                        try {
+                                          const res = await api.request('/api/practice/start', {
+                                            method: 'POST',
+                                            body: JSON.stringify({ subjectId: 'subj_cs', topicId: 'top_algo_sort', limit: 5 })
+                                          });
+                                          if (res && res.drill) {
+                                            setActivePracticeDrill(res.drill);
+                                            addToast({ type: 'success', title: 'Drill Started', message: 'Diagnostic questions loaded.' });
+                                          }
+                                        } catch (err) {
+                                          addToast({ type: 'error', title: 'Notice', message: err.message });
+                                        }
+                                      }}
+                                    >
+                                      Start Assessment
+                                    </button>
+                                  </div>
+                                </div>
+                              </FeatureGate>
                             </div>
-                            <h4 className="text-sm font-bold text-[#111827] dark:text-white">
-                              Verified Diagnostics
-                            </h4>
-                            <p className="text-xs text-[#667085] dark:text-white/60 mt-1 max-w-xs leading-relaxed">
-                              Assessments are timed and automatically evaluated against our question bank standards.
-                            </p>
+
+                            {/* Right: Decorative Academic Artwork Card (span 4 on lg) */}
+                            <div className="lg:col-span-4 glass-panel rounded-2xl p-5 flex flex-col items-center justify-center text-center">
+                              <div className="w-20 h-20 rounded-2xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center mb-3 shadow-inner">
+                                <CheckCircle2 className="w-10 h-10" />
+                              </div>
+                              <h4 className="text-sm font-bold text-[#111827] dark:text-white">
+                                Verified Diagnostics
+                              </h4>
+                              <p className="text-xs text-[#667085] dark:text-white/60 mt-1 max-w-xs leading-relaxed">
+                                Assessments are timed and automatically evaluated against our question bank standards.
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          /* Completed Assessments History View */
+                          <div className="glass-panel rounded-2xl p-5 space-y-4">
+                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+                              <h3 className="text-sm font-bold text-[#111827] dark:text-white">
+                                Completed Diagnostic Assessments
+                              </h3>
+                              <span className="text-xs text-[#667085] dark:text-white/60">
+                                {completedAttempts.length} verified attempt{completedAttempts.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+
+                            {completedAttempts.length === 0 ? (
+                              <div className="py-10 text-center space-y-2">
+                                <div className="w-12 h-12 rounded-full bg-[#F6F7F3] dark:bg-white/5 flex items-center justify-center mx-auto text-[#667085]">
+                                  <FileCheck2 className="w-6 h-6" />
+                                </div>
+                                <p className="text-xs font-semibold text-[#111827] dark:text-white">
+                                  No completed assessments yet
+                                </p>
+                                <p className="text-[11px] text-[#667085] dark:text-white/60 max-w-sm mx-auto">
+                                  Take an available diagnostic test to benchmark your topic proficiency and track your results here.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => setAssessmentFilterTab('available')}
+                                  className="mt-2 px-3 py-1.5 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] transition-all cursor-pointer inline-flex items-center gap-1.5"
+                                >
+                                  View Available Tests
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {completedAttempts.map((att, idx) => (
+                                  <div
+                                    key={att.id || idx}
+                                    className="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                                        att.passed
+                                          ? 'bg-[#DDEFE5] text-[#176B4D]'
+                                          : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                      }`}>
+                                        {att.score != null ? `${att.score}%` : '—'}
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-bold text-[#111827] dark:text-white">
+                                          {att.topic_id === 'top_calc_limits'
+                                            ? 'Mathematics: Limits & Calculus Diagnostic'
+                                            : att.topic_id === 'top_algo_sort'
+                                            ? 'Computer Science: Sorting & Complexity Drill'
+                                            : `Diagnostic Assessment (${att.topic_id || att.subject_id || 'Core'})`}
+                                        </p>
+                                        <p className="text-[11px] text-[#667085] dark:text-white/60 mt-0.5">
+                                          {att.correct_answers_count != null && att.total_questions
+                                            ? `${att.correct_answers_count} of ${att.total_questions} correct`
+                                            : 'Completed'}
+                                          {att.completed_at && ` • ${new Date(att.completed_at).toLocaleDateString()}`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold self-start sm:self-center ${
+                                      att.passed
+                                        ? 'bg-[#DDEFE5] text-[#176B4D] dark:bg-[#176B4D]/30 dark:text-[#A7F3D0]'
+                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                    }`}>
+                                      {att.passed ? 'Passed' : 'Needs Practice'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
