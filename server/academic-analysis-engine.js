@@ -101,7 +101,7 @@ async function analyzeSubjectPerformance(studentId) {
     const stats = attRes.rows[0];
     const totalAttempts = Number(stats.total_attempts || 0);
     const totalQuestions = Number(stats.total_questions || 0);
-    const correctCount = Number(stats.correct_answers_count || 0);
+    const correctCount = Number(stats.correct_answers || 0);
     const incorrectCount = totalQuestions - correctCount;
     const accuracy = totalQuestions > 0 ? Number(((correctCount / totalQuestions) * 100).toFixed(1)) : null;
 
@@ -244,12 +244,24 @@ async function analyzeLearningBehavior(studentId) {
   const totalActiveHours = Number((totalActiveMinutes / 60).toFixed(1));
   const totalIdleMinutes = Math.round(totalIdleSeconds / 60);
 
-  // Consistency & Streak calculation from authoritative study logs
-  const streakRes = await db.query(`
-    SELECT DISTINCT logged_at FROM study_logs WHERE user_id = $1 ORDER BY logged_at DESC;
-  `, [studentId]);
+  // Consistency & Streak calculation — try study_logs first, fall back to student_study_sessions dates
+  let dates = [];
+  try {
+    const streakRes = await db.query(`
+      SELECT DISTINCT logged_at::date::text as day FROM study_logs WHERE user_id = $1 ORDER BY day DESC;
+    `, [studentId]);
+    dates = streakRes.rows.map(r => String(r.day).split('T')[0]);
+  } catch (_studyLogsErr) {
+    // study_logs table may not exist in this environment; derive active days from completed sessions
+    const sessionDatesRes = await db.query(`
+      SELECT DISTINCT started_at::date::text as day
+      FROM student_study_sessions
+      WHERE student_id = $1 AND status = 'completed'
+      ORDER BY day DESC;
+    `, [studentId]);
+    dates = sessionDatesRes.rows.map(r => String(r.day).split('T')[0]);
+  }
 
-  const dates = streakRes.rows.map(r => String(r.logged_at).split('T')[0]);
   let streak = 0;
 
   if (dates.length > 0) {

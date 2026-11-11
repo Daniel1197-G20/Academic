@@ -183,12 +183,25 @@
 
 /* Dark Theme Adjustments */
 .dark {
-  --glass-panel-bg: rgba(14, 27, 21, 0.80);
+  --glass-sidebar-bg: rgba(12, 25, 19, 0.88);
+  --glass-sidebar-border: rgba(255, 255, 255, 0.08);
+
+  --glass-panel-bg: rgba(14, 27, 21, 0.82);
   --glass-panel-border: rgba(255, 255, 255, 0.10);
-  --glass-panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --glass-panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 
   --glass-stat-bg: rgba(18, 35, 27, 0.82);
   --glass-stat-border: rgba(255, 255, 255, 0.12);
+
+  --glass-nav-active-bg: rgba(23, 107, 77, 0.35);
+  --glass-nav-active-text: #A7F3D0;
+  --glass-nav-active-shadow: 0 2px 10px rgba(23, 107, 77, 0.25);
+}
+
+.dark .glass-sidebar {
+  background: var(--glass-sidebar-bg);
+  border-right-color: var(--glass-sidebar-border);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
 }
 
 .dark .glass-search-input {
@@ -197,10 +210,21 @@
   color: #FFFFFF;
 }
 
+.dark .glass-search-input:focus-within {
+  background: rgba(22, 44, 34, 0.92);
+  border-color: rgba(143, 201, 174, 0.45);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
 .dark .glass-icon-btn {
   background: rgba(18, 35, 27, 0.80);
   border-color: rgba(255, 255, 255, 0.12);
   color: #FFFFFF;
+}
+
+.dark .glass-icon-btn:hover {
+  background: rgba(26, 49, 38, 0.95);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .dark .quick-action-pod {

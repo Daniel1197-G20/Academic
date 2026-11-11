@@ -466,6 +466,131 @@ export async function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_student_topic_mastery_student ON student_topic_mastery(student_id);
     CREATE INDEX IF NOT EXISTS idx_student_topic_mastery_subject ON student_topic_mastery(student_id, subject_id);
+
+    -- ─────────────────────────────────────────────────────────────
+    -- PHASE 3: DAILY AI STUDY COACH & ADAPTIVE STUDY PLANNING
+    -- ─────────────────────────────────────────────────────────────
+
+    -- 1. Student Study Preferences
+    CREATE TABLE IF NOT EXISTS student_study_preferences (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      academic_goals TEXT DEFAULT '',
+      target_gpa NUMERIC(3, 2),
+      daily_available_minutes INT NOT NULL DEFAULT 60,
+      preferred_study_periods TEXT DEFAULT '["evening"]',
+      preferred_study_days TEXT DEFAULT '["monday","tuesday","wednesday","thursday","friday","saturday","sunday"]',
+      upcoming_exams TEXT DEFAULT '[]',
+      prioritized_subject_ids TEXT DEFAULT '[]',
+      prioritized_topic_ids TEXT DEFAULT '[]',
+      reminder_enabled BOOLEAN NOT NULL DEFAULT true,
+      reminder_time TEXT DEFAULT '09:00',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_student_study_prefs_user ON student_study_preferences(user_id);
+
+    -- 2. Daily Study Plans (Proactive Daily Container)
+    CREATE TABLE IF NOT EXISTS daily_study_plans (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      plan_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      status TEXT NOT NULL DEFAULT 'active',
+      target_study_minutes INT NOT NULL DEFAULT 60,
+      completed_study_minutes INT NOT NULL DEFAULT 0,
+      ai_coaching_note TEXT,
+      generation_context TEXT DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, plan_date)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_daily_study_plans_user_date ON daily_study_plans(user_id, plan_date DESC);
+
+    -- 3. Daily Study Tasks (Individual Actionable Units)
+    CREATE TABLE IF NOT EXISTS daily_study_tasks (
+      id TEXT PRIMARY KEY,
+      daily_plan_id TEXT NOT NULL REFERENCES daily_study_plans(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject_id TEXT REFERENCES subjects(id) ON DELETE SET NULL,
+      topic_id TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      learning_objective TEXT,
+      activity_type TEXT NOT NULL DEFAULT 'revision',
+      estimated_duration_minutes INT NOT NULL DEFAULT 25,
+      actual_duration_seconds INT NOT NULL DEFAULT 0,
+      priority TEXT NOT NULL DEFAULT 'medium',
+      recommendation_reason TEXT,
+      action_route TEXT DEFAULT '/study/timer',
+      status TEXT NOT NULL DEFAULT 'pending',
+      completed_at TIMESTAMPTZ,
+      session_id TEXT REFERENCES student_study_sessions(id) ON DELETE SET NULL,
+      attempt_id TEXT REFERENCES student_practice_attempts(id) ON DELETE SET NULL,
+      display_order INT NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_daily_study_tasks_plan ON daily_study_tasks(daily_plan_id, display_order ASC);
+    CREATE INDEX IF NOT EXISTS idx_daily_study_tasks_user_status ON daily_study_tasks(user_id, status);
+
+    -- ─────────────────────────────────────────────────────────────
+    -- PHASE 4: DOCUMENT-BASED LEARNING & KNOWLEDGE EXTRACTION
+    -- ─────────────────────────────────────────────────────────────
+
+    -- 1. Student Academic Documents
+    CREATE TABLE IF NOT EXISTS student_documents (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject_id TEXT REFERENCES subjects(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_size_bytes INT NOT NULL,
+      mime_type TEXT NOT NULL,
+      storage_path TEXT NOT NULL,
+      processing_status TEXT NOT NULL DEFAULT 'uploaded',
+      page_count INT NOT NULL DEFAULT 0,
+      extracted_summary TEXT,
+      extracted_topics TEXT DEFAULT '[]',
+      error_message TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_student_documents_user ON student_documents(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_student_documents_subject ON student_documents(user_id, subject_id);
+
+    -- 2. Document Content Chunks
+    CREATE TABLE IF NOT EXISTS document_chunks (
+      id TEXT PRIMARY KEY,
+      document_id TEXT NOT NULL REFERENCES student_documents(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      page_number INT NOT NULL DEFAULT 1,
+      chunk_index INT NOT NULL DEFAULT 0,
+      section_heading TEXT,
+      content TEXT NOT NULL,
+      token_count INT NOT NULL DEFAULT 0,
+      search_vector TSVECTOR,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_document_chunks_doc ON document_chunks(document_id, chunk_index ASC);
+    CREATE INDEX IF NOT EXISTS idx_document_chunks_user ON document_chunks(user_id);
+
+    -- 3. Generated Learning Resources
+    CREATE TABLE IF NOT EXISTS document_learning_resources (
+      id TEXT PRIMARY KEY,
+      document_id TEXT NOT NULL REFERENCES student_documents(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      resource_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_doc_resources_doc ON document_learning_resources(document_id, resource_type);
+    CREATE INDEX IF NOT EXISTS idx_doc_resources_user ON document_learning_resources(user_id);
   `);
 
   // Seed default grading scales

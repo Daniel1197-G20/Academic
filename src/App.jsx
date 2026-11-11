@@ -748,18 +748,13 @@ function AppContent() {
 
   return (
     <BillingProvider currentUser={currentUser} showToast={addToast}>
-      <div className={`min-h-screen flex text-ink antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
-        {/* Campus background — visible through glass surfaces */}
-        {(activeTab === 'dashboard' || activeTab === 'overview' || activeTab === 'messages' || activeTab === 'community') && (
-          <CampusBackground />
-        )}
-        {/* Background color — used on non-dashboard pages and as fallback */}
+      <div className={`min-h-screen flex text-ink dark:text-white antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
+        {/* Campus background — consistent presence across all authenticated platform pages */}
+        <CampusBackground />
+
+        {/* Ambient fallback / backdrop layer */}
         <div
-          className={`fixed inset-0 -z-10 transition-colors duration-500 ${
-            (activeTab === 'dashboard' || activeTab === 'overview')
-              ? 'bg-transparent'
-              : isDark ? 'bg-navy-900' : 'bg-canvas'
-          }`}
+          className="fixed inset-0 -z-10 bg-transparent"
         />
 
         {/* Desktop Sidebar */}

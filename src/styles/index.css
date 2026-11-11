@@ -76,6 +76,12 @@
     box-shadow: 0 1px 2px 0 rgba(17, 24, 39, 0.03), -1px -1px 2px 0 rgba(255, 255, 255, 0.85);
   }
 
+  .dark .tactile-surface {
+    background-color: rgba(14, 27, 21, 0.82);
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+
   /* LEVEL 2 — RAISED (important cards, CGPA hero, navigation dock, modal) */
   .tactile-raised {
     background-color: #FFFFFF;
@@ -85,9 +91,19 @@
     transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
   }
 
+  .dark .tactile-raised {
+    background-color: rgba(16, 32, 25, 0.82);
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+  }
+
   .tactile-raised-hover:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px 0 rgba(17, 24, 39, 0.05), 0 6px 16px 0 rgba(17, 24, 39, 0.04), -1px -1px 6px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .dark .tactile-raised-hover:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(143, 201, 174, 0.2);
   }
 
   .tactile-hero {
@@ -95,6 +111,12 @@
     border: 1px solid #E5E7EB;
     border-radius: 20px;
     box-shadow: 0 2px 6px 0 rgba(17, 24, 39, 0.045), 0 8px 20px 0 rgba(17, 24, 39, 0.035), -1px -1px 6px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .dark .tactile-hero {
+    background-color: rgba(14, 27, 21, 0.86);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.50);
   }
 
   /* LEVEL 3 — PRESSED / INSET (inputs, progress tracks, active controls) */
@@ -121,10 +143,23 @@
     box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 3px 8px 0 rgba(17, 24, 39, 0.03), -1px -1px 3px 0 rgba(255, 255, 255, 0.9);
   }
 
+  .dark .tactile-btn-secondary {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+
   .tactile-btn-secondary:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 2px 5px 0 rgba(17, 24, 39, 0.05), 0 5px 12px 0 rgba(17, 24, 39, 0.04), -1px -1px 4px 0 rgba(255, 255, 255, 0.95);
     background-color: #FAFAFA;
+  }
+
+  .dark .tactile-btn-secondary:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.20);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 
   .tactile-btn-secondary:active:not(:disabled) {
@@ -229,6 +264,12 @@
     box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 4px 12px 0 rgba(17, 24, 39, 0.035), -1px -1px 5px 0 rgba(255, 255, 255, 0.85);
   }
 
+  .dark .card-surface {
+    background: rgba(16, 32, 25, 0.82);
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+  }
+
   .card-surface-interactive {
     background: #FFFFFF;
     border: 1px solid #E5E7EB;
@@ -237,9 +278,19 @@
     transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
   }
 
+  .dark .card-surface-interactive {
+    background: rgba(16, 32, 25, 0.82);
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+  }
+
   .card-surface-interactive:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px 0 rgba(17, 24, 39, 0.05), 0 6px 16px 0 rgba(17, 24, 39, 0.04), -1px -1px 6px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .dark .card-surface-interactive:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(143, 201, 174, 0.2);
   }
 
   /* ==========================================================================

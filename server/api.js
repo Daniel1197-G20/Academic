@@ -43,6 +43,24 @@ import {
   generateStudentAcademicAnalysis,
   formatAcademicContextForAi
 } from './academic-analysis-engine.js';
+import {
+  getStudentStudyPreferences,
+  updateStudentStudyPreferences,
+  getOrCreateDailyStudyPlan,
+  completeDailyStudyTask,
+  updateDailyStudyTaskStatus,
+  getDailyCoachingPromptContext
+} from './study-coach-service.js';
+import {
+  createStudentDocument,
+  getStudentDocuments,
+  getStudentDocumentById,
+  deleteStudentDocument,
+  processDocumentContent,
+  retrieveRelevantDocumentChunks,
+  formatDocumentKnowledgeContext,
+  getDocumentLearningResources
+} from './document-learning-service.js';
 
 // Secret configuration
 // APP_SECRET is required when creating or verifying legacy HMAC session tokens.
@@ -968,7 +986,203 @@ export async function handleApiRequest(req, res) {
       return sendJson(res, 200, { streak, totalHours, activeDays: dates.length });
     }
 
-    // ── 4B. ACADEMIC INTELLIGENCE FOUNDATION ENDPOINTS ─────────────────────────
+    // ── 4A. PHASE 3: DAILY AI STUDY COACH & ADAPTIVE STUDY PLANNING ─────────
+
+    // GET /api/study/preferences — Retrieve student study preferences
+    if (pathname === '/api/study/preferences' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const preferences = await getStudentStudyPreferences(authUser.userId);
+        return sendJson(res, 200, { success: true, preferences });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // PUT /api/study/preferences — Update student study preferences
+    if (pathname === '/api/study/preferences' && method === 'PUT') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const body = await parseJsonBody(req);
+        const preferences = await updateStudentStudyPreferences(authUser.userId, body);
+        return sendJson(res, 200, { success: true, preferences });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+
+    // GET /api/study/daily-plan — Fetch or idempotently create today's adaptive study plan
+    if (pathname === '/api/study/daily-plan' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const forceRegenerate = req.url.includes('regenerate=true');
+        const plan = await getOrCreateDailyStudyPlan(authUser.userId, { forceRegenerate });
+        return sendJson(res, 200, { success: true, plan });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/daily-plan/regenerate — Explicitly re-generate adaptive daily plan
+    if (pathname === '/api/study/daily-plan/regenerate' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const plan = await getOrCreateDailyStudyPlan(authUser.userId, { forceRegenerate: true });
+        return sendJson(res, 200, { success: true, plan });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/daily-tasks/:id/complete — Complete a daily task with verification
+    if (pathname.startsWith('/api/study/daily-tasks/') && pathname.endsWith('/complete') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const taskId = pathname.replace('/api/study/daily-tasks/', '').replace('/complete', '');
+      try {
+        const body = await parseJsonBody(req);
+        const plan = await completeDailyStudyTask(authUser.userId, taskId, body);
+        return sendJson(res, 200, { success: true, plan });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // PATCH /api/study/daily-tasks/:id/status — Update task status (skip, reschedule)
+    if (pathname.startsWith('/api/study/daily-tasks/') && pathname.endsWith('/status') && method === 'PATCH') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const taskId = pathname.replace('/api/study/daily-tasks/', '').replace('/status', '');
+      try {
+        const { status } = await parseJsonBody(req);
+        const plan = await updateDailyStudyTaskStatus(authUser.userId, taskId, status);
+        return sendJson(res, 200, { success: true, plan });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // ── 4B. PHASE 4: DOCUMENT-BASED LEARNING & KNOWLEDGE RETRIEVAL ───────────
+
+    // GET /api/documents — List authenticated student's uploaded documents
+    if (pathname === '/api/documents' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const documents = await getStudentDocuments(authUser.userId);
+        return sendJson(res, 200, { success: true, documents });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // POST /api/documents/upload — Upload and register a new academic document
+    if (pathname === '/api/documents/upload' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const body = await parseJsonBody(req);
+        const { title, fileName, fileSizeBytes, mimeType, storagePath, subjectId, rawTextContent } = body;
+
+        const doc = await createStudentDocument(authUser.userId, {
+          title,
+          fileName,
+          fileSizeBytes: Number(fileSizeBytes) || 1024,
+          mimeType: mimeType || 'application/pdf',
+          storagePath: storagePath || `/tmp/doc_${Date.now()}.pdf`,
+          subjectId: subjectId || null
+        });
+
+        // Automatically trigger extraction and chunking pipeline
+        const processed = await processDocumentContent(authUser.userId, doc.id, rawTextContent !== undefined ? rawTextContent : null);
+        return sendJson(res, 201, { success: true, document: processed });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // GET /api/documents/:id — Retrieve single document details & processing status
+    if (pathname.startsWith('/api/documents/') && !pathname.includes('/chunks') && !pathname.includes('/resources') && !pathname.includes('/reprocess') && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const docId = pathname.replace('/api/documents/', '');
+      const doc = await getStudentDocumentById(authUser.userId, docId);
+      if (!doc) return sendJson(res, 404, { error: 'Document not found or access denied.' });
+
+      return sendJson(res, 200, { success: true, document: doc });
+    }
+
+    // DELETE /api/documents/:id — Delete document and associated chunks/resources
+    if (pathname.startsWith('/api/documents/') && method === 'DELETE') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const docId = pathname.replace('/api/documents/', '');
+      try {
+        const result = await deleteStudentDocument(authUser.userId, docId);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // POST /api/documents/:id/reprocess — Re-trigger extraction and chunking
+    if (pathname.startsWith('/api/documents/') && pathname.endsWith('/reprocess') && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const docId = pathname.replace('/api/documents/', '').replace('/reprocess', '');
+      try {
+        const body = await parseJsonBody(req);
+        const processed = await processDocumentContent(authUser.userId, docId, body.rawTextContent || null);
+        return sendJson(res, 200, { success: true, document: processed });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
+    }
+
+    // GET /api/documents/:id/resources — Retrieve generated learning materials (flashcards, questions, summary)
+    if (pathname.startsWith('/api/documents/') && pathname.endsWith('/resources') && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      const docId = pathname.replace('/api/documents/', '').replace('/resources', '');
+      try {
+        const resources = await getDocumentLearningResources(authUser.userId, docId);
+        return sendJson(res, 200, { success: true, resources });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // POST /api/documents/search — Contextual RAG search across student's documents
+    if (pathname === '/api/documents/search' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const { query, documentId, limit } = await parseJsonBody(req);
+        const chunks = await retrieveRelevantDocumentChunks(authUser.userId, query, { documentId, limit });
+        return sendJson(res, 200, { success: true, chunks });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+
+    // ── 4C. ACADEMIC INTELLIGENCE FOUNDATION ENDPOINTS ─────────────────────────
 
     // POST /api/study/sessions/start — Start a telemetry-tracked study session
     if (pathname === '/api/study/sessions/start' && method === 'POST') {
@@ -1337,11 +1551,21 @@ export async function handleApiRequest(req, res) {
           msgHistory = [{ role: 'user', content: prompt.trim() }];
         }
 
-        // Phase 2: Compute verified academic intelligence analysis and ground the AI context
+        // Phase 2, 3 & 4: Ground AI context with Academic Intelligence, Daily Plan, and Document Knowledge
         let academicContextBrief = null;
         try {
           const analysis = await generateStudentAcademicAnalysis(authUser.userId);
-          academicContextBrief = formatAcademicContextForAi(analysis);
+          const baseBrief = formatAcademicContextForAi(analysis);
+          const dailyCoachContext = await getDailyCoachingPromptContext(authUser.userId);
+
+          // Phase 4: Retrieve relevant student document chunks matching the prompt
+          const relevantChunks = await retrieveRelevantDocumentChunks(authUser.userId, prompt.trim(), { limit: 3 });
+          const documentBrief = formatDocumentKnowledgeContext(relevantChunks);
+
+          academicContextBrief = `${baseBrief}\n\n${dailyCoachContext}`;
+          if (documentBrief) {
+            academicContextBrief += `\n\n${documentBrief}`;
+          }
         } catch (analysisErr) {
           console.warn('[api.js] Notice: Could not compute academic analysis brief:', analysisErr.message);
         }

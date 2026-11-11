@@ -28,6 +28,7 @@ import { api } from '../../services/api/client';
 import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { useStudySessionTracker } from '../../hooks/useStudySessionTracker';
 import { StudySessionTimerWidget } from '../../components/study/StudySessionTimerWidget';
+import { DailyStudyCoachSection } from '../../components/study/DailyStudyCoachSection';
 
 export function StudyPlannerPage({
   studyPlans = [],
@@ -282,6 +283,23 @@ export function StudyPlannerPage({
         tracker={studyTracker}
         studyPlans={studyPlans}
         onFinish={onRefreshData}
+      />
+
+      {/* ── 1C. PHASE 3: PERSONAL DAILY AI STUDY COACH & ADAPTIVE PLANNER ─── */}
+      <DailyStudyCoachSection
+        onStartTaskSession={(task) => {
+          studyTracker.startSession({
+            subjectId: task.subjectId,
+            topicId: task.topicId,
+            source: 'study_coach_task'
+          });
+          showToast?.({
+            type: 'info',
+            title: 'Study Session Started',
+            message: `Active timer initiated for: ${task.title}`
+          });
+        }}
+        showToast={showToast}
       />
 
       {/* ── 2. METRIC STRIP (Matching Section 2_1) ────────────────────── */}

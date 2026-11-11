@@ -8,13 +8,13 @@ export function Card({
   ...props
 }) {
   const variantStyles = {
-    default: "bg-white border border-border rounded-card shadow-tactile-raised",
-    raised: "bg-white border border-border rounded-card shadow-tactile-raised",
-    hero: "bg-white border border-border rounded-hero shadow-tactile-hero",
-    surface: "bg-white border border-border rounded-card shadow-tactile-surface",
-    flat: "bg-white border border-border rounded-card shadow-tactile-surface",
-    subtle: "bg-surface-subtle border border-border-subtle rounded-card",
-    interactive: "bg-white border border-border rounded-card shadow-tactile-raised cursor-pointer hover:-translate-y-[1px] hover:shadow-tactile-raised-hover transition-all duration-150 active:translate-y-0"
+    default: "bg-white dark:bg-[#0e1b15]/85 border border-border dark:border-white/10 rounded-card shadow-tactile-raised text-ink dark:text-white backdrop-blur-md",
+    raised: "bg-white dark:bg-[#102019]/85 border border-border dark:border-white/10 rounded-card shadow-tactile-raised text-ink dark:text-white backdrop-blur-md",
+    hero: "bg-white dark:bg-[#0e1b15]/90 border border-border dark:border-white/10 rounded-hero shadow-tactile-hero text-ink dark:text-white backdrop-blur-md",
+    surface: "bg-white dark:bg-[#0e1b15]/80 border border-border dark:border-white/10 rounded-card shadow-tactile-surface text-ink dark:text-white backdrop-blur-md",
+    flat: "bg-white dark:bg-[#0e1b15]/80 border border-border dark:border-white/10 rounded-card shadow-tactile-surface text-ink dark:text-white backdrop-blur-md",
+    subtle: "bg-surface-subtle dark:bg-white/5 border border-border-subtle dark:border-white/10 rounded-card text-ink dark:text-white",
+    interactive: "bg-white dark:bg-[#102019]/85 border border-border dark:border-white/10 rounded-card shadow-tactile-raised cursor-pointer hover:-translate-y-[1px] hover:shadow-tactile-raised-hover transition-all duration-150 active:translate-y-0 text-ink dark:text-white backdrop-blur-md"
   };
 
   return (
@@ -38,7 +38,7 @@ export function CardHeader({ children, className = '' }) {
 
 export function CardTitle({ children, className = '' }) {
   return (
-    <h3 className={`text-sm sm:text-base font-semibold text-ink tracking-tight flex items-center justify-between ${className}`}>
+    <h3 className={`text-sm sm:text-base font-semibold text-ink dark:text-white tracking-tight flex items-center justify-between ${className}`}>
       {children}
     </h3>
   );
@@ -46,7 +46,7 @@ export function CardTitle({ children, className = '' }) {
 
 export function CardDescription({ children, className = '' }) {
   return (
-    <p className={`text-xs sm:text-sm text-muted leading-relaxed ${className}`}>
+    <p className={`text-xs sm:text-sm text-muted dark:text-white/70 leading-relaxed ${className}`}>
       {children}
     </p>
   );
@@ -62,7 +62,7 @@ export function CardContent({ children, className = '' }) {
 
 export function CardFooter({ children, className = '' }) {
   return (
-    <div className={`pt-3 border-t border-border flex items-center justify-between gap-3 text-xs ${className}`}>
+    <div className={`pt-3 border-t border-border dark:border-white/10 flex items-center justify-between gap-3 text-xs ${className}`}>
       {children}
     </div>
   );

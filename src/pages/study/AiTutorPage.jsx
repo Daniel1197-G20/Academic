@@ -23,13 +23,21 @@ import {
   ChevronRight,
   RefreshCw,
   Award,
+  BarChart2,
+  FileText,
 } from 'lucide-react';
 import { Button, Badge } from '../../components/ui';
 import { api } from '../../services/api/client';
 import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { FeatureGate } from '../../components/billing/FeatureGate';
+import { AcademicAnalysisSection } from '../../components/study/AcademicAnalysisSection';
+import { DocumentLearningSection } from '../../components/study/DocumentLearningSection';
 
 const STARTER_PROMPTS = [
+  { label: "My Strengths", prompt: "What are my strongest subjects and topics based on my verified records?" },
+  { label: "Areas to Improve", prompt: "Which topics should I focus on next to improve my academic performance?" },
+  { label: "Today's Study Plan", prompt: "What should I study today based on my active adaptive plan?" },
+  { label: "Study Progress", prompt: "Am I making consistent study progress, and how many verified hours have I logged?" },
   { label: "L'Hôpital's Rule", prompt: "Explain L'Hôpital's Rule step-by-step with a limits example." },
   { label: 'QuickSort Complexity', prompt: 'Analyze the best, average, and worst-case time complexity of QuickSort.' },
   { label: 'Microservices vs Monolith', prompt: 'Compare Monolithic vs Microservices architecture for scalable web apps.' },
@@ -37,6 +45,7 @@ const STARTER_PROMPTS = [
 ];
 
 export function AiTutorPage({ onNavigate, showToast }) {
+  const [activeTab, setActiveTab] = useState('tutor'); // 'tutor' | 'analysis' | 'documents'
   const [conversations, setConversations] = useState([]);
   const [activeConvId, setActiveConvId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -239,6 +248,11 @@ export function AiTutorPage({ onNavigate, showToast }) {
     setTimeout(() => setCopiedMsgId(null), 2000);
   };
 
+  const handleAskCoachFromAnalysis = (question) => {
+    setInputPrompt(question);
+    setActiveTab('tutor');
+  };
+
   return (
     <div className="max-w-6xl space-y-6 pb-20 md:pb-8">
       {/* ── Page Header ── */}
@@ -260,20 +274,74 @@ export function AiTutorPage({ onNavigate, showToast }) {
               Ask AI Academic Tutor
             </h1>
             <p className="text-xs sm:text-sm text-muted mt-0.5">
-              Powered by xAI Grok — ask coursework questions, solve math derivations, and debug code.
+              Powered by xAI Grok — ask coursework questions, solve math derivations, and explore empirical performance insights.
             </p>
           </div>
         </div>
 
         <div className="shrink-0 flex items-center gap-2">
-          <Button variant="academic" size="sm" onClick={handleNewChat} icon={Plus} className="shadow-tactile-btn">
-            New Chat
-          </Button>
+          {activeTab === 'tutor' && (
+            <Button variant="academic" size="sm" onClick={handleNewChat} icon={Plus} className="shadow-tactile-btn">
+              New Chat
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* ── Chat Container Grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 min-h-[550px]">
+      {/* ── Tab Switcher ── */}
+      <div className="flex items-center gap-2 border-b border-border pb-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('tutor')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-btn text-xs font-semibold transition-all ${
+            activeTab === 'tutor'
+              ? 'bg-academic text-white shadow-tactile-btn'
+              : 'bg-canvas text-muted hover:text-ink hover:bg-black/5'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          AI Tutor Chat
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('analysis')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-btn text-xs font-semibold transition-all ${
+            activeTab === 'analysis'
+              ? 'bg-academic text-white shadow-tactile-btn'
+              : 'bg-canvas text-muted hover:text-ink hover:bg-black/5'
+          }`}
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          Academic Intelligence & Performance
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('documents')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-btn text-xs font-semibold transition-all ${
+            activeTab === 'documents'
+              ? 'bg-academic text-white shadow-tactile-btn'
+              : 'bg-canvas text-muted hover:text-ink hover:bg-black/5'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          Course Materials & Documents
+        </button>
+      </div>
+
+      {/* ── Tab Contents ── */}
+      {activeTab === 'analysis' ? (
+        <AcademicAnalysisSection onAskCoach={handleAskCoachFromAnalysis} showToast={showToast} />
+      ) : activeTab === 'documents' ? (
+        <DocumentLearningSection
+          onAskAiAboutDocument={(promptText) => {
+            setInputPrompt(promptText);
+            setActiveTab('tutor');
+          }}
+          showToast={showToast}
+        />
+      ) : (
+        /* ── Chat Container Grid ── */
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 min-h-[550px]">
         {/* Left Sidebar: Conversations List */}
         <div className="md:col-span-1 bg-white border border-border rounded-card p-4 shadow-tactile-surface flex flex-col justify-between space-y-4">
           <div>
@@ -461,6 +529,7 @@ export function AiTutorPage({ onNavigate, showToast }) {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

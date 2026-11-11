@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge, ProgressBar } from '../ui';
 import { api } from '../../services/api/client';
+import { SubjectPerformanceChart } from './SubjectPerformanceChart';
 
 export function AcademicAnalysisSection({ onAskCoach, showToast }) {
   const [analysis, setAnalysis] = useState(null);
@@ -225,7 +226,10 @@ export function AcademicAnalysisSection({ onAskCoach, showToast }) {
           <span className="text-[11px] text-muted font-mono">{subjects.length} Subjects Evaluated</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Visual Horizontal Bar Chart */}
+        <SubjectPerformanceChart subjects={subjects} />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border dark:border-gray-800">
           {subjects.map((s) => (
             <div key={s.subjectId} className="p-3.5 rounded-card border border-border dark:border-gray-800 bg-canvas space-y-2">
               <div className="flex items-center justify-between">

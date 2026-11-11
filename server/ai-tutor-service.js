@@ -16,15 +16,47 @@ const GROK_API_KEY = process.env.GROK_API_KEY || process.env.XAI_API_KEY || null
 const GROK_API_URL = process.env.GROK_API_URL || 'https://api.x.ai/v1/chat/completions';
 const GROK_MODEL   = process.env.GROK_MODEL   || 'grok-2-latest';
 
-const SYSTEM_INSTRUCTION = `You are Studora AI Academic Tutor, an expert, patient, and pedagogical academic assistant for university and college students.
+const SYSTEM_INSTRUCTION = `You are Studora AI Academic Coach, an expert, patient, and pedagogically sound academic assistant for university and college students. You have two modes of operation:
 
-Your Goals:
-1. Explain complex coursework concepts step-by-step across STEM (Mathematics, Computer Science, Physics, Chemistry, Engineering), Medicine, Humanities, Law, and Business.
-2. Structure your answers with clear headings, bullet points, and code blocks with syntax tags.
-3. For mathematical derivations and equations, use clean standard LaTeX notation ($...$ for inline, $$...$$ for display equations).
+## MODE 1 — SUBJECT TUTORING
+When a student asks about academic concepts, coursework, or needs help understanding subject matter:
+1. Explain complex concepts step-by-step across STEM (Mathematics, Computer Science, Physics, Chemistry, Engineering), Medicine, Humanities, Law, and Business.
+2. Structure answers with clear headings, bullet points, and code blocks with syntax tags where relevant.
+3. For mathematical derivations, use clean LaTeX notation ($...$ for inline, $$...$$ for display equations).
 4. Provide concrete code snippets with comments for programming queries.
-5. End helpful answers with 1 or 2 thoughtful follow-up questions to test student comprehension.
-6. Be encouraging, precise, and academically rigorous. Never give harmful or non-academic content.`;
+5. End helpful subject answers with 1 or 2 thoughtful follow-up questions to test student comprehension.
+
+## MODE 2 — PERSONAL ACADEMIC INTELLIGENCE COACHING, DAILY STUDY COACH & DOCUMENT TUTORING
+When a student asks about their own academic performance, study plan, today's schedule, strengths, weaknesses, study habits, uploaded lecture notes, or document summaries:
+
+**CHECK**: Look for sections starting with "### VERIFIED STUDENT ACADEMIC INTELLIGENCE CONTEXT", "### TODAY'S ACTIVE STUDY PLAN CONTEXT", or "### RETRIEVED STUDENT ACADEMIC DOCUMENT KNOWLEDGE" in your system prompt.
+
+If that section IS present:
+- Use ONLY the verified facts from those sections to answer questions about performance, study hours, strengths, weaknesses, topic mastery, daily study tasks, and uploaded document excerpts.
+- If document excerpts are present (under ### RETRIEVED STUDENT ACADEMIC DOCUMENT KNOWLEDGE) — ground your answers in the exact citations, referencing document titles and page numbers accurately.
+- If asked "what should I study today?" — list today's recommended tasks from the TODAY'S ACTIVE STUDY PLAN CONTEXT, citing their priority, duration, and rationale.
+- If asked "why did you recommend this topic?" — reference the exact reason and measured accuracy from the student's records.
+- If asked "what should I revise before my examination?" — check the UPCOMING EXAMS section and prioritize those subjects/topics.
+- If asked "how am I progressing?" — check completed study minutes vs target study minutes and historical trend data.
+- Clearly label what is a verified measurement vs. what is your coaching recommendation.
+- For questions like "what are my strongest subjects?" — cite the actual accuracy percentages and attempt counts from the data.
+- For questions like "am I improving?" — check the TREND OBSERVATIONS section. If hasHistoricalTrend is No, say so explicitly.
+- For questions like "how many hours have I studied?" — read the Total Verified Active Study Hours figure directly.
+- Never round up, invent baseline scores, or add fictional achievements.
+- If a subject is listed as "Unassessed (0 questions attempted)" — say it is unassessed, not that the student is struggling with it.
+- If evidence confidence is "insufficient" — be honest about this and recommend diagnostic practice drills to generate data.
+- Distinguish between "mastered/proficient" topics (strength) and "struggling" topics (empirical weakness with ≥5 attempts).
+- Topics with 1-4 attempts are "developing" — do NOT classify them as weak or strong.
+
+If that section IS NOT present:
+- Do not pretend to have access to the student's academic records.
+- Say: "I don't currently have access to your academic performance records. Please use the Academic Intelligence tab to view your analysis, or ask a subject-specific question I can help with."
+
+## GENERAL RULES (both modes):
+- Be encouraging and constructive. Frame weaknesses as growth opportunities.
+- Be academically rigorous and never fabricate information.
+- Never give harmful, non-academic, or misleading content.
+- When in doubt, recommend more practice rather than making claims without data.`;
 
 /**
  * Sends a multi-turn chat request to Grok API or fallback provider,
@@ -144,6 +176,41 @@ function callGrokApi(messages) {
  */
 function generateFallbackAcademicAnswer(prompt, academicContext = null) {
   const p = prompt.toLowerCase();
+
+  // If student asks about uploaded lecture notes, documents, or chapters
+  if (
+    p.includes('lecture') ||
+    p.includes('note') ||
+    p.includes('document') ||
+    p.includes('chapter') ||
+    p.includes('summar') ||
+    p.includes('uploaded') ||
+    p.includes('citation') ||
+    p.includes('slide')
+  ) {
+    if (academicContext && academicContext.includes('### RETRIEVED STUDENT ACADEMIC DOCUMENT KNOWLEDGE')) {
+      return `### 📖 Document-Grounded Academic Tutor Response\n\nBased directly on your uploaded academic materials:\n\n${academicContext}\n\n---\n**Grounded Guidance:** The concepts above are extracted directly from your course materials. Would you like me to walk through a step-by-step example or generate revision flashcards from this section?`;
+    }
+    if (academicContext) {
+      return `### 📖 Academic Document Assistant\n\nI searched your uploaded materials for: "${prompt.slice(0, 100)}", but did not find an exact matching section.\n\nHere is your verified academic intelligence overview instead:\n\n${academicContext}\n\nTo learn from specific course materials, upload your PDF notes in the **Course Materials & Notes** tab!`;
+    }
+    return `### 📖 Academic Document Assistant\n\nYou currently have no uploaded course notes or textbooks on file. Head over to the **Course Materials & Notes** tab to upload your lecture PDFs and study with AI grounded in your syllabus!`;
+  }
+
+  // If student asks about their daily study plan, recommendations, or schedule
+  if (
+    p.includes('today') ||
+    p.includes('plan') ||
+    p.includes('schedule') ||
+    p.includes('recommend') ||
+    p.includes('priorit') ||
+    p.includes('what should i study')
+  ) {
+    if (academicContext) {
+      return `### 📅 Your Adaptive Daily Study Coach Brief\n\nHere is your evidence-grounded study plan tailored from your genuine performance records:\n\n${academicContext}\n\n---\n**Recommended Action:** Head over to **Study Planner** to start an active telemetry session on your top-priority task!`;
+    }
+    return `### 📅 Daily Study Plan\n\nYou do not have an active daily study plan generated yet. Head over to the **Study Planner** tab or configure your study preferences to generate your personalized daily plan!`;
+  }
 
   // If student asks about their academic progress, strengths, weaknesses, or hours
   if (

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@sentry/react": "^11.12.0",
     "@stream-io/video-react-sdk": "^1.44.1",
     "@supabase/supabase-js": "^2.117.2",
     "@zegocloud/zego-uikit-prebuilt": "^2.18.4",

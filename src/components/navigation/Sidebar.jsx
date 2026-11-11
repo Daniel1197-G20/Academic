@@ -104,11 +104,11 @@ export function Sidebar({
               title={collapsed ? item.label : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 text-left
                 ${isActive
-                  ? 'bg-[#DDEFE5] text-[#176B4D] dark:bg-[#176B4D]/40 dark:text-[#A7F3D0] shadow-sm font-bold'
-                  : 'text-[#111827] dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/5'
+                  ? 'bg-[#DDEFE5] text-[#176B4D] dark:bg-[#176B4D]/30 dark:text-[#A7F3D0] dark:border dark:border-[#176B4D]/40 shadow-sm font-bold'
+                  : 'text-[#111827] dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/5 border border-transparent'
                 }`}
             >
-              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#176B4D] dark:text-[#A7F3D0]' : 'text-[#667085] dark:text-white/60'}`} />
+              <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#176B4D] dark:text-[#A7F3D0]' : 'text-[#667085] dark:text-white/60'}`} />
               {!collapsed && (
                 <div className="flex-1 flex items-center justify-between min-w-0">
                   <span className="truncate">{item.label}</span>

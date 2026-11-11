@@ -45,7 +45,7 @@ export function CampusBackground({ className = '' }) {
 
       {/* Soft translucent atmospheric wash blending campus photo into canvas */}
       <div
-        className="absolute inset-0 bg-gradient-to-b from-[#F6F7F3]/20 via-[#F6F7F3]/60 to-[#F6F7F3] dark:from-[#0c1913]/40 dark:via-[#0c1913]/70 dark:to-[#0c1913]"
+        className="absolute inset-0 bg-gradient-to-b from-[#F6F7F3]/20 via-[#F6F7F3]/60 to-[#F6F7F3] dark:from-[#0c1913]/30 dark:via-[#0c1913]/60 dark:to-[#0c1913]"
         style={{ pointerEvents: 'none' }}
       />
     </div>
