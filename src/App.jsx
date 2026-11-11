@@ -94,7 +94,7 @@ export function normalizeRoute(path) {
   const clean = (path || '').replace(/^\/+|\/+$/g, '').trim();
   if (!clean || clean === 'landing') return 'landing';
   if (clean === 'dashboard' || clean === 'overview') return 'dashboard';
-  if (clean === 'test-prep' || clean === 'prep') return 'test-prep';
+  if (clean === 'test-prep' || clean === 'prep' || clean === 'test' || clean === 'tests' || clean === 'assessment' || clean === 'assessments') return 'test-prep';
   if (clean === 'messages' || clean === 'community') return 'messages';
   if (clean === 'settings' || clean === 'settings/subscription' || clean === 'settings-subscription') return 'settings/subscription';
   if (clean === 'billing-callback' || clean === 'billing/callback' || clean === 'billing/success' || clean === 'billing/failed') return 'billing-callback';
