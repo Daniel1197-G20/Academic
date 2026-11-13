@@ -473,7 +473,16 @@ export function AuthPage({
   };
 
   return (
-    <div className="auth-shell min-h-[100dvh] bg-canvas text-ink flex flex-col justify-between relative selection:bg-academic/20 selection:text-academic font-sans">
+    <div className="min-h-[100dvh] bg-[#e9eef5] text-slate-800 flex flex-col justify-between relative selection:bg-academic/20 selection:text-academic font-sans">
+      {/* Preserve the original soft neumorphic ambient lighting. */}
+      <div
+        className="absolute top-0 left-0 w-[500px] h-[500px] bg-white/40 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-[#b8c5d6]/20 rounded-full blur-3xl pointer-events-none translate-x-1/3 translate-y-1/3"
+        aria-hidden="true"
+      />
 
       {/* Main Split Layout */}
       <div className="relative flex-1 flex flex-col lg:flex-row items-center justify-center max-w-7xl mx-auto w-full p-4 sm:p-10 lg:p-14 gap-8 lg:gap-16 my-auto z-10">
@@ -578,7 +587,7 @@ export function AuthPage({
           </div>
 
           {/* Neumorphic Form Slab */}
-          <div className="auth-form-panel w-full max-w-md neu-plate p-5 sm:p-8 space-y-6">
+          <div className="w-full max-w-md neu-plate p-5 sm:p-8 space-y-6">
             {/* Top Navigation Row: Back Button */}
             {onBackToLanding && (
               <button
@@ -924,7 +933,7 @@ export function AuthPage({
       <Footer
         onNavigate={onNavigateLegal}
         onOpenCookieSettings={onOpenCookieSettings}
-        className="bg-[#F6F7F3]/80 border-t border-white/70 shadow-[0_-4px_16px_rgba(23,32,51,0.04)] backdrop-blur-md"
+        className="bg-[#e9eef5] border-t border-white/60 shadow-[0_-4px_16px_rgba(184,197,214,0.35)]"
       />
     </div>
   );
