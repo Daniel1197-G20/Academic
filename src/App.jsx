@@ -26,6 +26,7 @@ import { disconnectStreamUser } from './lib/stream/client';
 import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
 import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, BookOpen, Copy, Check, Loader2, CheckCircle2 } from 'lucide-react';
 import { BillingProvider } from './context/BillingContext';
+import { FeatureGate } from './components/billing/FeatureGate';
 import { CampusBackground } from './components/ui/CampusBackground';
 
 // Lazy-loaded routes & heavy pages to code-split bundles
@@ -754,7 +755,7 @@ function AppContent() {
 
   return (
     <BillingProvider currentUser={currentUser} showToast={addToast}>
-      <div className={`min-h-screen flex text-ink antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
+      <div className={`app-responsive-shell min-h-[100dvh] flex text-ink antialiased selection:bg-academic-100 selection:text-academic relative ${isDark ? 'dark' : ''}`}>
         {/* Campus background — visible across overview/dashboard, hidden on focused study, sessions & tutor tools */}
         {activeTab !== 'tutor-dashboard' && activeTab !== 'study' && activeTab !== 'study-session' && !activePracticeDrill && (
           <CampusBackground />
@@ -780,10 +781,10 @@ function AppContent() {
         />
 
         {/* Main Content Workspace */}
-        <div className={`flex-1 flex flex-col min-w-0 overflow-x-clip ${
+        <div className={`flex-1 flex flex-col min-w-0 ${
           (activeTab === 'messages' || activeTab === 'community')
-            ? 'h-dvh max-h-dvh pb-[calc(62px+env(safe-area-inset-bottom,0px))] md:pb-0'
-            : 'min-h-screen'
+            ? 'h-dvh max-h-dvh pb-[calc(92px+env(safe-area-inset-bottom,0px))] xl:pb-0'
+            : 'min-h-0 xl:min-h-[100dvh] responsive-scroll-area'
         }`}>
           {/* Top Header - hidden on desktop Messages route to match reference 1:1 */}
           {activeTab !== 'messages' && activeTab !== 'community' && (
@@ -814,8 +815,8 @@ function AppContent() {
 
           {/* Page Container */}
           <main className={`flex-1 w-full mx-auto ${(activeTab === 'messages' || activeTab === 'community')
-              ? 'p-0 sm:p-3 md:p-5 lg:p-6 max-w-[1520px] flex flex-col min-h-0 h-full'
-              : 'p-4 sm:p-6 lg:p-8 max-w-7xl'
+              ? 'relative z-10 p-0 sm:p-3 md:p-5 lg:p-6 max-w-[1520px] flex flex-col min-h-0 h-full'
+              : 'relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mobile-nav-pb'
             }`}>
             <ErrorBoundary onGoHome={() => navigateRoute('dashboard')}>
               <Suspense fallback={<PageLoader message="Loading Studora..." />}>
@@ -1261,6 +1262,8 @@ function AppContent() {
         <BottomNav
           activeTab={activeTab}
           onSelectTab={navigateRoute}
+          userProfile={userProfile}
+          unreadMessages={unreadMessages}
         />
 
         {/* Universal Cookie Settings Modal */}

@@ -4,11 +4,27 @@
    ========================================================================== */
 
 :root {
-  /* Official reference sidebar: frosted translucent glass with dark ink typography */
-  --glass-sidebar-bg: rgba(255, 255, 255, 0.88);
-  --glass-sidebar-border: rgba(229, 231, 235, 0.80);
-  --glass-sidebar-blur: 24px;
-  
+  /* Light academic-green sidebar; theme state switches these shared tokens. */
+  --glass-sidebar-bg: linear-gradient(180deg, rgba(246, 249, 245, 0.97) 0%, rgba(221, 239, 229, 0.97) 100%);
+  --glass-sidebar-border: rgba(23, 107, 77, 0.14);
+  --glass-sidebar-blur: 18px;
+  --glass-sidebar-text: #172033;
+  --glass-sidebar-muted: #66766D;
+  --glass-sidebar-brand-bg: #176B4D;
+  --glass-sidebar-brand-border: rgba(23, 107, 77, 0.18);
+  --glass-sidebar-hover-bg: rgba(23, 107, 77, 0.08);
+  --glass-sidebar-hover-text: #104633;
+  --glass-sidebar-icon: #557065;
+  --glass-sidebar-active-bg: #DDEFE5;
+  --glass-sidebar-active-text: #104633;
+  --glass-sidebar-active-shadow: 0 2px 8px rgba(7, 31, 23, 0.10);
+  --glass-sidebar-badge-bg: #C24141;
+  --glass-sidebar-badge-text: #FFFFFF;
+  --glass-sidebar-upgrade-bg: #FDF9F0;
+  --glass-sidebar-upgrade-border: #EBC785;
+  --glass-sidebar-upgrade-text: #583F1B;
+  --glass-sidebar-upgrade-icon: #A97C2B;
+
   /* Translucent frosted glass panel over campus photograph */
   --glass-panel-bg: rgba(255, 255, 255, 0.72);
   --glass-panel-border: rgba(255, 255, 255, 0.85);
@@ -20,18 +36,130 @@
   --glass-stat-border: rgba(255, 255, 255, 0.95);
 
   /* Sidebar Active */
-  --glass-nav-active-bg: rgba(221, 239, 229, 0.85);
-  --glass-nav-active-text: #176B4D;
-  --glass-nav-active-shadow: 0 2px 8px rgba(23, 107, 77, 0.12);
+  --glass-nav-active-bg: #DDEFE5;
+  --glass-nav-active-text: #104633;
+  --glass-nav-active-shadow: 0 2px 8px rgba(7, 31, 23, 0.18);
+}
+
+/* Campus-led authentication surfaces use the same quiet glass language as
+   the signed-in workspace while retaining a readable form-first layout. */
+.auth-shell {
+  isolation: isolate;
+  background: #F6F7F3;
+}
+
+.auth-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(246, 247, 243, 0.34), rgba(246, 247, 243, 0.82) 74%, #F6F7F3),
+    url('/campus-background.webp');
+  background-position: center top, center 32%;
+  background-size: cover, cover;
+  background-repeat: no-repeat;
+}
+
+.auth-form-panel {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 46px rgba(23, 32, 51, 0.10), 0 2px 8px rgba(23, 32, 51, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-radius: 26px;
+}
+
+.auth-shell .neu-plate,
+.auth-shell .neu-surface,
+.auth-shell .neu-btn,
+.auth-shell .neu-tab-active {
+  background-color: rgba(255, 255, 255, 0.58);
+  border-color: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 4px 14px rgba(23, 32, 51, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.auth-shell .neu-plate.auth-form-panel {
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 46px rgba(23, 32, 51, 0.10), 0 2px 8px rgba(23, 32, 51, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.auth-shell .neu-inset,
+.auth-shell .neu-inset-sm,
+.auth-shell .neu-tab-track {
+  background-color: rgba(246, 247, 243, 0.82);
+  border-color: rgba(229, 231, 235, 0.9);
+  box-shadow: inset 0 1px 3px rgba(23, 32, 51, 0.06);
+}
+
+.auth-shell .neu-btn-primary {
+  background: linear-gradient(135deg, #176B4D, #145C43);
+  box-shadow: 0 8px 18px rgba(23, 107, 77, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.dark .auth-shell {
+  background: #F6F7F3;
+}
+
+@media (max-width: 639px) {
+  .auth-shell::before {
+    background-image:
+      linear-gradient(180deg, rgba(246, 247, 243, 0.48), rgba(246, 247, 243, 0.9) 64%, #F6F7F3),
+      url('/campus-background-sm.webp');
+    background-position: center top, center top;
+  }
+
+  .auth-form-panel {
+    border-radius: 22px;
+  }
 }
 
 /* Sidebar styling */
 .glass-sidebar {
+  color: var(--glass-sidebar-text);
   background: var(--glass-sidebar-bg);
   backdrop-filter: blur(var(--glass-sidebar-blur));
   -webkit-backdrop-filter: blur(var(--glass-sidebar-blur));
   border-right: 1px solid var(--glass-sidebar-border);
   box-shadow: 2px 0 16px rgba(0, 0, 0, 0.04);
+}
+
+.glass-sidebar-brand-mark {
+  color: #FFFFFF;
+  background: var(--glass-sidebar-brand-bg);
+  border-color: var(--glass-sidebar-brand-border);
+}
+
+.glass-sidebar-brand-name { color: var(--glass-sidebar-text); }
+.glass-sidebar-muted { color: var(--glass-sidebar-muted); }
+.glass-nav-indicator {
+  background: var(--glass-sidebar-active-bg);
+  box-shadow: var(--glass-sidebar-active-shadow);
+}
+.glass-nav-item { color: var(--glass-sidebar-text); }
+.glass-nav-item:hover:not(.is-active) {
+  color: var(--glass-sidebar-hover-text);
+  background: var(--glass-sidebar-hover-bg);
+}
+.glass-nav-item.is-active { color: var(--glass-sidebar-active-text); }
+.glass-nav-icon {
+  color: var(--glass-sidebar-icon);
+  transition: color 180ms ease, transform 180ms ease;
+}
+.glass-nav-item.is-active .glass-nav-icon,
+.glass-nav-item:hover .glass-nav-icon { color: currentColor; }
+.glass-nav-item.is-active .glass-nav-icon { transform: scale(1.05); }
+.glass-sidebar-badge { background: var(--glass-sidebar-badge-bg); color: var(--glass-sidebar-badge-text); }
+.glass-sidebar-upgrade {
+  color: var(--glass-sidebar-upgrade-text);
+  background: var(--glass-sidebar-upgrade-bg);
+  border: 1px solid var(--glass-sidebar-upgrade-border);
+}
+.glass-sidebar-upgrade svg { color: var(--glass-sidebar-upgrade-icon); }
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-nav-icon { transition: none; }
 }
 
 /* Upgrade to Premium Button in Sidebar */
@@ -183,8 +311,23 @@
 
 /* Dark Theme Adjustments */
 .dark {
-  --glass-sidebar-bg: rgba(12, 25, 19, 0.88);
+  --glass-sidebar-bg: linear-gradient(180deg, rgba(23, 32, 51, 0.96) 0%, rgba(14, 57, 43, 0.96) 100%);
   --glass-sidebar-border: rgba(255, 255, 255, 0.08);
+  --glass-sidebar-text: rgba(255, 255, 255, 0.82);
+  --glass-sidebar-muted: rgba(255, 255, 255, 0.56);
+  --glass-sidebar-brand-bg: rgba(23, 107, 77, 0.48);
+  --glass-sidebar-brand-border: rgba(167, 243, 208, 0.18);
+  --glass-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --glass-sidebar-hover-text: #FFFFFF;
+  --glass-sidebar-icon: rgba(255, 255, 255, 0.62);
+  --glass-sidebar-active-bg: rgba(23, 107, 77, 0.48);
+  --glass-sidebar-active-text: #DDEFE5;
+  --glass-sidebar-active-shadow: 0 2px 10px rgba(0, 0, 0, 0.20);
+  --glass-sidebar-badge-bg: #C24141;
+  --glass-sidebar-upgrade-bg: rgba(200, 155, 60, 0.18);
+  --glass-sidebar-upgrade-border: rgba(200, 155, 60, 0.42);
+  --glass-sidebar-upgrade-text: #F4DEB3;
+  --glass-sidebar-upgrade-icon: #EBC785;
 
   --glass-panel-bg: rgba(14, 27, 21, 0.82);
   --glass-panel-border: rgba(255, 255, 255, 0.10);
@@ -235,4 +378,43 @@
 .dark .quick-action-pod:hover {
   background: rgba(35, 60, 48, 0.95);
   border-color: rgba(255, 255, 255, 0.20);
+}
+
+/* ==========================================================================
+   MOBILE FLOATING GLASS NAVIGATION DOCK
+   Faithful to the approved mobile design reference:
+   - Elevated floating glass bar with generous rounded pill geometry
+   - Translucent glassmorphism with backdrop blur
+   - Active state pill with academic green illumination
+   - Proper clearance from device edges and safe-area compatibility
+   ========================================================================== */
+.glass-floating-dock {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  box-shadow: 0 12px 32px -4px rgba(17, 24, 39, 0.12), 0 4px 12px rgba(17, 24, 39, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.dark .glass-floating-dock {
+  background: rgba(14, 27, 21, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.65), 0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+/* Glass Card Subtle Surface for lists and secondary groups */
+.glass-card-subtle {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+}
+
+.dark .glass-card-subtle {
+  background: rgba(18, 35, 27, 0.70);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }

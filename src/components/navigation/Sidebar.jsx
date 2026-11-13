@@ -1,19 +1,18 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   GraduationCap,
   BookOpen,
   FileCheck2,
-  Compass,
+  UserRoundSearch,
   MessageSquare,
-  User,
   Settings,
-  Bell,
-  HelpCircle,
-  CreditCard,
   Sparkles,
-  ChevronRight,
-  ChevronLeft
+  BrainCircuit,
+  PhoneCall,
+  CalendarCheck,
+  LibraryBig,
+  TrendingUp,
 } from 'lucide-react';
 import { StudoraMark } from '../ui';
 import { useBilling } from '../../context/BillingContext';
@@ -31,91 +30,104 @@ export function Sidebar({
 }) {
   const isTutor = userProfile?.role === 'tutor';
   const { isPremium } = useBilling();
+  const navRef = useRef(null);
+  const [indicator, setIndicator] = useState(null);
+  const [hasPositionedIndicator, setHasPositionedIndicator] = useState(false);
 
-  // Navigation Items matching the official reference screenshot:
-  // 1. Dashboard
-  // 2. Profile
-  // 3. Find Tutor
-  // 4. Chat & Calls
-  // 5. My Courses
-  // 6. Study Plans
-  // 7. Assessments
-  // 8. Payments
-  // 9. Notifications
-  // 10. Settings
+  // Several requested shortcuts lead to existing combined workspaces. Keep the
+  // canonical route active so one destination never lights up multiple rows.
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    ...(isTutor ? [{ id: 'tutor-dashboard', label: 'Tutor Dashboard', icon: Sparkles }] : []),
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'tutors', label: 'Find Tutor', icon: Compass },
-    { id: 'messages', label: 'Chat & Calls', icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages : null },
-    { id: 'cgpa', label: 'My Courses', icon: GraduationCap },
-    { id: 'study', label: 'Study Plans', icon: BookOpen },
-    { id: 'test-prep', label: 'Assessments', icon: FileCheck2 },
-    { id: 'settings/subscription', label: 'Payments', icon: CreditCard },
-    { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotifications > 0 ? unreadNotifications : null },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: 'Home', icon: LayoutDashboard, activeFor: ['dashboard', 'overview'] },
+    { id: 'tutors', label: 'Find Tutor', icon: UserRoundSearch, activeFor: ['tutors'] },
+    { id: 'study', label: 'Study', icon: BookOpen, activeFor: ['study'] },
+    { id: 'cgpa', label: 'Courses', icon: GraduationCap, activeFor: ['cgpa'] },
+    { id: 'study', label: 'Study Plan', icon: CalendarCheck, activeFor: [] },
+    { id: 'ai', label: 'AI Study Coach', icon: BrainCircuit, activeFor: ['ai'] },
+    { id: 'test-prep', label: 'Assessments', icon: FileCheck2, activeFor: ['test-prep', 'prep'] },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, activeFor: ['messages', 'community'], badge: unreadMessages > 0 ? unreadMessages : null },
+    { id: 'messages', label: 'Calls', icon: PhoneCall, activeFor: [] },
+    { id: 'dashboard', label: 'My Bookings', icon: CalendarCheck, activeFor: [] },
+    { id: 'ai', label: 'Resources', icon: LibraryBig, activeFor: [] },
+    { id: 'cgpa', label: 'Progress', icon: TrendingUp, activeFor: [] },
+    { id: 'settings/subscription', label: 'Settings', icon: Settings, activeFor: ['settings/subscription', 'settings', 'settings-subscription'] },
+    ...(isTutor ? [{ id: 'tutor-dashboard', label: 'Tutor Dashboard', icon: Sparkles, activeFor: ['tutor-dashboard'] }] : []),
   ];
+
+  const positionIndicator = () => {
+    const currentNav = navRef.current;
+    if (!currentNav) return;
+    const item = navItems.find((candidate) => candidate.activeFor.includes(activeTab));
+    const button = item && currentNav.querySelector(`[data-nav-id="${item.id}"]`);
+    if (!button) {
+      setIndicator(null);
+      return;
+    }
+    const navRect = currentNav.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    setIndicator({ top: buttonRect.top - navRect.top, height: buttonRect.height });
+    setHasPositionedIndicator(true);
+  };
+
+  useLayoutEffect(() => {
+    positionIndicator();
+    const observer = typeof ResizeObserver !== 'undefined' && navRef.current
+      ? new ResizeObserver(positionIndicator)
+      : null;
+    if (observer && navRef.current) observer.observe(navRef.current);
+    window.addEventListener('resize', positionIndicator);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', positionIndicator);
+    };
+  }, [activeTab, collapsed, isTutor]);
 
   return (
     <aside
-      className={`hidden md:flex flex-col z-30 select-none sticky top-0 h-screen shrink-0 overflow-y-auto no-scrollbar glass-sidebar transition-all duration-200 ease-in-out
+      className={`hidden xl:flex flex-col z-30 select-none sticky top-0 h-dvh shrink-0 overflow-y-auto no-scrollbar glass-sidebar transition-all duration-200 ease-in-out
         ${collapsed ? 'w-20' : 'w-[240px]'} ${className}`}
     >
-      {/* Top Branding matching the official reference */}
-      <div className="pt-6 pb-4 px-5">
+      <div className="pt-6 pb-5 px-5">
         <div className="flex items-center gap-3">
-          {/* Studora Green Octagonal / Shield Icon */}
-          <div className="w-10 h-10 rounded-xl bg-academic-100 dark:bg-[#176B4D]/30 border border-academic-200/60 dark:border-[#176B4D]/40 flex items-center justify-center shrink-0 shadow-sm text-academic">
+          <div className="glass-sidebar-brand-mark w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-sm">
             <StudoraMark className="w-5 h-5" strokeWidth={2.4} />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-lg tracking-tight text-ink dark:text-white leading-tight font-sans">
-                Studora
-              </span>
+              <span className="glass-sidebar-brand-name font-extrabold text-lg tracking-tight leading-tight font-sans">Studora</span>
+              <span className="glass-sidebar-muted text-[9px] leading-none tracking-[0.12em] uppercase">Learn · Connect · Excel</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Main Navigation List */}
-      <nav className="flex-1 px-3 py-2 space-y-1">
-        {navItems.map((item) => {
+      <nav ref={navRef} aria-label="Main navigation" className="relative flex flex-1 flex-col gap-2.5 px-3 py-2">
+        {indicator && (
+          <span
+            aria-hidden="true"
+            className={`glass-nav-indicator pointer-events-none absolute left-3 right-3 top-0 rounded-xl ${hasPositionedIndicator ? 'transition-[transform,height] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none' : ''}`}
+            style={{ height: indicator.height, transform: `translateY(${indicator.top}px)` }}
+          />
+        )}
+        {navItems.map((item, index) => {
           const Icon = item.icon;
-          const isActive =
-            (item.id === 'dashboard' && (activeTab === 'dashboard' || activeTab === 'overview')) ||
-            (item.id === 'profile' && activeTab === 'profile') ||
-            (item.id === 'tutors' && activeTab === 'tutors') ||
-            (item.id === 'messages' && (activeTab === 'messages' || activeTab === 'community')) ||
-            (item.id === 'cgpa' && activeTab === 'cgpa') ||
-            (item.id === 'study' && activeTab === 'study') ||
-            (item.id === 'test-prep' && (activeTab === 'test-prep' || activeTab === 'prep')) ||
-            (item.id === 'settings/subscription' && (activeTab === 'settings/subscription' || activeTab === 'billing-callback')) ||
-            (item.id === 'notifications' && activeTab === 'notifications') ||
-            (item.id === 'settings' && activeTab === 'settings') ||
-            activeTab === item.id;
-
+          const isActive = item.activeFor.includes(activeTab);
           return (
             <button
-              key={item.id}
+              key={`${item.label}-${index}`}
+              data-nav-id={item.id}
               type="button"
               onClick={() => onSelectTab(item.id)}
               title={collapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 text-left
-                ${isActive
-                  ? 'bg-[#DDEFE5] text-[#176B4D] dark:bg-[#176B4D]/30 dark:text-[#A7F3D0] dark:border dark:border-[#176B4D]/40 shadow-sm font-bold'
-                  : 'text-[#111827] dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/5 border border-transparent'
-                }`}
+              aria-current={isActive ? 'page' : undefined}
+              className={`glass-nav-item group relative z-10 flex h-10 min-h-10 w-full items-center gap-3 rounded-xl px-3 py-0 text-xs font-semibold transition-colors duration-200 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C89B3C]
+                ${isActive ? 'is-active font-bold' : ''} motion-reduce:transition-none`}
             >
-              <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#176B4D] dark:text-[#A7F3D0]' : 'text-[#667085] dark:text-white/60'}`} />
+              <Icon className="glass-nav-icon w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none" />
               {!collapsed && (
                 <div className="flex-1 flex items-center justify-between min-w-0">
                   <span className="truncate">{item.label}</span>
                   {item.badge != null && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EF4444] text-white min-w-[18px] text-center leading-none shadow-sm">
-                      {item.badge}
-                    </span>
+                    <span className="glass-sidebar-badge text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[18px] text-center leading-none shadow-sm">{item.badge}</span>
                   )}
                 </div>
               )}
@@ -124,15 +136,14 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Upgrade to Premium Pill Button at bottom */}
       {!collapsed && !isPremium && (
-        <div className="p-4 pt-2">
+        <div className="p-4 pt-2 mt-auto">
           <button
             type="button"
             onClick={() => onSelectTab('pricing')}
-            className="w-full py-2.5 px-3 rounded-xl bg-[#F6E6C2] dark:bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#78350F] dark:text-[#FDE68A] text-xs font-bold flex items-center justify-center gap-2 shadow-sm hover:brightness-105 transition-all"
+            className="glass-sidebar-upgrade w-full py-3 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm hover:brightness-105 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C89B3C] motion-reduce:transition-none"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" />
+            <Sparkles className="w-3.5 h-3.5" />
             <span>Upgrade to Premium</span>
           </button>
         </div>

@@ -30,6 +30,7 @@
     --color-surface: #FFFFFF;
     --color-muted: #667085;
     --color-border: #E5E7EB;
+    --color-gold: #C89B3C;
   }
 
   body {
@@ -84,10 +85,12 @@
 @layer components {
   /* LEVEL 1 — SURFACE (content sections, tables, normal panels) */
   .tactile-surface {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E7EB;
+    background-color: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.88);
     border-radius: 16px;
     box-shadow: 0 1px 2px 0 rgba(17, 24, 39, 0.03), -1px -1px 2px 0 rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
   .dark .tactile-surface {
@@ -98,11 +101,13 @@
 
   /* LEVEL 2 — RAISED (important cards, CGPA hero, navigation dock, modal) */
   .tactile-raised {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E7EB;
+    background-color: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.9);
     border-radius: 16px;
     box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.04), 0 4px 12px 0 rgba(17, 24, 39, 0.035), -1px -1px 5px 0 rgba(255, 255, 255, 0.85);
     transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .dark .tactile-raised {
@@ -121,10 +126,12 @@
   }
 
   .tactile-hero {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E7EB;
+    background-color: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.92);
     border-radius: 20px;
     box-shadow: 0 2px 6px 0 rgba(17, 24, 39, 0.045), 0 8px 20px 0 rgba(17, 24, 39, 0.035), -1px -1px 6px 0 rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
 
   .dark .tactile-hero {
@@ -660,13 +667,30 @@
   padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
 }
 
-/* Mobile bottom navigation spacing to prevent content obstruction */
+/* Content breathing room inside the authenticated scroll region. */
 .mobile-nav-pb {
-  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 1.5rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1280px) {
   .mobile-nav-pb {
     padding-bottom: 2rem;
+  }
+}
+
+@media (max-width: 1279px) {
+  .app-responsive-shell {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .responsive-scroll-area {
+    height: calc(100dvh - (88px + max(0px, env(safe-area-inset-bottom, 0px) - 12px)));
+    max-height: calc(100dvh - (88px + max(0px, env(safe-area-inset-bottom, 0px) - 12px)));
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
   }
 }

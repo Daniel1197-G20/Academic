@@ -46,7 +46,7 @@ function NeuInput({
           {label} {required && <span className="text-academic">*</span>}
         </label>
       )}
-      <div className="relative flex items-center neu-inset neu-inset-focus px-3.5 py-2.5 transition-all">
+      <div className="relative flex items-center neu-inset neu-inset-focus px-3.5 py-1.5 transition-all">
         {Icon && (
           <div className="text-slate-400 shrink-0 pointer-events-none mr-2.5">
             <Icon className="w-4 h-4" />
@@ -59,7 +59,7 @@ function NeuInput({
           onChange={onChange}
           placeholder={placeholder}
           required={required}
-          className="w-full bg-transparent text-slate-900 text-sm placeholder:text-slate-400/80 focus:outline-none"
+          className="w-full min-h-11 bg-transparent text-slate-900 text-sm placeholder:text-slate-400/80 focus:outline-none"
         />
       </div>
     </div>
@@ -94,22 +94,24 @@ function NeuCheckbox({
   };
 
   return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      onClick={handleClick}
-      className={`relative w-5 h-5 shrink-0 transition-transform duration-100 ease-out select-none flex items-center justify-center cursor-pointer focus:outline-none ${
-        animating ? 'scale-90' : 'scale-100'
-      } ${checked ? 'neu-checkbox-checked' : 'neu-checkbox-unchecked'}`}
-    >
-      <Check
-        className={`w-3.5 h-3.5 stroke-[2.8] transition-opacity duration-150 ${
-          checked ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-    </button>
+    <span className="w-11 h-11 -ml-3 -my-3 flex items-center justify-center shrink-0">
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={checked}
+        aria-label={ariaLabel}
+        onClick={handleClick}
+        className={`relative w-5 h-5 shrink-0 transition-transform duration-100 ease-out select-none flex items-center justify-center cursor-pointer focus:outline-none ${
+          animating ? 'scale-90' : 'scale-100'
+        } ${checked ? 'neu-checkbox-checked' : 'neu-checkbox-unchecked'}`}
+      >
+        <Check
+          className={`w-3.5 h-3.5 stroke-[2.8] transition-opacity duration-150 ${
+            checked ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      </button>
+    </span>
   );
 }
 
@@ -471,19 +473,10 @@ export function AuthPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#e9eef5] text-slate-800 flex flex-col justify-between relative selection:bg-academic/20 selection:text-academic overflow-x-hidden font-sans">
-      {/* Neumorphic Atmospheric Ambient Lighting Gradients */}
-      <div 
-        className="absolute top-0 left-0 w-[500px] h-[500px] bg-white/40 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" 
-        aria-hidden="true" 
-      />
-      <div 
-        className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-[#b8c5d6]/20 rounded-full blur-3xl pointer-events-none translate-x-1/3 translate-y-1/3" 
-        aria-hidden="true" 
-      />
+    <div className="auth-shell min-h-[100dvh] bg-canvas text-ink flex flex-col justify-between relative selection:bg-academic/20 selection:text-academic font-sans">
 
       {/* Main Split Layout */}
-      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center max-w-7xl mx-auto w-full p-6 sm:p-10 lg:p-14 gap-10 lg:gap-16 my-auto z-10">
+      <div className="relative flex-1 flex flex-col lg:flex-row items-center justify-center max-w-7xl mx-auto w-full p-4 sm:p-10 lg:p-14 gap-8 lg:gap-16 my-auto z-10">
         
         {/* Left Side: Brand & Academic Mission Narrative (Desktop) */}
         <div className="hidden lg:flex lg:w-1/2 flex-col justify-between space-y-8 max-w-xl">
@@ -585,13 +578,13 @@ export function AuthPage({
           </div>
 
           {/* Neumorphic Form Slab */}
-          <div className="w-full max-w-md neu-plate p-7 sm:p-9 space-y-6">
+          <div className="auth-form-panel w-full max-w-md neu-plate p-5 sm:p-8 space-y-6">
             {/* Top Navigation Row: Back Button */}
             {onBackToLanding && (
               <button
                 type="button"
                 onClick={onBackToLanding}
-                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 neu-btn px-3 py-1.5 transition-all"
+                className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 neu-btn px-3 py-1.5 transition-all"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Back to Studora</span>
@@ -619,7 +612,7 @@ export function AuthPage({
                   setIsRegistering(false);
                   setError('');
                 }}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                className={`min-h-11 py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                   !isRegistering
                     ? 'neu-tab-active text-slate-900'
                     : 'text-slate-500 hover:text-slate-800'
@@ -633,7 +626,7 @@ export function AuthPage({
                   setIsRegistering(true);
                   setError('');
                 }}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                className={`min-h-11 py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                   isRegistering
                     ? 'neu-tab-active text-slate-900'
                     : 'text-slate-500 hover:text-slate-800'
@@ -670,7 +663,7 @@ export function AuthPage({
                 <button
                   type="button"
                   onClick={handleUseDemoAccount}
-                  className="neu-btn px-3 py-1.5 text-xs text-academic font-bold shrink-0 hover:text-academic-700 cursor-pointer"
+                  className="neu-btn min-h-11 px-3 py-1.5 text-xs text-academic font-bold shrink-0 hover:text-academic-700 cursor-pointer"
                 >
                   Quick Fill
                 </button>
@@ -839,7 +832,7 @@ export function AuthPage({
                           setResetError('');
                           setResetSuccess(false);
                         }}
-                        className="text-xs text-slate-500 hover:text-academic transition-colors font-medium cursor-pointer"
+                        className="inline-flex min-h-11 items-center px-2 text-xs text-slate-500 hover:text-academic transition-colors font-medium cursor-pointer"
                       >
                         Forgot password?
                       </button>
@@ -861,7 +854,7 @@ export function AuthPage({
                       <button
                         type="button"
                         onClick={() => onNavigateLegal?.('terms')}
-                        className="text-academic hover:underline font-bold"
+                        className="inline-flex min-h-11 items-center px-0.5 align-middle text-academic hover:underline font-bold"
                       >
                         Terms of Service
                       </button>{' '}
@@ -869,7 +862,7 @@ export function AuthPage({
                       <button
                         type="button"
                         onClick={() => onNavigateLegal?.('privacy')}
-                        className="text-academic hover:underline font-bold"
+                        className="inline-flex min-h-11 items-center px-0.5 align-middle text-academic hover:underline font-bold"
                       >
                         Privacy Policy
                       </button>
@@ -916,7 +909,7 @@ export function AuthPage({
                   setIsRegistering(!isRegistering);
                   setError('');
                 }}
-                className="text-xs text-slate-500 hover:text-academic transition-colors font-medium cursor-pointer"
+                className="inline-flex min-h-11 items-center px-2 text-xs text-slate-500 hover:text-academic transition-colors font-medium cursor-pointer"
               >
                 {isRegistering 
                   ? 'Already have an academic profile? Sign In' 
@@ -931,7 +924,7 @@ export function AuthPage({
       <Footer
         onNavigate={onNavigateLegal}
         onOpenCookieSettings={onOpenCookieSettings}
-        className="bg-[#e9eef5] border-t border-white/60 shadow-[0_-4px_16px_rgba(184,197,214,0.35)]"
+        className="bg-[#F6F7F3]/80 border-t border-white/70 shadow-[0_-4px_16px_rgba(23,32,51,0.04)] backdrop-blur-md"
       />
     </div>
   );

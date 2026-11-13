@@ -20,12 +20,15 @@ import {
   Sparkles,
   AlertCircle,
   FolderOpen,
-  Award
+  Award,
+  Leaf,
+  Zap
 } from 'lucide-react';
 import { AnimatedNumber, Skeleton, LoadingSpinner } from '../../components/ui';
 import { calculateCumulativeMetrics, DEFAULT_GRADING_SCALES } from '../../services/academic/cgpaEngine';
 import { useTutorMarketplace } from '../../hooks/useTutorMarketplace';
 import { supabase } from '../../lib/supabase/client';
+import { useBilling } from '../../context/BillingContext';
 
 // Mini smooth curvy wave line for stat cards
 function StatWave({ color = '#176B4D', stroke = '#176B4D' }) {
@@ -203,7 +206,8 @@ export function DashboardPage({
   const firstName = userProfile?.full_name?.trim()?.split(/\s+/)[0] || 'Student';
 
   // Live Tutor Marketplace count
-  const { tutors, loading: tutorsLoading } = useTutorMarketplace();
+  const { tutors, loading: tutorsLoading, error: tutorsError } = useTutorMarketplace();
+  const { isPremium, loading: billingLoading } = useBilling();
 
   // Live Bookings & Sessions from Supabase
   const [sessions, setSessions] = useState([]);
@@ -232,12 +236,7 @@ export function DashboardPage({
             slot_time,
             status,
             mode,
-            tutor_id,
-            profiles:tutor_id (
-              id,
-              full_name,
-              avatar_url
-            )
+            tutor_id
           `)
           .eq('student_id', user.id)
           .in('status', ['confirmed', 'pending'])
@@ -246,8 +245,21 @@ export function DashboardPage({
 
         if (error) throw error;
 
+        const tutorIds = [...new Set((data || []).map((booking) => booking.tutor_id).filter(Boolean))];
+        let profilesById = {};
+        if (tutorIds.length > 0) {
+          const { data: tutorProfiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', tutorIds);
+
+          if (profilesError) throw profilesError;
+          profilesById = Object.fromEntries((tutorProfiles || []).map((profile) => [profile.id, profile]));
+        }
+
         if (isMounted) {
           const mapped = (data || []).map((b) => {
+            const tutorProfile = profilesById[b.tutor_id];
             let formattedTime = b.slot_time;
             try {
               const d = new Date(b.slot_time);
@@ -260,7 +272,7 @@ export function DashboardPage({
                   minute: '2-digit'
                 });
               }
-            } catch (e) {}
+            } catch (e) { }
 
             return {
               id: b.id,
@@ -268,8 +280,8 @@ export function DashboardPage({
               time: formattedTime || 'Scheduled',
               rawDate: b.slot_time,
               mode: b.mode === 'physical' ? 'In-Person' : 'Online',
-              avatar: b.profiles?.avatar_url || null,
-              tutorName: b.profiles?.full_name || 'Tutor',
+              avatar: tutorProfile?.avatar_url || null,
+              tutorName: tutorProfile?.full_name || 'Tutor',
               icon: b.mode === 'physical' ? Monitor : Video
             };
           });
@@ -305,8 +317,8 @@ export function DashboardPage({
           iconBg: idx % 3 === 0
             ? 'bg-[#DDEFE5] text-[#176B4D]'
             : idx % 3 === 1
-            ? 'bg-[#E0E7FF] text-[#4F46E5]'
-            : 'bg-[#EDE9FE] text-[#7C3AED]'
+              ? 'bg-[#E0E7FF] text-[#4F46E5]'
+              : 'bg-[#EDE9FE] text-[#7C3AED]'
         };
       });
     }
@@ -322,8 +334,8 @@ export function DashboardPage({
         iconBg: idx % 3 === 0
           ? 'bg-[#DDEFE5] text-[#176B4D]'
           : idx % 3 === 1
-          ? 'bg-[#E0E7FF] text-[#4F46E5]'
-          : 'bg-[#EDE9FE] text-[#7C3AED]'
+            ? 'bg-[#E0E7FF] text-[#4F46E5]'
+            : 'bg-[#EDE9FE] text-[#7C3AED]'
       }));
     }
 
@@ -364,429 +376,240 @@ export function DashboardPage({
   const isTutor = userProfile?.role === 'tutor';
   const roleLabel = isTutor ? 'Tutor' : userProfile?.role ? String(userProfile.role).charAt(0).toUpperCase() + String(userProfile.role).slice(1) : 'Student';
   const studyStreakDays = streakData?.streak || 0;
-  const courseCount = enrolledCourses.length;
+  const courseCount = cumulative.totalCourses;
+
+  const hasAcademicRecord = cumulative.totalCourses > 0;
+  const academicMetric = (value) => (hasAcademicRecord ? value : '—');
+  const currency = (amount) => new Intl.NumberFormat('en-NG', {
+    style: 'currency', currency: 'NGN', maximumFractionDigits: 0
+  }).format(amount);
+  const displayTutors = tutors.filter((tutor) => tutor.isVerified).slice(0, 3);
+  const dashboardDate = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long', month: 'long', day: 'numeric'
+  }).format(new Date());
 
   return (
-    <div className="w-full space-y-5 pb-12">
-      {/* ── 1. WELCOME HEADER ────────────────────────────────────────── */}
-      <div className="pt-1">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight font-sans">
-          Welcome back, {firstName}!
-        </h1>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs sm:text-sm font-medium text-[#667085] dark:text-white/70">
-            Keep learning, keep growing.
-          </p>
-          <span className="w-5 h-5 rounded-full bg-[#DDEFE5] dark:bg-[#176B4D]/40 text-[#176B4D] dark:text-[#A7F3D0] flex items-center justify-center text-xs">
-            🍃
-          </span>
+    <div className="w-full space-y-5 pb-6 md:pb-12">
+      <section className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-academic dark:text-[#9FD0B5]">{dashboardDate}</p>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink dark:text-white sm:text-4xl">
+            Good to see you, {firstName}.
+          </h1>
+          <p className="mt-1 text-sm text-muted dark:text-white/65">Your academic journey, all in one place.</p>
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => onNavigateTab('study')}
+          className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-academic px-4 text-sm font-bold text-white shadow-sm transition hover:bg-academic-700 sm:self-auto"
+        >
+          <Plus className="h-4 w-4" />
+          Plan your study
+        </button>
+      </section>
 
-      {/* ── 2. TOP METRICS & PROFILE ROW (Matches Reference Section 0_0) ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-        {/* Student Profile Card (span 4 on md/lg) */}
-        <div className="md:col-span-5 lg:col-span-4 glass-panel rounded-2xl p-4 sm:p-5 flex items-center gap-4">
-          <div className="relative shrink-0">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-[#176B4D] flex items-center justify-center border-2 border-white/80 shadow-sm">
-              {userProfile?.avatar_url ? (
-                <img
-                  src={userProfile.avatar_url}
-                  alt={userProfile.full_name || 'Student avatar'}
-                  className="w-full h-full object-cover"
-                />
+      <section aria-label="Academic overview" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: 'Current CGPA', value: academicMetric(cumulative.cgpa.toFixed(2)), detail: hasAcademicRecord ? `${cumulative.maxScale} point scale` : 'Add course results', icon: GraduationCap, action: 'cgpa' },
+          { label: 'Courses', value: String(courseCount), detail: `${cumulative.totalCourses} graded course${cumulative.totalCourses === 1 ? '' : 's'}`, icon: BookOpen, action: 'cgpa' },
+          { label: 'Study streak', value: String(studyStreakDays), detail: 'consecutive days', icon: Zap, action: 'study' },
+          { label: 'Plan progress', value: studyPlans.length ? `${overallStudyProgress}%` : '—', detail: studyPlans.length ? `${studyPlans.length} active plan${studyPlans.length === 1 ? '' : 's'}` : 'Create your first plan', icon: TrendingUp, action: 'study' }
+        ].map(({ label, value, detail, icon: Icon, action }) => (
+          <button key={label} type="button" onClick={() => onNavigateTab(action)} className="glass-stat group min-h-[124px] rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+            <span className="flex items-center justify-between gap-3 text-xs font-semibold text-muted dark:text-white/65">
+              {label}
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-academic-100 text-academic transition group-hover:bg-academic group-hover:text-white dark:bg-white/10 dark:text-[#B9E4CB]"><Icon className="h-4 w-4" /></span>
+            </span>
+            <span className="mt-3 block font-mono text-2xl font-bold tracking-tight text-ink dark:text-white sm:text-3xl">{value}</span>
+            <span className="mt-1 block truncate text-[11px] text-muted dark:text-white/55">{detail}</span>
+          </button>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <article className="glass-panel rounded-2xl p-4 sm:p-5 xl:col-span-7">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-academic dark:text-[#9FD0B5]">Your learning</p>
+              <h2 className="mt-1 font-serif text-xl font-semibold text-ink dark:text-white sm:text-2xl">Learning overview</h2>
+            </div>
+            <button type="button" onClick={() => onNavigateTab('study')} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-bold text-academic hover:bg-academic-50 dark:text-[#9FD0B5] dark:hover:bg-white/5">
+              View plans <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-[minmax(150px,0.75fr)_minmax(0,1.25fr)] sm:items-center">
+            <div className="flex items-center gap-4 rounded-xl bg-white/55 p-4 dark:bg-white/5">
+              <div className="relative grid h-24 w-24 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#176B4D ${overallStudyProgress}%, rgba(23,107,77,.12) 0)` }}>
+                <div className="grid h-[76px] w-[76px] place-items-center rounded-full bg-[#F6F7F3] text-center dark:bg-[#14231B]">
+                  <span><strong className="block font-mono text-xl text-ink dark:text-white">{studyPlans.length ? `${overallStudyProgress}%` : '—'}</strong><span className="text-[9px] text-muted dark:text-white/55">overall</span></span>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-ink dark:text-white">Study plans</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted dark:text-white/60">
+                  {studyPlans.length ? `${studyPlans.length} active plan${studyPlans.length === 1 ? '' : 's'} tracking your topics.` : 'Your completed topics will appear here once you create a study plan.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {studyPlans.length ? studyPlans.slice(0, 3).map((plan) => {
+                const topics = plan.topics || [];
+                const completed = topics.filter((topic) => topic.is_completed).length;
+                const percent = topics.length ? Math.round(completed / topics.length * 100) : 0;
+                return (
+                  <div key={plan.id}>
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+                      <span className="truncate font-semibold text-ink dark:text-white">{plan.subject || 'Study plan'}</span>
+                      <span className="shrink-0 font-mono font-bold text-academic dark:text-[#9FD0B5]">{percent}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-ink/10 dark:bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-academic to-[#5AAB87] transition-all" style={{ width: `${percent}%` }} /></div>
+                    <p className="mt-1 text-[10px] text-muted dark:text-white/50">{completed} of {topics.length} topics complete</p>
+                  </div>
+                );
+              }) : hasAcademicRecord && cumulative.semesterBreakdown.length ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-ink dark:text-white">Recorded academic performance</p>
+                  {cumulative.semesterBreakdown.slice(-3).reverse().map((semester, index) => (
+                    <div key={`${semester.academicYear}-${semester.semesterName}-${index}`} className="flex items-center gap-3">
+                      <span className="min-w-0 flex-1 truncate text-xs text-muted dark:text-white/65">{semester.academicYear} · {semester.semesterName}</span>
+                      <span className="font-mono text-xs font-bold text-ink dark:text-white">{semester.gpa.toFixed(2)}</span>
+                      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink/10 dark:bg-white/10"><div className="h-full rounded-full bg-academic" style={{ width: `${Math.max(0, Math.min(100, semester.gpa / (cumulative.maxScale || 5) * 100))}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <span className="text-white font-bold text-xl font-sans">
-                  {(userProfile?.full_name || 'Student').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                </span>
+                <div className="rounded-xl border border-dashed border-ink/15 p-4 dark:border-white/15">
+                  <p className="text-xs font-semibold text-ink dark:text-white">Your course progress will appear here</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted dark:text-white/55">Add course results or create a study plan to see your real progress.</p>
+                  <button type="button" onClick={() => onNavigateTab('cgpa')} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-academic-100 px-3 text-xs font-bold text-academic hover:bg-academic-200 dark:bg-white/10 dark:text-[#B9E4CB]">
+                    Add courses <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               )}
             </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-base sm:text-lg font-bold text-[#111827] dark:text-white truncate">
-              {userProfile?.full_name || 'Studora Scholar'}
-            </h3>
-            <p className="text-xs text-[#667085] dark:text-white/60 mb-2.5">
-              {roleLabel}
-            </p>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('profile')}
-              className="px-4 py-1.5 rounded-xl bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C] transition-all shadow-sm"
-            >
-              View Profile
-            </button>
+        </article>
+
+        <article className="relative isolate overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-[#176B4D] via-[#12543F] to-[#0E392B] p-5 text-white shadow-[0_18px_42px_rgba(14,57,43,.2)] sm:p-6 xl:col-span-5">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-16 -z-10 h-48 w-48 rounded-full border border-white/10 bg-white/5 blur-2xl" />
+          <div className="flex h-full flex-col justify-between gap-7">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#DDEFE5]"> Studora learning tools</span>
+              <h2 className="mt-4 max-w-sm font-serif text-2xl font-semibold leading-tight sm:text-3xl">A clearer path through your next study session.</h2>
+              <p className="mt-2 max-w-md text-xs leading-relaxed text-white/75 sm:text-sm">Use your study plan to build a focused daily routine, or ask the AI Tutor to work through a topic with you.</p>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <button type="button" onClick={() => onNavigateTab('study')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#DDEFE5] px-4 text-xs font-bold text-[#104633] shadow-sm transition hover:bg-white">
+                <Calendar className="h-4 w-4" /> Open Study Coach <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" onClick={() => onNavigateTab('ai')} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-xs font-bold text-white transition hover:bg-white/15">
+                <MessageSquare className="h-4 w-4" /> Ask AI Tutor
+              </button>
+            </div>
           </div>
-        </div>
+        </article>
+      </section>
 
-        {/* 3 Metric Glass Cards: Your Progress, Enrolled Courses, Study Streak */}
-        <div className="md:col-span-7 lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          {/* Metric 1: Your Progress (Donut Chart) */}
-          <div
-            onClick={() => onNavigateTab('study')}
-            className="glass-stat rounded-2xl p-4 flex flex-col justify-between cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#667085] dark:text-white/60">
-                Your Progress
-              </span>
-              <span className="w-5 h-5 rounded-full bg-[#FEF3C7] text-[#D97706] flex items-center justify-center text-[10px]">
-                ⚡
-              </span>
-            </div>
-            <div className="flex items-center gap-3 my-2">
-              {/* Circular SVG Donut */}
-              <div className="relative w-12 h-12 shrink-0">
-                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="text-gray-200 dark:text-gray-700"
-                    strokeWidth="3.8"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="text-[#176B4D]"
-                    strokeDasharray={`${overallStudyProgress}, 100`}
-                    strokeWidth="3.8"
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-              </div>
-              <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">
-                {overallStudyProgress}%
-              </span>
-            </div>
-            <p className="text-[10px] text-[#667085] dark:text-white/50 truncate">
-              {studyPlans.length > 0 ? `${studyPlans.length} active study plan${studyPlans.length > 1 ? 's' : ''}` : 'No active study plans'}
-            </p>
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <article className="glass-panel rounded-2xl p-4 sm:p-5 xl:col-span-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.15em] text-academic dark:text-[#9FD0B5]">On your calendar</p><h2 className="mt-1 font-serif text-xl font-semibold text-ink dark:text-white">Upcoming activities</h2></div>
+            <button type="button" onClick={() => onNavigateTab('tutors')} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-bold text-academic hover:bg-academic-50 dark:text-[#9FD0B5] dark:hover:bg-white/5">Bookings <ArrowRight className="h-3.5 w-3.5" /></button>
           </div>
-
-          {/* Metric 2: Enrolled Courses */}
-          <div
-            onClick={() => onNavigateTab('cgpa')}
-            className="glass-stat rounded-2xl p-4 flex flex-col justify-between cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#667085] dark:text-white/60">
-                Enrolled Courses
-              </span>
-              <div className="w-5 h-5 rounded-md bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center text-[11px]">
-                <BookOpen className="w-3 h-3" />
-              </div>
+          {sessionsLoading ? (
+            <div className="space-y-3" aria-label="Loading upcoming activities"><div className="h-14 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" /><div className="h-14 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" /></div>
+          ) : sessionsError ? (
+            <div className="rounded-xl border border-dashed border-ink/15 p-4 text-xs text-muted dark:border-white/15 dark:text-white/60">Your bookings could not be loaded right now.</div>
+          ) : sessions.length ? (
+            <div className="space-y-2.5">
+              {sessions.slice(0, 3).map((session) => {
+                const SessionIcon = session.icon || Calendar;
+                return <div key={session.id} className="flex items-center gap-3 rounded-xl border border-white/75 bg-white/55 p-3 dark:border-white/10 dark:bg-white/5">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-academic-100 text-academic dark:bg-white/10 dark:text-[#B9E4CB]"><SessionIcon className="h-4 w-4" /></span>
+                  <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-ink dark:text-white">{session.title}</p><p className="mt-0.5 truncate text-[11px] text-muted dark:text-white/55">{session.tutorName} · {session.time}</p></div>
+                  <button type="button" onClick={() => onNavigateTab('messages')} className="min-h-10 shrink-0 rounded-lg px-2.5 text-[11px] font-bold text-academic hover:bg-academic-50 dark:text-[#9FD0B5] dark:hover:bg-white/10">Details</button>
+                </div>;
+              })}
             </div>
-            <div className="flex items-baseline gap-2 my-2">
-              <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">
-                {courseCount}
-              </span>
+          ) : (
+            <div className="rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center dark:border-white/15">
+              <Calendar className="mx-auto h-5 w-5 text-academic/70 dark:text-[#9FD0B5]" />
+              <p className="mt-2 text-xs font-semibold text-ink dark:text-white">No upcoming sessions</p>
+              <p className="mt-1 text-[11px] text-muted dark:text-white/55">Your confirmed and pending tutor bookings will show here.</p>
+              <button type="button" onClick={() => onNavigateTab('tutors')} className="mt-3 min-h-10 rounded-lg bg-academic px-3 text-xs font-bold text-white hover:bg-academic-700">Find a tutor</button>
             </div>
-            <p className="text-[10px] text-[#667085] dark:text-white/50 truncate">
-              {courseCount > 0 ? `${courseCount} registered courses` : 'Registered curriculum'}
-            </p>
-          </div>
-
-          {/* Metric 3: Study Streak */}
-          <div
-            onClick={() => onNavigateTab('study')}
-            className="glass-stat rounded-2xl p-4 flex flex-col justify-between cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#667085] dark:text-white/60">
-                Study Streak
-              </span>
-              <div className="w-5 h-5 rounded-md bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center text-[11px]">
-                <Clock className="w-3 h-3" />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-1 my-2">
-              <span className="text-2xl font-extrabold text-[#111827] dark:text-white font-mono">
-                {studyStreakDays}
-              </span>
-              <span className="text-sm font-bold text-[#111827] dark:text-white">Days</span>
-            </div>
-            <p className="text-[10px] text-[#667085] dark:text-white/50 truncate">
-              Consecutive practice
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 3. QUICK ACTIONS ROW ─────────────────────────────────────── */}
-      <div className="glass-panel rounded-2xl p-4 sm:p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-bold text-[#111827] dark:text-white tracking-tight">
-            Quick Actions
-          </h2>
-          <span className="text-xs text-[#176B4D]">⚡</span>
-        </div>
-
-        <div className={`grid grid-cols-2 sm:grid-cols-3 ${isTutor ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-3`}>
-          {/* Action: Tutor Dashboard (For Approved Tutors) */}
-          {isTutor && (
-            <button
-              type="button"
-              onClick={() => onNavigateTab('tutor-dashboard')}
-              className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group relative"
-            >
-              <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Award className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                  Tutor Dashboard
-                </p>
-                <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
-                  Manage sessions
-                </p>
-              </div>
-            </button>
           )}
+        </article>
 
-          {/* Action 1: Messages & Chat */}
-          <button
-            type="button"
-            onClick={() => onNavigateTab('messages')}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group relative"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <MessageSquare className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                Messages
-              </p>
-              <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
-                Chat with tutors
-              </p>
-            </div>
-            {unreadMessages > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#176B4D]" />
-            )}
-          </button>
-
-          {/* Action 2: Find a Tutor */}
-          <button
-            type="button"
-            onClick={() => onNavigateTab('tutors')}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Users className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                Find a Tutor
-              </p>
-              <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
-                Get expert help
-              </p>
-            </div>
-          </button>
-
-          {/* Action 3: My Courses */}
-          <button
-            type="button"
-            onClick={() => onNavigateTab('cgpa')}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                My Courses
-              </p>
-              <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
-                Continue learning
-              </p>
-            </div>
-          </button>
-
-          {/* Action 4: Study Plan */}
-          <button
-            type="button"
-            onClick={() => onNavigateTab('study')}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                Study Plan
-              </p>
-              <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
-                Plan your study
-              </p>
-            </div>
-          </button>
-
-          {/* Action 5: Take Assessment */}
-          <button
-            type="button"
-            onClick={() => onNavigateTab('test-prep')}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:border-[#176B4D]/40 transition-all text-left shadow-sm group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <CheckSquare className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-[#111827] dark:text-white leading-tight">
-                Assessment
-              </p>
-              <p className="text-[11px] text-[#667085] dark:text-white/50 mt-0.5 truncate">
-                Test knowledge
-              </p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* ── 4. BOTTOM ROW: MY COURSES & UPCOMING SESSIONS ────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left: My Courses Preview Cards (span 7 on lg) */}
-        <div className="lg:col-span-7 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-[#111827] dark:text-white">
-                My Courses
-              </h2>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('cgpa')}
-                className="text-xs font-semibold text-[#176B4D] dark:text-[#8FC9AE] hover:underline flex items-center gap-1"
-              >
-                <span>View All</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Architectural Course Thumbnails matching the reference */}
-            {enrolledCourses.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {enrolledCourses.slice(0, 3).map((c, i) => (
-                  <div
-                    key={c.id || i}
-                    onClick={() => onNavigateTab('cgpa')}
-                    className="rounded-xl overflow-hidden bg-white/80 dark:bg-white/5 border border-white/80 dark:border-white/10 shadow-sm cursor-pointer hover:shadow-md transition-all group"
-                  >
-                    <div className="h-20 w-full overflow-hidden bg-gray-100 dark:bg-navy-800 relative">
-                      <picture>
-                        <source srcSet="/campus-background-sm.webp" type="image/webp" />
-                        <img
-                          src="/campus-background.webp"
-                          alt={c.name}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </picture>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <span className="absolute bottom-1.5 left-2 text-[10px] font-bold text-white truncate max-w-[90%]">
-                        {c.name}
-                      </span>
-                    </div>
-                    <div className="p-2.5">
-                      <div className="flex items-center justify-between text-[10px] text-[#667085] dark:text-white/60 mb-1">
-                        <span>Progress</span>
-                        <span className="font-bold text-[#176B4D]">{c.progress ?? 0}%</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-gray-200 dark:bg-navy-700 overflow-hidden">
-                        <div
-                          className="h-full bg-[#176B4D] rounded-full transition-all"
-                          style={{ width: `${c.progress ?? 0}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 text-center space-y-2">
-                <p className="text-xs font-semibold text-[#111827] dark:text-white">No courses registered yet</p>
-                <p className="text-[11px] text-[#667085] dark:text-white/60">
-                  Add courses to your semester records or create a study plan to track progress here.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('cgpa')}
-                  className="px-3 py-1.5 rounded-lg bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C]"
-                >
-                  Add Courses
-                </button>
-              </div>
-            )}
+        <article className="glass-panel rounded-2xl p-4 sm:p-5 xl:col-span-7">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.15em] text-academic dark:text-[#9FD0B5]">Verified marketplace</p><h2 className="mt-1 font-serif text-xl font-semibold text-ink dark:text-white">Recommended tutors</h2></div>
+            <button type="button" onClick={() => onNavigateTab('tutors')} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-bold text-academic hover:bg-academic-50 dark:text-[#9FD0B5] dark:hover:bg-white/5">Browse all <ArrowRight className="h-3.5 w-3.5" /></button>
           </div>
-        </div>
-
-        {/* Right: Upcoming Sessions (span 5 on lg) */}
-        <div className="lg:col-span-5 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-[#111827] dark:text-white">
-                Upcoming Sessions
-              </h2>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('tutors')}
-                className="text-xs font-semibold text-[#176B4D] dark:text-[#8FC9AE] hover:underline flex items-center gap-1"
-              >
-                <span>View All</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {sessions.length > 0 ? (
-              <div className="space-y-2.5">
-                {sessions.slice(0, 3).map((s) => (
-                  <div
-                    key={s.id}
-                    className="p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 flex items-center justify-between gap-3 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-[#DDEFE5] text-[#176B4D] flex items-center justify-center shrink-0">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#111827] dark:text-white truncate">
-                          {s.title}
-                        </p>
-                        <p className="text-[11px] text-[#667085] dark:text-white/50 truncate">
-                          {s.time}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('messages')}
-                      className="px-2.5 py-1 rounded-lg bg-[#176B4D] text-white text-[11px] font-bold hover:bg-[#12543C] shrink-0"
-                    >
-                      Join
-                    </button>
+          {tutorsLoading ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Loading tutors">{[1, 2, 3].map((item) => <div key={item} className="h-36 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" />)}</div>
+          ) : tutorsError ? (
+            <div className="rounded-xl border border-dashed border-ink/15 p-4 text-xs text-muted dark:border-white/15 dark:text-white/60">The tutor directory could not be loaded. Try browsing the marketplace.</div>
+          ) : displayTutors.length ? (
+            <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${displayTutors.length > 2 ? 'xl:grid-cols-3' : 'xl:grid-cols-2'}`}>
+              {displayTutors.map((tutor) => (
+                <article key={tutor.tutorId} className="flex min-w-0 flex-col rounded-xl border border-white/80 bg-white/55 p-3.5 dark:border-white/10 dark:bg-white/5">
+                  <div className="flex items-center gap-3">
+                    {tutor.avatarUrl ? <img src={tutor.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-academic-100 dark:ring-white/10" /> : <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-academic-100 text-xs font-bold text-academic dark:bg-white/10 dark:text-[#B9E4CB]">{tutor.fullName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</span>}
+                    <div className="min-w-0"><p className="truncate text-xs font-bold text-ink dark:text-white">{tutor.fullName}</p><p className="truncate text-[10px] text-muted dark:text-white/55">{tutor.title}</p></div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 rounded-xl bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 text-center space-y-2">
-                <p className="text-xs font-semibold text-[#111827] dark:text-white">No upcoming sessions</p>
-                <p className="text-[11px] text-[#667085] dark:text-white/60">
-                  Book 1-on-1 sessions with verified tutors in the marketplace.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('tutors')}
-                  className="px-3 py-1.5 rounded-lg bg-[#176B4D] text-white text-xs font-bold hover:bg-[#12543C]"
-                >
-                  Find a Tutor
-                </button>
-              </div>
-            )}
-          </div>
+                  <div className="mt-3 flex min-h-6 items-center gap-1.5 text-[10px] text-muted dark:text-white/60">
+                    {tutor.rating != null && <><span className="text-gold-600">★</span><span className="font-bold text-ink dark:text-white">{tutor.rating.toFixed(1)}</span><span>({tutor.reviewCount} reviews)</span></>}
+                    {tutor.rating == null && <span>Verified tutor</span>}
+                  </div>
+                  <p className="mt-1 min-h-8 line-clamp-2 text-[10px] text-muted dark:text-white/55">{tutor.subjectNames.slice(0, 2).join(' · ') || tutor.department || 'Available for tutoring'}</p>
+                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-ink/5 pt-3 dark:border-white/10">
+                    <span className="truncate text-[11px] font-bold text-ink dark:text-white">{tutor.hourlyRate > 0 ? currency(tutor.hourlyRate) : 'Rate not listed'}{tutor.hourlyRate > 0 && <span className="font-normal text-muted dark:text-white/50"> / session</span>}</span>
+                    <button type="button" onClick={() => onNavigateTab('tutors')} className="min-h-9 shrink-0 rounded-lg bg-academic px-2.5 text-[10px] font-bold text-white hover:bg-academic-700">View tutor</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center dark:border-white/15">
+              <Users className="mx-auto h-5 w-5 text-academic/70 dark:text-[#9FD0B5]" />
+              <p className="mt-2 text-xs font-semibold text-ink dark:text-white">No verified tutors to show yet</p>
+              <p className="mt-1 text-[11px] text-muted dark:text-white/55">When eligible tutors are available, their current profiles and session rates will appear here.</p>
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section aria-label="Quick actions" className="glass-panel rounded-2xl p-4 sm:p-5">
+        <div className="mb-3 flex items-center gap-2"><Zap className="h-4 w-4 text-gold-600" /><h2 className="font-serif text-lg font-semibold text-ink dark:text-white">Quick actions</h2></div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
+          {[
+            { label: 'Find a tutor', icon: Compass, route: 'tutors' },
+            { label: 'My courses & CGPA', icon: GraduationCap, route: 'cgpa' },
+            { label: 'Study plans', icon: Calendar, route: 'study' },
+            { label: 'Assessments', icon: CheckSquare, route: 'test-prep' },
+            { label: 'Messages', icon: MessageSquare, route: 'messages', badge: unreadMessages }
+          ].map(({ label, icon: Icon, route, badge }) => (
+            <button key={route} type="button" onClick={() => onNavigateTab(route)} className="group flex min-h-14 items-center gap-2.5 rounded-xl border border-white/75 bg-white/55 px-3 text-left transition hover:border-academic/25 hover:bg-white/80 hover:shadow-sm dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-academic-100 text-academic transition group-hover:bg-academic group-hover:text-white dark:bg-white/10 dark:text-[#B9E4CB]"><Icon className="h-4 w-4" /></span>
+              <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-ink dark:text-white">{label}</span>
+              {badge > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white">{badge}</span>}
+            </button>
+          ))}
         </div>
-      </div>
+      </section>
+
+      {!billingLoading && !isPremium && (
+        <section className="xl:hidden flex flex-col gap-4 rounded-2xl border border-gold-500/25 bg-gradient-to-r from-[#172033] to-[#104633] p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-500/15 text-gold-300"><Award className="h-5 w-5" /></span>
+            <div><h2 className="text-sm font-bold">Explore Studora Premium</h2><p className="mt-1 text-xs text-white/70">See the plans and features available for your account.</p></div>
+          </div>
+          <button type="button" onClick={() => onNavigateTab('pricing')} className="min-h-11 shrink-0 rounded-xl bg-gold-500 px-4 text-xs font-bold text-[#172033] transition hover:bg-gold-400">View plans <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></button>
+        </section>
+      )}
     </div>
   );
 }

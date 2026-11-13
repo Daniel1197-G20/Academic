@@ -66,6 +66,25 @@ export function TopHeader({
           </button>
         )}
 
+        {/* Profile control remains visible on tablet and desktop. */}
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="hidden md:flex items-center gap-2.5 rounded-full border border-white/70 bg-white/75 dark:bg-white/10 px-2.5 py-1.5 shadow-sm backdrop-blur-md hover:bg-white dark:hover:bg-white/15 transition-colors"
+          title="Open profile"
+          aria-label="Open profile"
+        >
+          <Avatar
+            name={userProfile?.full_name || 'Student'}
+            src={userProfile?.avatar_url}
+            size="sm"
+          />
+          <span className="hidden lg:block max-w-36 text-left">
+            <span className="block truncate text-xs font-bold text-ink dark:text-white">{userProfile?.full_name || 'Student'}</span>
+            <span className="block text-[10px] text-muted dark:text-white/60">{userProfile?.role || 'Student'}</span>
+          </span>
+        </button>
+
         {/* Mobile Avatar Trigger */}
         <button
           type="button"

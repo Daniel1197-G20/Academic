@@ -442,7 +442,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             <button
               type="button"
               onClick={() => onNavigate('login')}
-              className="text-xs font-semibold text-ink px-3 py-1.5 rounded-btn hover:bg-canvas transition-colors"
+              className="min-h-11 text-xs font-semibold text-ink px-3 py-1.5 rounded-btn hover:bg-canvas transition-colors"
             >
               Log in
             </button>
@@ -459,7 +459,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-btn text-muted hover:text-ink hover:bg-canvas border border-border"
+              className="md:hidden min-h-11 min-w-11 p-2 rounded-btn text-muted hover:text-ink hover:bg-canvas border border-border"
               aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -536,7 +536,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               variant="academic"
               size="lg"
               onClick={() => onNavigate('register')}
-              className="w-full sm:w-auto shadow-tactile-btn text-sm font-semibold px-7"
+              className="min-h-11 w-full sm:w-auto shadow-tactile-btn text-sm font-semibold px-7"
             >
               Get Started
             </Button>
@@ -544,7 +544,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
               variant="secondary"
               size="lg"
               onClick={() => scrollToSection('features')}
-              className="w-full sm:w-auto text-sm font-semibold px-6 border-border hover:bg-white"
+              className="min-h-11 w-full sm:w-auto text-sm font-semibold px-6 border-border hover:bg-white"
             >
               Explore Features
             </Button>
@@ -818,7 +818,7 @@ export function LandingPage({ onNavigate, onSelectPlan, onOpenCookieSettings }) 
                     variant="secondary"
                     size="md"
                     onClick={() => onNavigate('study')}
-                    className="w-full sm:w-auto text-xs font-semibold border-border hover:bg-academic-50 hover:text-academic hover:border-academic-200 flex items-center justify-center gap-2"
+                    className="min-h-11 w-full sm:w-auto text-xs font-semibold border-border hover:bg-academic-50 hover:text-academic hover:border-academic-200 flex items-center justify-center gap-2"
                   >
                     <span>Plan my studies</span>
                     <ArrowRight className="w-3.5 h-3.5" />

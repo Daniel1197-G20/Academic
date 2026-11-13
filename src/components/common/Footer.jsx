@@ -29,7 +29,7 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
             <button
               type="button"
               onClick={() => onNavigate?.('privacy')}
-              className="text-muted hover:text-academic transition-colors flex items-center gap-1.5"
+              className="min-h-11 px-1 text-muted hover:text-academic transition-colors flex items-center gap-1.5"
             >
               <Shield className="w-3.5 h-3.5" />
               Privacy Policy
@@ -37,7 +37,7 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
             <button
               type="button"
               onClick={() => onNavigate?.('terms')}
-              className="text-muted hover:text-academic transition-colors flex items-center gap-1.5"
+              className="min-h-11 px-1 text-muted hover:text-academic transition-colors flex items-center gap-1.5"
             >
               <FileText className="w-3.5 h-3.5" />
               Terms of Service
@@ -45,7 +45,7 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
             <button
               type="button"
               onClick={() => onNavigate?.('privacy-settings')}
-              className="text-muted hover:text-academic transition-colors flex items-center gap-1.5"
+              className="min-h-11 px-1 text-muted hover:text-academic transition-colors flex items-center gap-1.5"
             >
               <Shield className="w-3.5 h-3.5" />
               Privacy Settings
@@ -53,7 +53,7 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
             <button
               type="button"
               onClick={onOpenCookieSettings}
-              className="text-muted hover:text-academic transition-colors flex items-center gap-1.5"
+              className="min-h-11 px-1 text-muted hover:text-academic transition-colors flex items-center gap-1.5"
             >
               <Cookie className="w-3.5 h-3.5" />
               Cookie Settings
@@ -61,7 +61,7 @@ export function Footer({ onNavigate, onOpenCookieSettings, className = '' }) {
             <button
               type="button"
               onClick={() => setShowContactModal(true)}
-              className="text-muted hover:text-academic transition-colors flex items-center gap-1.5"
+              className="min-h-11 px-1 text-muted hover:text-academic transition-colors flex items-center gap-1.5"
             >
               <Mail className="w-3.5 h-3.5" />
               Contact
