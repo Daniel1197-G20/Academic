@@ -71,6 +71,7 @@ import {
   resolveCampaignAudience,
   executeCampaign,
   processResendWebhook,
+  verifyResendWebhook,
   getOrCreateEmailPreferences,
   isResendConfigured
 } from './email-service.js';
@@ -1915,11 +1916,12 @@ export async function handleApiRequest(req, res) {
     // POST /api/email/webhook/resend — provider webhook for delivery events & suppressions
     if (pathname === '/api/email/webhook/resend' && method === 'POST') {
       try {
-        const body = await parseJsonBody(req);
-        const result = await processResendWebhook(body);
+        await parseJsonBody(req);
+        const verifiedEvent = verifyResendWebhook(req.rawBody || '', req.headers);
+        const result = await processResendWebhook(verifiedEvent);
         return sendJson(res, 200, result);
       } catch (err) {
-        return sendJson(res, 400, { error: err.message });
+        return sendJson(res, err.statusCode || 400, { error: err.statusCode === 503 ? err.message : 'Invalid Resend webhook signature or payload.' });
       }
     }
 

@@ -30,8 +30,9 @@ import {
 
 // Configuration from verified environment
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Studora <notifications@studora.app>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
 const REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO || 'support@studora.app';
+const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || '';
 const APP_URL = process.env.APP_URL || 'https://studora.app';
 
 // Lazy-initialized Resend client
@@ -48,7 +49,33 @@ export function getResendClient() {
  * Check if Resend is fully configured with an active live key
  */
 export function isResendConfigured() {
-  return Boolean(RESEND_API_KEY && RESEND_API_KEY.startsWith('re_'));
+  return Boolean(RESEND_API_KEY.startsWith('re_') && FROM_EMAIL.trim());
+}
+
+/** Verify the raw Resend webhook body before processing provider events. */
+export function verifyResendWebhook(rawPayload, headers) {
+  if (!RESEND_WEBHOOK_SECRET) {
+    const error = new Error('Resend webhook verification is not configured.');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const client = getResendClient();
+  if (!client) {
+    const error = new Error('Resend API credentials are not configured.');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  return client.webhooks.verify({
+    payload: rawPayload,
+    headers: {
+      id: headers['svix-id'],
+      timestamp: headers['svix-timestamp'],
+      signature: headers['svix-signature']
+    },
+    webhookSecret: RESEND_WEBHOOK_SECRET
+  });
 }
 
 /**
@@ -155,7 +182,7 @@ export async function sendEmail({
   let status = 'pending';
   let errorMsg = null;
 
-  if (client) {
+  if (client && FROM_EMAIL.trim()) {
     try {
       const response = await client.emails.send({
         from: FROM_EMAIL,
@@ -178,10 +205,11 @@ export async function sendEmail({
       console.error(`[EmailService] Resend dispatch error to ${recipientEmail}:`, apiErr.message);
     }
   } else {
-    // Development / unconfigured mode: Simulate successful queued dispatch with cryptographic ID
-    resendMessageId = `mock_${crypto.randomBytes(12).toString('hex')}`;
-    status = 'sent';
-    console.log(`[EmailService (Dev Mock)] Dispatched ${templateType} to ${recipientEmail} (ID: ${resendMessageId})`);
+    status = 'failed';
+    errorMsg = !RESEND_API_KEY
+      ? 'Resend API key is not configured on the server.'
+      : 'Resend sender address is not configured on the server.';
+    console.error(`[EmailService] ${errorMsg}`);
   }
 
   // 4. Record audit log
@@ -534,33 +562,41 @@ export async function processResendWebhook(payload) {
 
   console.log(`[EmailService] Processing webhook event: ${eventType} for message: ${messageId}`);
 
-  let newStatus = 'sent';
-  if (eventType === 'email.delivered') newStatus = 'delivered';
-  else if (eventType === 'email.bounced') newStatus = 'bounced';
-  else if (eventType === 'email.complained') newStatus = 'complaint';
+  const eventStatuses = {
+    'email.sent': 'sent',
+    'email.delivered': 'delivered',
+    'email.bounced': 'bounced',
+    'email.complained': 'complaint'
+  };
+  const newStatus = eventStatuses[eventType];
+  if (!newStatus) return { received: true, event: eventType, ignored: true };
 
+  let updatedCampaignId = null;
   if (messageId) {
-    // Update outbox log
-    await db.query(
+    // Update once per status transition so provider retries do not inflate metrics.
+    const updateRes = await db.query(
       `UPDATE email_logs 
        SET status = $1,
            delivered_at = CASE WHEN $1 = 'delivered' THEN CURRENT_TIMESTAMP ELSE delivered_at END,
            updated_at = CURRENT_TIMESTAMP
-       WHERE resend_message_id = $2;`,
+       WHERE resend_message_id = $2
+         AND status IS DISTINCT FROM $1
+         AND NOT (status IN ('delivered', 'bounced', 'complaint') AND $1 = 'sent')
+       RETURNING campaign_id;`,
       [newStatus, messageId]
     );
+    updatedCampaignId = updateRes.rows[0]?.campaign_id || null;
+  }
 
-    // If tied to campaign, increment counters
-    const logRes = await db.query(`SELECT campaign_id FROM email_logs WHERE resend_message_id = $1;`, [messageId]);
-    const campaignId = logRes.rows[0]?.campaign_id;
-    if (campaignId) {
-      if (newStatus === 'delivered') {
-        await db.query(`UPDATE email_campaigns SET delivered_count = delivered_count + 1 WHERE id = $1;`, [campaignId]);
-      } else if (newStatus === 'bounced') {
-        await db.query(`UPDATE email_campaigns SET bounced_count = bounced_count + 1 WHERE id = $1;`, [campaignId]);
-      } else if (newStatus === 'complaint') {
-        await db.query(`UPDATE email_campaigns SET complaint_count = complaint_count + 1 WHERE id = $1;`, [campaignId]);
-      }
+  if (updatedCampaignId) {
+    const metricByStatus = {
+      delivered: 'delivered_count',
+      bounced: 'bounced_count',
+      complaint: 'complaint_count'
+    };
+    const metric = metricByStatus[newStatus];
+    if (metric) {
+      await db.query(`UPDATE email_campaigns SET ${metric} = ${metric} + 1 WHERE id = $1;`, [updatedCampaignId]);
     }
   }
 
