@@ -498,14 +498,14 @@ export function DashboardPage({
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#DDEFE5]"> Studora learning tools</span>
               <h2 className="mt-4 max-w-sm font-serif text-2xl font-semibold leading-tight sm:text-3xl">A clearer path through your next study session.</h2>
-              <p className="mt-2 max-w-md text-xs leading-relaxed text-white/75 sm:text-sm">Use your study plan to build a focused daily routine, or ask the AI Tutor to work through a topic with you.</p>
+              <p className="mt-2 max-w-md text-xs leading-relaxed text-white/75 sm:text-sm">Use your study plan to build a focused daily routine, or ask the NEXA to work through a topic with you.</p>
             </div>
             <div className="flex flex-wrap gap-2.5">
               <button type="button" onClick={() => onNavigateTab('study')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#DDEFE5] px-4 text-xs font-bold text-[#104633] shadow-sm transition hover:bg-white">
                 <Calendar className="h-4 w-4" /> Open Study Coach <ArrowRight className="h-3.5 w-3.5" />
               </button>
               <button type="button" onClick={() => onNavigateTab('ai')} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-xs font-bold text-white transition hover:bg-white/15">
-                <MessageSquare className="h-4 w-4" /> Ask AI Tutor
+                <MessageSquare className="h-4 w-4" /> Ask NEXA
               </button>
             </div>
           </div>

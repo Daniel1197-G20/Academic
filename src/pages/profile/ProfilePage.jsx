@@ -582,11 +582,10 @@ export function ProfilePage({
               key={tab.id}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
-                isActive
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${isActive
                   ? 'bg-[#176B4D] text-white shadow-sm'
                   : 'text-[#667085] dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
+                }`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
@@ -671,17 +670,15 @@ export function ProfilePage({
                         key={subj.id}
                         type="button"
                         onClick={() => handleToggleSubject(subj.id)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
-                          isSelected
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${isSelected
                             ? 'bg-[#DDEFE5] dark:bg-[#176B4D]/30 border-[#176B4D] shadow-sm text-[#176B4D] dark:text-[#A7F3D0]'
                             : 'bg-white/70 dark:bg-white/5 border-gray-200 dark:border-gray-800 text-[#111827] dark:text-white hover:border-[#176B4D]/50'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-1">
                           <span className="text-xs font-bold truncate">{subj.name}</span>
-                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold ${
-                            isSelected ? 'bg-[#176B4D] text-white' : 'bg-gray-100 dark:bg-white/10 text-[#667085] dark:text-white/60'
-                          }`}>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold ${isSelected ? 'bg-[#176B4D] text-white' : 'bg-gray-100 dark:bg-white/10 text-[#667085] dark:text-white/60'
+                            }`}>
                             {subj.code}
                           </span>
                         </div>
@@ -730,7 +727,7 @@ export function ProfilePage({
             <div className="pt-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs text-[#667085] dark:text-white/60">
                 <ShieldCheck className="w-4 h-4 text-[#176B4D]" />
-                <span>All changes synchronized to your secure database profile</span>
+                <span>All changes synchronized</span>
               </div>
               <button
                 type="submit"
@@ -803,11 +800,10 @@ export function ProfilePage({
               <button
                 type="button"
                 onClick={() => toggleTheme(false)}
-                className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between space-y-3 ${
-                  !isDarkMode
+                className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between space-y-3 ${!isDarkMode
                     ? 'border-[#176B4D] bg-[#DDEFE5]/50 shadow-sm ring-2 ring-[#176B4D]/20'
                     : 'border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-white/5 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -829,11 +825,10 @@ export function ProfilePage({
               <button
                 type="button"
                 onClick={() => toggleTheme(true)}
-                className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between space-y-3 ${
-                  isDarkMode
+                className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between space-y-3 ${isDarkMode
                     ? 'border-[#176B4D] bg-[#176B4D]/30 shadow-sm ring-2 ring-[#176B4D]/20'
                     : 'border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-white/5 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -861,7 +856,7 @@ export function ProfilePage({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
               <div>
                 <p className="text-xs font-bold text-[#111827] dark:text-white">Export Academic Archive</p>
-                <p className="text-[11px] text-[#667085] dark:text-white/60">Download a JSON record of all course history and study logs.</p>
+                <p className="text-[11px] text-[#667085] dark:text-white/60">Download  course history and study logs.</p>
               </div>
               <button
                 type="button"
