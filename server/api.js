@@ -49,7 +49,8 @@ import {
   getOrCreateDailyStudyPlan,
   completeDailyStudyTask,
   updateDailyStudyTaskStatus,
-  getDailyCoachingPromptContext
+  getDailyCoachingPromptContext,
+  getDailyPersonalizedQuestions
 } from './study-coach-service.js';
 import {
   createStudentDocument,
@@ -62,6 +63,11 @@ import {
   formatDocumentKnowledgeContext,
   getDocumentLearningResources
 } from './document-learning-service.js';
+import {
+  getPersonalizedEducationalVideos,
+  trackVideoProgress,
+  formatVideoRecommendationsForAi
+} from './educational-video-service.js';
 import {
   sendEmail,
   sendStudentWelcomeEmail,
@@ -644,23 +650,27 @@ export async function handleApiRequest(req, res) {
           avatar_url = COALESCE($2, avatar_url),
           institution = COALESCE($3, institution),
           department = COALESCE($4, department),
-          academic_level = COALESCE($5, academic_level),
-          matric_number = COALESCE($6, matric_number),
-          bio = COALESCE($7, bio),
-          academic_interests = COALESCE($8, academic_interests),
-          study_preferences = COALESCE($9, study_preferences),
+          course_of_study = COALESCE($5, course_of_study),
+          academic_level = COALESCE($6, academic_level),
+          matric_number = COALESCE($7, matric_number),
+          bio = COALESCE($8, bio),
+          academic_interests = COALESCE($9, academic_interests),
+          study_preferences = COALESCE($10, study_preferences),
+          registered_subjects = COALESCE($11, registered_subjects),
           updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $10;
+        WHERE user_id = $12;
       `, [
-        updates.fullName,
-        updates.avatarUrl,
-        updates.institution,
-        updates.department,
-        updates.academicLevel,
-        updates.matricNumber,
-        updates.bio,
-        updates.academicInterests ? JSON.stringify(updates.academicInterests) : null,
-        updates.studyPreferences ? JSON.stringify(updates.studyPreferences) : null,
+        updates.fullName !== undefined ? updates.fullName : null,
+        updates.avatarUrl !== undefined ? updates.avatarUrl : null,
+        updates.institution !== undefined ? updates.institution : null,
+        updates.department !== undefined ? updates.department : null,
+        updates.courseOfStudy !== undefined ? updates.courseOfStudy : null,
+        updates.academicLevel !== undefined ? updates.academicLevel : null,
+        updates.matricNumber !== undefined ? updates.matricNumber : null,
+        updates.bio !== undefined ? updates.bio : null,
+        updates.academicInterests !== undefined ? JSON.stringify(updates.academicInterests) : null,
+        updates.studyPreferences !== undefined ? JSON.stringify(updates.studyPreferences) : null,
+        updates.registeredSubjects !== undefined ? JSON.stringify(updates.registeredSubjects) : null,
         authUser.userId
       ]);
 
@@ -1037,6 +1047,53 @@ export async function handleApiRequest(req, res) {
         const body = await parseJsonBody(req);
         const preferences = await updateStudentStudyPreferences(authUser.userId, body);
         return sendJson(res, 200, { success: true, preferences });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+
+    // GET /api/study/daily-questions — Fetch proactively surfaced questions based on actual profile & mastery
+    if (pathname === '/api/study/daily-questions' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const questionsData = await getDailyPersonalizedQuestions(authUser.userId, { limit: 5 });
+        return sendJson(res, 200, { success: true, ...questionsData });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // GET /api/study/videos — Fetch personalized educational video recommendations (Phase C)
+    if (pathname === '/api/study/videos' && method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const urlObj = new URL(req.url, 'http://localhost');
+        const limitParam = parseInt(urlObj.searchParams.get('limit') || '4', 10);
+        const limit = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 4;
+        const videoData = await getPersonalizedEducationalVideos(authUser.userId, { limit });
+        return sendJson(res, 200, { success: true, ...videoData });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // POST /api/study/videos/progress — Track student view/completion of a verified video
+    if (pathname === '/api/study/videos/progress' && method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+      try {
+        const body = await parseJsonBody(req);
+        if (!body || !body.videoId) {
+          return sendJson(res, 400, { error: 'videoId is required' });
+        }
+        const status = body.status === 'completed' ? 'completed' : 'viewed';
+        const progressResult = await trackVideoProgress(authUser.userId, body.videoId, status);
+        return sendJson(res, 200, progressResult);
       } catch (err) {
         return sendJson(res, 400, { error: err.message });
       }
@@ -1592,7 +1649,7 @@ export async function handleApiRequest(req, res) {
           msgHistory = [{ role: 'user', content: prompt.trim() }];
         }
 
-        // Phase 2, 3 & 4: Ground AI context with Academic Intelligence, Daily Plan, and Document Knowledge
+        // Phase 2, 3, 4 & Phase C: Ground AI context with Academic Intelligence, Daily Plan, Document Knowledge, and Verified Video Recommendations
         let academicContextBrief = null;
         try {
           const analysis = await generateStudentAcademicAnalysis(authUser.userId);
@@ -1603,7 +1660,14 @@ export async function handleApiRequest(req, res) {
           const relevantChunks = await retrieveRelevantDocumentChunks(authUser.userId, prompt.trim(), { limit: 3 });
           const documentBrief = formatDocumentKnowledgeContext(relevantChunks);
 
+          // Phase C: Retrieve grounded video recommendations
+          const videoData = await getPersonalizedEducationalVideos(authUser.userId, { limit: 4 }).catch(() => null);
+          const videoBrief = formatVideoRecommendationsForAi(videoData);
+
           academicContextBrief = `${baseBrief}\n\n${dailyCoachContext}`;
+          if (videoBrief) {
+            academicContextBrief += `\n\n${videoBrief}`;
+          }
           if (documentBrief) {
             academicContextBrief += `\n\n${documentBrief}`;
           }

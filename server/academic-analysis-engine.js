@@ -25,8 +25,19 @@ export async function generateStudentAcademicAnalysis(studentId) {
   if (!studentId) throw new Error('studentId is required');
 
   // 1. Fetch Student Profile Metadata
-  const profileRes = await db.query(`SELECT full_name, institution, department, academic_level FROM profiles WHERE user_id = $1;`, [studentId]);
+  const profileRes = await db.query(`SELECT full_name, institution, department, course_of_study, academic_level, registered_subjects FROM profiles WHERE user_id = $1;`, [studentId]);
   const profile = profileRes.rows[0] || {};
+
+  let registeredSubjects = [];
+  if (profile.registered_subjects) {
+    try {
+      registeredSubjects = typeof profile.registered_subjects === 'string'
+        ? JSON.parse(profile.registered_subjects)
+        : profile.registered_subjects;
+    } catch (e) {
+      registeredSubjects = [];
+    }
+  }
 
   // 2. Compute Subject Performance
   const subjectAnalysis = await analyzeSubjectPerformance(studentId);
@@ -56,8 +67,11 @@ export async function generateStudentAcademicAnalysis(studentId) {
   return {
     studentId,
     studentName: profile.full_name || 'Student',
-    department: profile.department || 'General Studies',
-    academicLevel: profile.academic_level || 'Year 1',
+    institution: profile.institution || null,
+    department: profile.department || null,
+    courseOfStudy: profile.course_of_study || null,
+    academicLevel: profile.academic_level || null,
+    registeredSubjects,
     evidenceConfidence,
     summary: {
       totalQuestionsAnswered: totalQuestions,
@@ -358,7 +372,31 @@ async function analyzeProgressTrends(studentId) {
  * Injects measured facts and explicit warnings not to hallucinate unassessed areas.
  */
 export function formatAcademicContextForAi(analysis) {
-  const { studentName, department, academicLevel, evidenceConfidence, summary, subjects, topicMastery, learningBehavior, trends } = analysis;
+  const {
+    studentName,
+    institution,
+    department,
+    courseOfStudy,
+    academicLevel,
+    registeredSubjects,
+    evidenceConfidence,
+    summary,
+    subjects,
+    topicMastery,
+    learningBehavior,
+    trends
+  } = analysis;
+
+  const academicProfileParts = [];
+  if (courseOfStudy) academicProfileParts.push(`Course of Study: ${courseOfStudy}`);
+  if (department) academicProfileParts.push(`Department: ${department}`);
+  if (institution) academicProfileParts.push(`Institution: ${institution}`);
+  if (academicLevel) academicProfileParts.push(`Academic Level: ${academicLevel}`);
+  const academicProfileStr = academicProfileParts.length > 0 ? academicProfileParts.join(' | ') : 'Academic Program: Incomplete Profile (No assumptions made)';
+
+  const registeredSubjStr = Array.isArray(registeredSubjects) && registeredSubjects.length > 0
+    ? registeredSubjects.join(', ')
+    : 'None explicitly registered.';
 
   const strengthsStr = topicMastery.strengths.length > 0
     ? topicMastery.strengths.map(s => `- ${s.topicName} (${s.subjectName}): ${s.accuracyPercentage}% accuracy over ${s.questionsAttempted} questions [${s.classification}]`).join('\n')
@@ -381,7 +419,8 @@ export function formatAcademicContextForAi(analysis) {
 
   return `### VERIFIED STUDENT ACADEMIC INTELLIGENCE CONTEXT (DO NOT OVERRIDE OR INVENT FACTS)
 Student Name: ${studentName}
-Academic Program: ${department} — ${academicLevel}
+${academicProfileStr}
+Registered Subjects: ${registeredSubjStr}
 Evidence Confidence Level: ${evidenceConfidence.toUpperCase()}
 
 #### MEASURED ACTIVITY METRICS:

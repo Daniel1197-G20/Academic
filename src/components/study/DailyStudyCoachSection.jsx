@@ -33,13 +33,16 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Modal, Input, Select, ProgressBar } from '../ui';
 import { api } from '../../services/api/client';
+import { EducationalVideoRecommendationsSection } from './EducationalVideoRecommendationsSection';
 
-export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, showToast }) {
+export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, onDiscussVideo, showToast }) {
   const [dailyPlan, setDailyPlan] = useState(null);
   const [preferences, setPreferences] = useState(null);
+  const [dailyQuestionsData, setDailyQuestionsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [isPrefsModalOpen, setIsPrefsModalOpen] = useState(false);
+  const [showQuestionsPreview, setShowQuestionsPreview] = useState(false);
 
   // Form states for preferences
   const [prefDailyMinutes, setPrefDailyMinutes] = useState(60);
@@ -51,9 +54,10 @@ export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, showTo
   const fetchDailyPlanAndPrefs = useCallback(async () => {
     setLoading(true);
     try {
-      const [planRes, prefRes] = await Promise.all([
+      const [planRes, prefRes, questionsRes] = await Promise.all([
         api.request('/api/study/daily-plan'),
-        api.request('/api/study/preferences')
+        api.request('/api/study/preferences'),
+        api.request('/api/study/daily-questions').catch(() => null)
       ]);
 
       if (planRes && planRes.plan) {
@@ -64,6 +68,9 @@ export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, showTo
         setPrefDailyMinutes(prefRes.preferences.dailyAvailableMinutes || 60);
         setPrefAcademicGoals(prefRes.preferences.academicGoals || '');
         setPrefTargetGpa(prefRes.preferences.targetGpa || '');
+      }
+      if (questionsRes && questionsRes.success) {
+        setDailyQuestionsData(questionsRes);
       }
     } catch (err) {
       console.warn('Failed to load daily plan or preferences:', err.message);
@@ -251,6 +258,76 @@ export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, showTo
         </div>
       </div>
 
+      {/* ── Daily Personalized Questions Card (Phase B) ── */}
+      {dailyQuestionsData && dailyQuestionsData.questions && dailyQuestionsData.questions.length > 0 && (
+        <div className="bg-gradient-to-r from-[#DDEFE5]/70 to-white dark:from-[#176B4D]/20 dark:to-[#161B22] border border-[#176B4D]/30 dark:border-[#176B4D]/40 rounded-card p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#176B4D] text-white flex items-center justify-center shrink-0 shadow-sm">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-ink dark:text-white">Daily Personalized Questions</h3>
+                  <Badge variant="academic">Profile Grounded</Badge>
+                </div>
+                <p className="text-xs text-muted dark:text-white/70 mt-0.5">
+                  {dailyQuestionsData.rationale}
+                </p>
+                {dailyQuestionsData.targetCourseOfStudy && (
+                  <p className="text-[11px] text-[#176B4D] dark:text-[#A7F3D0] font-medium mt-0.5">
+                    Course of Study: {dailyQuestionsData.targetCourseOfStudy}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowQuestionsPreview(prev => !prev)}
+                className="cursor-pointer text-xs"
+              >
+                {showQuestionsPreview ? 'Hide Details' : `Preview (${dailyQuestionsData.totalQuestions})`}
+              </Button>
+              <Button
+                variant="academic"
+                size="sm"
+                onClick={() => onOpenDrill?.({
+                  subjectId: dailyQuestionsData.questions[0]?.subjectId,
+                  topicId: dailyQuestionsData.questions[0]?.topicId
+                })}
+                icon={Play}
+                className="cursor-pointer bg-[#176B4D] hover:bg-[#12543C] text-white text-xs"
+              >
+                Launch Drill
+              </Button>
+            </div>
+          </div>
+
+          {/* Collapsible Questions Preview */}
+          {showQuestionsPreview && (
+            <div className="pt-3 border-t border-[#176B4D]/20 space-y-2">
+              {dailyQuestionsData.questions.map((q, idx) => (
+                <div key={q.id || idx} className="p-3 rounded-xl bg-white dark:bg-white/5 border border-border dark:border-gray-800 text-xs space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-ink dark:text-white flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-muted">
+                        Q{idx + 1}
+                      </span>
+                      {q.topicName || q.subjectName || 'Curriculum Practice'}
+                    </span>
+                    <span className="text-[10px] uppercase font-mono text-muted">{q.difficulty}</span>
+                  </div>
+                  <p className="text-ink dark:text-white/90 leading-relaxed font-sans">{q.question}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Today's Tasks List ── */}
       <div className="space-y-2.5">
         {tasks.length === 0 ? (
@@ -346,6 +423,12 @@ export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, showTo
           })
         )}
       </div>
+
+      {/* ── Educational Video Recommendations (Phase C) ── */}
+      <EducationalVideoRecommendationsSection
+        onDiscussVideoWithNexa={onDiscussVideo}
+        showToast={showToast}
+      />
 
       {/* ── Preferences Modal ── */}
       <Modal

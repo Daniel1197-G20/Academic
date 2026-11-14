@@ -50,23 +50,95 @@ export function ProfilePage({
   const [avatarUrl, setAvatarUrl] = useState(userProfile?.avatar_url || '');
   const [institution, setInstitution] = useState(userProfile?.institution || '');
   const [department, setDepartment] = useState(userProfile?.department || '');
-  const [academicLevel, setAcademicLevel] = useState(userProfile?.academic_level || 'Year 3 (Junior)');
+  const [courseOfStudy, setCourseOfStudy] = useState(
+    userProfile?.course_of_study ||
+    (userProfile?.study_preferences && typeof userProfile.study_preferences === 'object' && !Array.isArray(userProfile.study_preferences) ? userProfile.study_preferences.course_of_study : '') ||
+    ''
+  );
+  const [academicLevel, setAcademicLevel] = useState(userProfile?.academic_level || 'Year 1');
   const [matricNumber, setMatricNumber] = useState(userProfile?.matric_number || '');
   const [bio, setBio] = useState(userProfile?.bio || '');
+
+  // Registered Subjects Taxonomy Selection
+  const [availableSubjects, setAvailableSubjects] = useState([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState(() => {
+    if (Array.isArray(userProfile?.registered_subject_ids)) return userProfile.registered_subject_ids;
+    if (Array.isArray(userProfile?.registered_subjects)) return userProfile.registered_subjects;
+    if (typeof userProfile?.registered_subjects === 'string') {
+      try { return JSON.parse(userProfile.registered_subjects); } catch (e) { /* ignore */ }
+    }
+    if (userProfile?.study_preferences && typeof userProfile.study_preferences === 'object' && !Array.isArray(userProfile.study_preferences)) {
+      if (Array.isArray(userProfile.study_preferences.registered_subject_ids)) {
+        return userProfile.study_preferences.registered_subject_ids;
+      }
+    }
+    return [];
+  });
+
   const [interests, setInterests] = useState(
     Array.isArray(userProfile?.academic_interests)
       ? userProfile.academic_interests.join(', ')
       : typeof userProfile?.academic_interests === 'string'
         ? (JSON.parse(userProfile.academic_interests || '[]')).join(', ')
-        : 'Algorithms, Distributed Systems, Applied ML'
+        : ''
   );
-  const [preferences, setPreferences] = useState(
-    Array.isArray(userProfile?.study_preferences)
-      ? userProfile.study_preferences.join(', ')
-      : typeof userProfile?.study_preferences === 'string'
-        ? (JSON.parse(userProfile.study_preferences || '[]')).join(', ')
-        : 'Night Focus, Interactive Quizzes'
-  );
+  const [preferences, setPreferences] = useState(() => {
+    if (Array.isArray(userProfile?.study_preferences)) {
+      return userProfile.study_preferences.join(', ');
+    }
+    if (userProfile?.study_preferences && typeof userProfile.study_preferences === 'object') {
+      const styles = userProfile.study_preferences.study_styles;
+      if (Array.isArray(styles)) return styles.join(', ');
+    }
+    if (typeof userProfile?.study_preferences === 'string') {
+      try {
+        const parsed = JSON.parse(userProfile.study_preferences);
+        if (Array.isArray(parsed)) return parsed.join(', ');
+        if (parsed?.study_styles) return parsed.study_styles.join(', ');
+      } catch (e) { /* ignore */ }
+    }
+    return '';
+  });
+
+  // Fetch verified subjects taxonomy on mount
+  useEffect(() => {
+    let isSubscribed = true;
+    async function loadSubjects() {
+      setLoadingSubjects(true);
+      try {
+        // Query Supabase directly with fallback to academic curriculum API
+        const { data, error } = await supabase
+          .from('subjects')
+          .select('id, name, code, category, is_active')
+          .eq('is_active', true)
+          .order('name');
+
+        if (!error && data && data.length > 0) {
+          if (isSubscribed) setAvailableSubjects(data);
+        } else {
+          const res = await api.request('/api/academic/curriculum');
+          if (isSubscribed && res?.subjects) setAvailableSubjects(res.subjects);
+        }
+      } catch (err) {
+        console.warn('Notice loading verified academic subjects:', err);
+      } finally {
+        if (isSubscribed) setLoadingSubjects(false);
+      }
+    }
+    loadSubjects();
+    return () => { isSubscribed = false; };
+  }, []);
+
+  const handleToggleSubject = (subjId) => {
+    setSelectedSubjects(prev => {
+      if (prev.includes(subjId)) {
+        return prev.filter(id => id !== subjId);
+      } else {
+        return [...prev, subjId];
+      }
+    });
+  };
 
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -248,21 +320,95 @@ export function ProfilePage({
       const interestsArray = interests.split(',').map(s => s.trim()).filter(Boolean);
       const preferencesArray = preferences.split(',').map(s => s.trim()).filter(Boolean);
 
+      // Package structured preferences and registered subjects
+      const structuredStudyPreferences = {
+        study_styles: preferencesArray,
+        course_of_study: courseOfStudy.trim(),
+        registered_subject_ids: selectedSubjects
+      };
+
+      // 1. Authoritative persistence via Supabase client if available
+      let supabaseUpdatedProfile = null;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const authUid = session?.user?.id || userProfile?.id;
+        if (authUid) {
+          // Attempt update with dedicated columns first; fallback gracefully if custom column migration is pending
+          let updatePayload = {
+            full_name: fullName.trim(),
+            avatar_url: avatarUrl || null,
+            institution: institution.trim(),
+            department: department.trim(),
+            academic_level: academicLevel.trim(),
+            matric_number: matricNumber.trim() || null,
+            bio: bio.trim(),
+            academic_interests: interestsArray,
+            study_preferences: structuredStudyPreferences,
+            updated_at: new Date().toISOString()
+          };
+
+          const { data: directData, error: directErr } = await supabase
+            .from('profiles')
+            .update({
+              ...updatePayload,
+              course_of_study: courseOfStudy.trim(),
+              registered_subject_ids: selectedSubjects
+            })
+            .eq('id', authUid)
+            .select();
+
+          if (!directErr && directData && directData[0]) {
+            supabaseUpdatedProfile = directData[0];
+          } else {
+            // Fallback: update without unmigrated top-level columns (stored in structured study_preferences)
+            const { data: fbData, error: fbErr } = await supabase
+              .from('profiles')
+              .update(updatePayload)
+              .eq('id', authUid)
+              .select();
+            if (!fbErr && fbData && fbData[0]) {
+              supabaseUpdatedProfile = fbData[0];
+            }
+          }
+        }
+      } catch (sbErr) {
+        console.warn('Notice updating profile via Supabase:', sbErr);
+      }
+
+      // 2. Synchronize to backend API
       const res = await api.updateProfile({
-        fullName,
+        fullName: fullName.trim(),
         avatarUrl,
-        institution,
-        department,
-        academicLevel,
-        matricNumber,
-        bio,
+        institution: institution.trim(),
+        department: department.trim(),
+        courseOfStudy: courseOfStudy.trim(),
+        academicLevel: academicLevel.trim(),
+        matricNumber: matricNumber.trim() || null,
+        bio: bio.trim(),
         academicInterests: interestsArray,
-        studyPreferences: preferencesArray
+        studyPreferences: structuredStudyPreferences,
+        registeredSubjects: selectedSubjects
       });
 
+      const finalProfile = supabaseUpdatedProfile || res?.profile || {
+        ...userProfile,
+        full_name: fullName.trim(),
+        avatar_url: avatarUrl,
+        institution: institution.trim(),
+        department: department.trim(),
+        course_of_study: courseOfStudy.trim(),
+        academic_level: academicLevel.trim(),
+        matric_number: matricNumber.trim() || null,
+        bio: bio.trim(),
+        academic_interests: interestsArray,
+        study_preferences: structuredStudyPreferences,
+        registered_subject_ids: selectedSubjects,
+        registered_subjects: selectedSubjects
+      };
+
       showToast({ type: 'success', title: 'Profile Updated', message: 'Your student information has been saved.' });
-      if (onProfileUpdated) onProfileUpdated(res.profile);
-      syncEngine.broadcastUpdate(SYNC_EVENTS.PROFILE_UPDATED, res.profile);
+      if (onProfileUpdated) onProfileUpdated(finalProfile);
+      syncEngine.broadcastUpdate(SYNC_EVENTS.PROFILE_UPDATED, finalProfile);
     } catch (err) {
       showToast({ type: 'error', title: 'Update Failed', message: err.message });
     } finally {
@@ -378,7 +524,7 @@ export function ProfilePage({
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-[#667085] dark:text-white/70">
-                {institution || 'University Member'} • {department || 'Department Member'}
+                {institution || 'University Member'} • {department || 'Department Member'}{courseOfStudy ? ` • ${courseOfStudy}` : ''}
               </p>
               <p className="text-xs text-[#667085] dark:text-white/60">
                 ID / Matric: <strong className="text-[#111827] dark:text-white font-mono font-medium">{matricNumber || 'Not Specified'}</strong> • {academicLevel}
@@ -468,23 +614,89 @@ export function ProfilePage({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Input
                 label="Institution / University"
                 value={institution}
                 onChange={(e) => setInstitution(e.target.value)}
+                placeholder="e.g. University of Lagos"
               />
               <Input
-                label="Department / Major"
+                label="Department / Faculty"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
+                placeholder="e.g. Sciences"
+              />
+              <Input
+                label="Course of Study"
+                value={courseOfStudy}
+                onChange={(e) => setCourseOfStudy(e.target.value)}
+                placeholder="e.g. Computer Science"
               />
               <Input
                 label="Academic Level"
                 value={academicLevel}
                 onChange={(e) => setAcademicLevel(e.target.value)}
-                placeholder="e.g. Year 3 (Senior)"
+                placeholder="e.g. Year 2 / 200 Level"
               />
+            </div>
+
+            {/* Registered Subjects Selection (Verified Platform Taxonomy) */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] dark:text-white">
+                    Registered Subjects (Curriculum Taxonomy)
+                  </label>
+                  <p className="text-[11px] text-[#667085] dark:text-white/60">
+                    Select the active subjects you are taking this semester. NEXA uses this to ground your personalized questions and study coaching.
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono font-medium text-[#176B4D] dark:text-[#A7F3D0] bg-[#DDEFE5] dark:bg-[#176B4D]/30 px-2 py-0.5 rounded-md">
+                  {selectedSubjects.length} selected
+                </span>
+              </div>
+
+              {loadingSubjects ? (
+                <div className="py-4 flex items-center justify-center gap-2 text-xs text-[#667085] dark:text-white/60">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#176B4D]" />
+                  <span>Loading curriculum taxonomy…</span>
+                </div>
+              ) : availableSubjects.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1">
+                  {availableSubjects.map((subj) => {
+                    const isSelected = selectedSubjects.includes(subj.id);
+                    return (
+                      <button
+                        key={subj.id}
+                        type="button"
+                        onClick={() => handleToggleSubject(subj.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                          isSelected
+                            ? 'bg-[#DDEFE5] dark:bg-[#176B4D]/30 border-[#176B4D] shadow-sm text-[#176B4D] dark:text-[#A7F3D0]'
+                            : 'bg-white/70 dark:bg-white/5 border-gray-200 dark:border-gray-800 text-[#111827] dark:text-white hover:border-[#176B4D]/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold truncate">{subj.name}</span>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold ${
+                            isSelected ? 'bg-[#176B4D] text-white' : 'bg-gray-100 dark:bg-white/10 text-[#667085] dark:text-white/60'
+                          }`}>
+                            {subj.code}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-[#667085] dark:text-white/50 truncate">
+                          {subj.category || 'General'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Curriculum catalog is currently offline. You can still save other profile fields.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">

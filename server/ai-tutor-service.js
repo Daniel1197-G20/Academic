@@ -26,13 +26,14 @@ When a student asks about academic concepts, coursework, or needs help understan
 4. Provide concrete code snippets with comments for programming queries.
 5. End helpful subject answers with 1 or 2 thoughtful follow-up questions to test student comprehension.
 
-## MODE 2 — PERSONAL ACADEMIC INTELLIGENCE COACHING, DAILY STUDY COACH & DOCUMENT TUTORING
-When a student asks about their own academic performance, study plan, today's schedule, strengths, weaknesses, study habits, uploaded lecture notes, or document summaries:
+## MODE 2 — PERSONAL ACADEMIC INTELLIGENCE COACHING, DAILY STUDY COACH, DOCUMENT TUTORING & VIDEO RECOMMENDATIONS
+When a student asks about their own academic performance, study plan, today's schedule, strengths, weaknesses, study habits, uploaded lecture notes, document summaries, or educational video recommendations:
 
-**CHECK**: Look for sections starting with "### VERIFIED STUDENT ACADEMIC INTELLIGENCE CONTEXT", "### TODAY'S ACTIVE STUDY PLAN CONTEXT", or "### RETRIEVED STUDENT ACADEMIC DOCUMENT KNOWLEDGE" in your system prompt.
+**CHECK**: Look for sections starting with "### VERIFIED STUDENT ACADEMIC INTELLIGENCE CONTEXT", "### TODAY'S ACTIVE STUDY PLAN CONTEXT", "### VERIFIED EDUCATIONAL VIDEO RECOMMENDATIONS", or "### RETRIEVED STUDENT ACADEMIC DOCUMENT KNOWLEDGE" in your system prompt.
 
 If that section IS present:
-- Use ONLY the verified facts from those sections to answer questions about performance, study hours, strengths, weaknesses, topic mastery, daily study tasks, and uploaded document excerpts.
+- Use ONLY the verified facts from those sections to answer questions about performance, study hours, strengths, weaknesses, topic mastery, daily study tasks, video recommendations, and uploaded document excerpts.
+- If video recommendations are present (under ### VERIFIED EDUCATIONAL VIDEO RECOMMENDATIONS) — recommend ONLY the verified titles and URLs provided. Never invent or hallucinate YouTube channels, publishers, titles or video URLs. Connect each recommended video to their learning objectives and weak topics, and suggest supplementary practice questions from the Assessments tab.
 - If document excerpts are present (under ### RETRIEVED STUDENT ACADEMIC DOCUMENT KNOWLEDGE) — ground your answers in the exact citations, referencing document titles and page numbers accurately.
 - If asked "what should I study today?" — list today's recommended tasks from the TODAY'S ACTIVE STUDY PLAN CONTEXT, citing their priority, duration, and rationale.
 - If asked "why did you recommend this topic?" — reference the exact reason and measured accuracy from the student's records.
@@ -200,6 +201,39 @@ function generateFallbackAcademicAnswer(prompt, academicContext = null) {
       return `### 📖 Academic Document Assistant\n\nI searched your uploaded materials for: "${prompt.slice(0, 100)}", but did not find an exact matching section.\n\nHere is your verified academic intelligence overview instead:\n\n${academicContext}\n\nTo learn from specific course materials, upload your PDF notes in the **Course Materials & Notes** tab!`;
     }
     return `### 📖 Academic Document Assistant\n\nYou currently have no uploaded course notes or textbooks on file. Head over to the **Course Materials & Notes** tab to upload your lecture PDFs and study with AI grounded in your syllabus!`;
+  }
+
+  // If student asks about educational video recommendations, lectures, or video resources (Phase C)
+  if (
+    p.includes('video') ||
+    p.includes('youtube') ||
+    p.includes('watch') ||
+    p.includes('lecture') ||
+    p.includes('video tutorial') ||
+    p.includes('video recommendation')
+  ) {
+    if (academicContext && academicContext.includes('### VERIFIED EDUCATIONAL VIDEO RECOMMENDATIONS')) {
+      return `### 🎥 Your Verified Educational Video Recommendations\n\nNEXA has selected verified academic lectures and tutorials from recognized institutions and verified subject educators tailored directly to your academic profile and learning needs:\n\n${academicContext}\n\n---\n**Connecting to Your Learning Objectives:**\n- Watch the high-priority videos above to address your diagnosed weak areas or reinforce your registered coursework.\n- After viewing, reinforce the material by completing a 5-question diagnostic drill on these exact topics in the **Assessments** tab!`;
+    }
+    if (academicContext) {
+      return `### 🎥 Educational Video Recommendations\n\nHere is your verified academic intelligence overview:\n\n${academicContext}\n\nTo discover educational videos aligned with your curriculum, ensure your enrolled subjects are configured in your Profile!`;
+    }
+    return `### 🎥 Educational Video Recommendations\n\nYou currently have no academic profile or assessment records configured. Configure your registered subjects in your **Profile** to receive tailored, verified educational video recommendations!`;
+  }
+
+  // If student asks about daily questions, test practice, or practice drill recommendation
+  if (
+    p.includes('daily question') ||
+    p.includes('practice question') ||
+    p.includes('test prep') ||
+    p.includes('quiz me') ||
+    p.includes('questions for me') ||
+    p.includes('today\'s questions')
+  ) {
+    if (academicContext) {
+      return `### 🎯 Your Grounded Daily Personalized Questions\n\nNEXA has analyzed your academic profile, enrolled subjects, and recent practice attempts to select targeted practice questions:\n\n${academicContext}\n\n---\n**Immediate Step:** You can launch your dedicated daily drill directly from the **Study Planner** or **Assessments** tab to test your mastery and update your empirical learning records!`;
+    }
+    return `### 🎯 Daily Personalized Questions\n\nYou currently have no diagnostic assessment records. Head over to the **Assessments** tab or configure your registered subjects to surface questions tailored to your coursework!`;
   }
 
   // If student asks about their daily study plan, recommendations, or schedule

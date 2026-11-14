@@ -55,6 +55,12 @@ export function BottomNav({ activeTab, onSelectTab, userProfile, unreadMessages 
           isActive: (tab) => tab === 'dashboard' || tab === 'overview'
         },
         {
+          id: 'learning',
+          label: 'Learn',
+          icon: Sparkles,
+          isActive: (tab) => tab === 'learning' || tab === 'ai'
+        },
+        {
           id: 'study',
           label: 'Study',
           icon: BookOpen,
@@ -65,12 +71,6 @@ export function BottomNav({ activeTab, onSelectTab, userProfile, unreadMessages 
           label: 'Test',
           icon: CheckSquare,
           isActive: (tab) => tab === 'test-prep' || tab === 'prep'
-        },
-        {
-          id: 'tutors',
-          label: 'Tutors',
-          icon: Compass,
-          isActive: (tab) => tab === 'tutors' || tab === 'messages' || tab === 'community'
         },
         {
           id: 'profile',

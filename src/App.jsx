@@ -48,6 +48,7 @@ const BecomeTutorPage = React.lazy(() => import('./pages/tutor/BecomeTutorPage')
 const TutorDashboardPage = React.lazy(() => import('./pages/tutor/TutorDashboardPage').then(m => ({ default: m.TutorDashboardPage })));
 const TutorMarketplacePage = React.lazy(() => import('./pages/tutor/TutorMarketplacePage').then(m => ({ default: m.TutorMarketplacePage })));
 const AiTutorPage = React.lazy(() => import('./pages/study/AiTutorPage').then(m => ({ default: m.AiTutorPage })));
+const LearningWorkspacePage = React.lazy(() => import('./pages/study/LearningWorkspacePage').then(m => ({ default: m.LearningWorkspacePage })));
 const PracticeDrillRunner = React.lazy(() => import('./components/study/PracticeDrillRunner').then(m => ({ default: m.PracticeDrillRunner })));
 
 // Lazy-load heavy chat widget / GetStream SDK to load strictly after initial page render
@@ -87,6 +88,7 @@ const PROTECTED_ROUTES = new Set([
   'billing-callback',
   'billing/callback',
   'ai',
+  'learning',
   'become-tutor',
   'tutor-dashboard',
 ]);
@@ -108,6 +110,7 @@ export function normalizeRoute(path) {
   if (clean === 'tutors') return 'tutors';
   if (clean === 'profile') return 'profile';
   if (clean === 'ai') return 'ai';
+  if (clean === 'learning') return 'learning';
   if (clean === 'privacy') return 'privacy';
   if (clean === 'terms') return 'terms';
   if (clean === 'cookie-settings') return 'cookie-settings';
@@ -739,6 +742,7 @@ function AppContent() {
     messages: 'Messages & Peer Groups',
     community: 'Messages & Peer Groups',
     ai: 'AI Academic Assistant',
+    learning: 'NEXA Learning Workspace',
     profile: 'Student Profile & Settings',
     pricing: 'Plans & Feature Entitlements',
     'settings/subscription': 'Subscription & Entitlements',
@@ -867,6 +871,7 @@ function AppContent() {
                     streakData={streakData}
                     onRefreshData={fetchAllData}
                     onToggleTopic={handleToggleTopic}
+                    onNavigateTab={navigateRoute}
                     showToast={addToast}
                   />
                 )}
@@ -1238,7 +1243,16 @@ function AppContent() {
                   </div>
                 )}
 
-                {/* AI Academic Tutor */}
+                {/* Dedicated NEXA Learning Workspace (Phase D) */}
+                {activeTab === 'learning' && (
+                  <LearningWorkspacePage
+                    userProfile={userProfile}
+                    onNavigateTab={navigateRoute}
+                    showToast={addToast}
+                  />
+                )}
+
+                {/* AI Academic Tutor (Preserved for backwards compatibility & direct link access) */}
                 {activeTab === 'ai' && (
                   <AiTutorPage
                     onNavigate={navigateRoute}

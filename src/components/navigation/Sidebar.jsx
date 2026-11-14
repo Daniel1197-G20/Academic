@@ -38,6 +38,7 @@ export function Sidebar({
   // canonical route active so one destination never lights up multiple rows.
   const navItems = [
     { id: 'dashboard', label: 'Home', icon: LayoutDashboard, activeFor: ['dashboard', 'overview'] },
+    { id: 'learning', label: 'Learning', icon: Sparkles, activeFor: ['learning'] },
     { id: 'tutors', label: 'Find Tutor', icon: UserRoundSearch, activeFor: ['tutors'] },
     { id: 'study', label: 'Study', icon: BookOpen, activeFor: ['study'] },
     { id: 'cgpa', label: 'Courses', icon: GraduationCap, activeFor: ['cgpa'] },

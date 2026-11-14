@@ -106,14 +106,25 @@ export async function initializeDatabase() {
       avatar_url TEXT,
       institution TEXT,
       department TEXT,
+      course_of_study TEXT,
       academic_level TEXT,
       matric_number TEXT,
       bio TEXT,
       academic_interests TEXT,
       study_preferences TEXT,
+      registered_subjects TEXT DEFAULT '[]',
       is_public BOOLEAN NOT NULL DEFAULT true,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='course_of_study') THEN
+        ALTER TABLE profiles ADD COLUMN course_of_study TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='registered_subjects') THEN
+        ALTER TABLE profiles ADD COLUMN registered_subjects TEXT DEFAULT '[]';
+      END IF;
+    END $$;
 
     -- GRADING SCALES
     CREATE TABLE IF NOT EXISTS grading_scales (
@@ -677,6 +688,23 @@ export async function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_doc_resources_doc ON document_learning_resources(document_id, resource_type);
     CREATE INDEX IF NOT EXISTS idx_doc_resources_user ON document_learning_resources(user_id);
+
+    -- ─────────────────────────────────────────────────────────────
+    -- PHASE C: EDUCATIONAL VIDEO RECOMMENDATIONS & PROGRESS TRACKING
+    -- ─────────────────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS student_video_progress (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      video_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'viewed', -- 'viewed' | 'completed'
+      last_watched_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, video_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_student_video_progress_user ON student_video_progress(user_id, status);
   `);
 
   // Seed default grading scales
@@ -942,19 +970,21 @@ export async function initializeDatabase() {
     `, [userId, firebaseUid, 'alexander.vance@tech-academy.edu', hash, salt]);
 
     await db.query(`
-      INSERT INTO profiles (user_id, full_name, avatar_url, institution, department, academic_level, matric_number, bio, academic_interests, study_preferences, is_public)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true);
+      INSERT INTO profiles (user_id, full_name, avatar_url, institution, department, course_of_study, academic_level, matric_number, bio, academic_interests, study_preferences, registered_subjects, is_public)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true);
     `, [
       userId,
       'Alexander Vance',
       null,
       'Apex Institute of Technology',
       'Computer Science & Software Engineering',
+      'Computer Science',
       'Year 3 (Junior)',
       'AIT/2023/CS/084',
       'CS Junior pursuing first-class honors. Building high-performance software and hosting peer study sessions.',
       JSON.stringify(['Algorithms', 'Distributed Systems', 'Applied ML', 'Compilers']),
-      JSON.stringify(['Night Owl (20:00 - 02:00)', 'Visual Flowcharts', 'Interactive Quizzes'])
+      JSON.stringify(['Night Owl (20:00 - 02:00)', 'Visual Flowcharts', 'Interactive Quizzes']),
+      JSON.stringify(['subj_cs', 'subj_math'])
     ]);
 
     await db.query(`
@@ -1171,8 +1201,8 @@ export async function initializeDatabase() {
     `, [mayaId, mayaFbUid, 'maya.lin@tech-academy.edu', mHash, mSalt]);
 
     await db.query(`
-      INSERT INTO profiles (user_id, full_name, avatar_url, institution, department, academic_level, matric_number, bio, academic_interests, study_preferences, is_public)
-      VALUES ($1, $2, null, 'Apex Institute of Technology', 'Data Science & Applied Statistics', 'Year 3 (Junior)', 'AIT/2023/DS/042', 'Statistics and Machine Learning scholar.', '["Statistics", "Machine Learning"]', '["Morning Focused"]', true);
+      INSERT INTO profiles (user_id, full_name, avatar_url, institution, department, course_of_study, academic_level, matric_number, bio, academic_interests, study_preferences, registered_subjects, is_public)
+      VALUES ($1, $2, null, 'Apex Institute of Technology', 'Data Science & Applied Statistics', 'Data Science', 'Year 3 (Junior)', 'AIT/2023/DS/042', 'Statistics and Machine Learning scholar.', '["Statistics", "Machine Learning"]', '["Morning Focused"]', '["subj_math"]', true);
     `, [mayaId, 'Maya Lin']);
 
     await db.query(`

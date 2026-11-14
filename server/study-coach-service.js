@@ -301,8 +301,10 @@ export function prioritizeLearningTasks(analysis, prefs) {
     });
   }
 
-  // C. Student-selected Priorities
+  // C. Student Registered Subjects & Prioritized Topics
+  const registeredSubjects = Array.isArray(analysis.registeredSubjects) ? analysis.registeredSubjects : [];
   const priorityTopicIds = Array.isArray(prefs.prioritizedTopicIds) ? prefs.prioritizedTopicIds : [];
+
   for (const topicId of priorityTopicIds) {
     if (!candidates.some(c => c.topicId === topicId)) {
       candidates.push({
@@ -337,7 +339,28 @@ export function prioritizeLearningTasks(analysis, prefs) {
     }
   }
 
-  // E. Fallback: If no records, recommend foundation diagnostic drill
+  // E. Registered Subjects Diagnostic / Practice (Rooted in actual student profile)
+  if (registeredSubjects.length > 0) {
+    for (const regSubjId of registeredSubjects) {
+      const match = (analysis.subjects || []).find(s => s.subjectId === regSubjId);
+      const subjTitle = match ? match.subjectName : regSubjId;
+      if (!candidates.some(c => c.subjectId === regSubjId)) {
+        candidates.push({
+          subjectId: regSubjId,
+          topicId: null,
+          title: `Coursework Practice: ${subjTitle}`,
+          learningObjective: `Daily practice questions in your registered course: ${subjTitle}.`,
+          activityType: 'practice_drill',
+          estimatedDurationMinutes: 20,
+          priority: 'medium',
+          recommendationReason: `Proactively surfaced based on your registered subject enrollment in ${subjTitle}.`,
+          actionRoute: `/study/drill?subjectId=${regSubjId}`
+        });
+      }
+    }
+  }
+
+  // F. Fallback: If no records and no registered subjects, recommend foundation diagnostic drill
   if (candidates.length === 0) {
     const subjects = analysis.subjects || [];
     const firstSubj = subjects[0];
@@ -621,10 +644,146 @@ ${taskList}
 
 function parseJsonSafe(val, fallback) {
   if (!val) return fallback;
-  if (Array.isArray(val) || typeof val === 'object') return val;
-  try {
-    return JSON.parse(val);
-  } catch (e) {
-    return fallback;
+  if (typeof val === 'object') return val;
+  try { return JSON.parse(val); } catch (e) { return fallback; }
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────
+ * 7. DAILY PERSONALIZED QUESTIONS ENGINE (PHASE B)
+ * ─────────────────────────────────────────────────────────────
+ * Surfaces targeted, proactive questions using the student's
+ * actual academic profile, registered subjects, and mastery ledger.
+ *
+ * Prioritization:
+ *  1. Empirical Weaknesses (<60% accuracy, >=5 attempts)
+ *  2. Developing Topics (1-4 attempts)
+ *  3. Student Registered Subjects & Course of Study
+ *  4. Spaced Retrieval for Mastered Topics
+ *  5. General Taxonomy Diagnostic Fallback
+ */
+export async function getDailyPersonalizedQuestions(userId, { limit = 5 } = {}) {
+  if (!userId) throw new Error('userId is required');
+
+  const [analysis, prefs] = await Promise.all([
+    generateStudentAcademicAnalysis(userId),
+    getStudentStudyPreferences(userId)
+  ]);
+
+  const registeredSubjects = Array.isArray(analysis.registeredSubjects) ? analysis.registeredSubjects : [];
+  const weaknesses = analysis.topicMastery?.weaknesses || [];
+  const developing = analysis.topicMastery?.developing || [];
+
+  // Determine priority topic IDs and subject IDs
+  const targetTopicIds = [];
+  const targetSubjectIds = [];
+
+  // 1. Weakness topics take priority
+  for (const w of weaknesses) {
+    if (w.topicId && !targetTopicIds.includes(w.topicId)) {
+      targetTopicIds.push(w.topicId);
+    }
   }
+
+  // 2. Developing topics
+  for (const d of developing) {
+    if (d.topicId && !targetTopicIds.includes(d.topicId)) {
+      targetTopicIds.push(d.topicId);
+    }
+  }
+
+  // 3. Registered subjects
+  for (const sId of registeredSubjects) {
+    if (!targetSubjectIds.includes(sId)) {
+      targetSubjectIds.push(sId);
+    }
+  }
+
+  // Query question bank matching student's actual learning history
+  let questions = [];
+  let recommendationRationale = '';
+
+  if (targetTopicIds.length > 0) {
+    const placeholders = targetTopicIds.map((_, i) => `$${i + 1}`).join(',');
+    const qRes = await db.query(`
+      SELECT q.id, q.subject_id, q.topic_id, q.question, q.question_type, q.difficulty, q.options,
+             s.name as subject_name, s.code as subject_code, top.name as topic_name
+      FROM question_bank q
+      LEFT JOIN subjects s ON q.subject_id = s.id
+      LEFT JOIN topics top ON q.topic_id = top.id
+      WHERE q.status = 'active' AND q.topic_id IN (${placeholders})
+      ORDER BY RANDOM() LIMIT $${targetTopicIds.length + 1};
+    `, [...targetTopicIds, limit]);
+
+    if (qRes.rows.length > 0) {
+      questions = qRes.rows;
+      recommendationRationale = `Targeted questions focused on your ${weaknesses.length > 0 ? 'identified weakness and developing' : 'developing'} topics.`;
+    }
+  }
+
+  // If not enough questions from topics, supplement with registered subjects
+  if (questions.length < limit && targetSubjectIds.length > 0) {
+    const existingIds = questions.map(q => q.id);
+    const needed = limit - questions.length;
+    const placeholders = targetSubjectIds.map((_, i) => `$${i + 1}`).join(',');
+    const qRes = await db.query(`
+      SELECT q.id, q.subject_id, q.topic_id, q.question, q.question_type, q.difficulty, q.options,
+             s.name as subject_name, s.code as subject_code, top.name as topic_name
+      FROM question_bank q
+      LEFT JOIN subjects s ON q.subject_id = s.id
+      LEFT JOIN topics top ON q.topic_id = top.id
+      WHERE q.status = 'active' AND q.subject_id IN (${placeholders})
+      ${existingIds.length > 0 ? `AND q.id NOT IN (${existingIds.map((_, idx) => `$${targetSubjectIds.length + 1 + idx}`).join(',')})` : ''}
+      ORDER BY RANDOM() LIMIT $${targetSubjectIds.length + 1 + existingIds.length};
+    `, [...targetSubjectIds, ...existingIds, needed]);
+
+    questions = [...questions, ...qRes.rows];
+    if (!recommendationRationale) {
+      recommendationRationale = `Calibrated practice based on your registered subjects (${targetSubjectIds.join(', ')}).`;
+    }
+  }
+
+  // Fallback if no questions found yet: query available active questions
+  if (questions.length === 0) {
+    const qRes = await db.query(`
+      SELECT q.id, q.subject_id, q.topic_id, q.question, q.question_type, q.difficulty, q.options,
+             s.name as subject_name, s.code as subject_code, top.name as topic_name
+      FROM question_bank q
+      LEFT JOIN subjects s ON q.subject_id = s.id
+      LEFT JOIN topics top ON q.topic_id = top.id
+      WHERE q.status = 'active'
+      ORDER BY RANDOM() LIMIT $1;
+    `, [limit]);
+    questions = qRes.rows;
+    recommendationRationale = `Curriculum diagnostic questions to establish your baseline performance.`;
+  }
+
+  // Format questions safely for student practice (never leak correct_answer or explanation)
+  const safeQuestions = questions.map(q => {
+    let opts = q.options;
+    if (typeof opts === 'string') {
+      try { opts = JSON.parse(opts); } catch (e) { opts = []; }
+    }
+    return {
+      id: q.id,
+      subjectId: q.subject_id,
+      subjectName: q.subject_name || null,
+      subjectCode: q.subject_code || null,
+      topicId: q.topic_id,
+      topicName: q.topic_name || null,
+      question: q.question,
+      questionType: q.question_type,
+      difficulty: q.difficulty,
+      options: opts
+    };
+  });
+
+  return {
+    studentId: userId,
+    date: new Date().toISOString().split('T')[0],
+    rationale: recommendationRationale,
+    targetCourseOfStudy: analysis.courseOfStudy || null,
+    totalQuestions: safeQuestions.length,
+    questions: safeQuestions
+  };
 }

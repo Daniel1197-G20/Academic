@@ -714,9 +714,11 @@ export async function getStudentAcademicProfile(studentId) {
     studentId,
     profile: {
       fullName: profile.full_name || 'Student',
-      institution: profile.institution,
-      department: profile.department,
-      academicLevel: profile.academic_level
+      institution: profile.institution || null,
+      department: profile.department || null,
+      courseOfStudy: profile.course_of_study || null,
+      academicLevel: profile.academic_level || null,
+      registeredSubjects: profile.registered_subjects ? (typeof profile.registered_subjects === 'string' ? JSON.parse(profile.registered_subjects) : profile.registered_subjects) : []
     },
     activityMetrics: {
       totalCompletedSessions: Number(sessionStats.rows[0].total_sessions || 0),

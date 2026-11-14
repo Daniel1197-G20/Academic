@@ -35,6 +35,7 @@ export function StudyPlannerPage({
   streakData = { streak: 0, totalHours: 0 },
   onRefreshData,
   onToggleTopic,
+  onNavigateTab,
   showToast
 }) {
   // Calendar month state
@@ -297,6 +298,14 @@ export function StudyPlannerPage({
             type: 'info',
             title: 'Study Session Started',
             message: `Active timer initiated for: ${task.title}`
+          });
+        }}
+        onDiscussVideo={(video) => {
+          onNavigateTab?.('ai');
+          showToast?.({
+            type: 'info',
+            title: 'NEXA AI Academic Tutor',
+            message: `Ask NEXA: "Can you explain key concepts in ${video.title}?"`
           });
         }}
         showToast={showToast}
