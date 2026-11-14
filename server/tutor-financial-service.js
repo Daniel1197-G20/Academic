@@ -185,6 +185,39 @@ function mockTutorPaystackResponse(endpoint, method, data) {
   return Promise.resolve({ status: true, message: 'Mock tutor financial response', data: {} });
 }
 
+export function buildTutorSessionPaystackPayload(booking, {
+  studentEmail, tutorId, subject, mode
+}) {
+  return {
+    amount: booking.gross_amount_kobo,
+    email: studentEmail,
+    reference: booking.payment_reference,
+    currency: 'NGN',
+    metadata: {
+      booking_id: booking.booking_id,
+      tutor_id: tutorId,
+      subject,
+      session_mode: mode,
+      type: 'tutor_session'
+    },
+    callback_url: process.env.PAYSTACK_TUTOR_CALLBACK_URL || `${process.env.VITE_APP_URL || ''}/tutors/payment/callback`
+  };
+}
+
+export function buildTutorSessionBookingClientResponse(booking, paystackData) {
+  return {
+    bookingId: booking.booking_id,
+    paymentReference: booking.payment_reference,
+    authorizationUrl: paystackData.data?.authorization_url,
+    accessCode: paystackData.data?.access_code,
+    tutorName: booking.tutor_name,
+    subject: booking.subject,
+    mode: booking.mode,
+    grossAmountKobo: booking.gross_amount_kobo,
+    currency: 'NGN'
+  };
+}
+
 // ── 1. Initialize Booking Payment ─────────────────────────────────────────────
 
 /**
@@ -229,35 +262,12 @@ export async function initializeBookingPayment(supabaseJwt, {
   }
 
   // Initialize Paystack transaction with the server-determined amount
-  const paystackData = await paystackRequest('/transaction/initialize', 'POST', {
-    amount:    booking.gross_amount_kobo, // kobo — already server-determined
-    email:     studentEmail,
-    reference: booking.payment_reference,
-    currency:  'NGN',
-    metadata: {
-      booking_id:   booking.booking_id,
-      tutor_id:     tutorId,
-      subject:      subject,
-      session_mode: mode,
-      type:         'tutor_session'
-    },
-    callback_url: process.env.PAYSTACK_TUTOR_CALLBACK_URL || `${process.env.VITE_APP_URL || ''}/tutors/payment/callback`
+  const paystackPayload = buildTutorSessionPaystackPayload(booking, {
+    studentEmail, tutorId, subject, mode
   });
+  const paystackData = await paystackRequest('/transaction/initialize', 'POST', paystackPayload);
 
-  return {
-    bookingId:            booking.booking_id,
-    paymentReference:     booking.payment_reference,
-    authorizationUrl:     paystackData.data?.authorization_url,
-    accessCode:           paystackData.data?.access_code,
-    tutorName:            booking.tutor_name,
-    subject:              booking.subject,
-    mode:                 booking.mode,
-    grossAmountKobo:      booking.gross_amount_kobo,
-    commissionPercentage: booking.platform_commission_percentage,
-    commissionKobo:       booking.platform_commission_amount_kobo,
-    tutorAmountKobo:      booking.tutor_amount_kobo,
-    currency:             'NGN'
-  };
+  return buildTutorSessionBookingClientResponse(booking, paystackData);
 }
 
 // ── 2. Verify and Confirm Session Payment ─────────────────────────────────────

@@ -37,7 +37,7 @@ function createDB(dbPath) {
   }
 }
 
-export const db = createDB(DB_PATH);
+export let db = createDB(DB_PATH);
 
 // Helper for hashing passwords securely
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -52,6 +52,20 @@ export function verifyPassword(password, hash, salt) {
 
 // Initialize tables and default seed data
 export async function initializeDatabase() {
+  try {
+    await db.waitReady;
+  } catch (error) {
+    if (!DB_PATH || process.env.NODE_ENV === 'production') {
+      throw new Error(`Persistent PGlite database failed to start: ${error.message}`);
+    }
+
+    // Keep the existing on-disk database untouched: it may contain recoverable
+    // records. Allow local development to run against a fresh in-memory DB.
+    console.error('[DB] Persistent PGlite startup failed; preserving data/academic-platform.db and using an in-memory database for this session:', error.message);
+    db = new PGlite();
+    await db.waitReady;
+  }
+
   await db.exec(`
     -- USERS (PostgreSQL Identity Model with Firebase UID Mapping)
     CREATE TABLE IF NOT EXISTS users (
@@ -617,6 +631,7 @@ export async function initializeDatabase() {
       file_size_bytes INT NOT NULL,
       mime_type TEXT NOT NULL,
       storage_path TEXT NOT NULL,
+      source_text TEXT,
       processing_status TEXT NOT NULL DEFAULT 'uploaded',
       page_count INT NOT NULL DEFAULT 0,
       extracted_summary TEXT,
@@ -625,6 +640,8 @@ export async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE student_documents ADD COLUMN IF NOT EXISTS source_text TEXT;
 
     CREATE INDEX IF NOT EXISTS idx_student_documents_user ON student_documents(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_student_documents_subject ON student_documents(user_id, subject_id);

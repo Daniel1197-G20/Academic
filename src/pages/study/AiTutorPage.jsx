@@ -56,14 +56,33 @@ export function AiTutorPage({ onNavigate, showToast }) {
   const [copiedMsgId, setCopiedMsgId] = useState(null);
   const [usageInfo, setUsageInfo] = useState(null);
 
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const isAutoScrollEnabledRef = useRef(true);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Scroll only the messages container, never the window or outer page
+  const scrollToBottom = (behavior = 'smooth') => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+  };
+
+  // Detect if user has scrolled up to read older messages
+  const handleScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    // If within 80px of bottom, consider user pinned to bottom
+    const isNearBottom = scrollHeight - scrollTop - clientHeight <= 80;
+    isAutoScrollEnabledRef.current = isNearBottom;
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0 && isAutoScrollEnabledRef.current) {
+      scrollToBottom('smooth');
+    }
   }, [messages, loading]);
 
   // Fetch conversation list
@@ -263,7 +282,7 @@ export function AiTutorPage({ onNavigate, showToast }) {
           </div>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <Badge variant="academic">AI Academic Tutor</Badge>
+              <Badge variant="academic">NEXA by Studora</Badge>
               {usageInfo && (
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-canvas border border-border text-muted">
                   Usage: {usageInfo.usageCount} / {usageInfo.limit === -1 ? '∞' : usageInfo.limit} queries
@@ -271,10 +290,10 @@ export function AiTutorPage({ onNavigate, showToast }) {
               )}
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
-              Ask AI Academic Tutor
+              Ask NEXA
             </h1>
             <p className="text-xs sm:text-sm text-muted mt-0.5">
-              Powered by xAI Grok — ask coursework questions, solve math derivations, and explore empirical performance insights.
+              Your Personal Academic Intelligence. Learn smarter. Understand deeper. Achieve further.
             </p>
           </div>
         </div>
@@ -300,7 +319,7 @@ export function AiTutorPage({ onNavigate, showToast }) {
           }`}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          AI Tutor Chat
+          Ask NEXA
         </button>
         <button
           type="button"
@@ -341,10 +360,10 @@ export function AiTutorPage({ onNavigate, showToast }) {
         />
       ) : (
         /* ── Chat Container Grid ── */
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 min-h-[550px]">
+        <div className="flex flex-col md:flex-row gap-6 min-h-[500px]">
         {/* Left Sidebar: Conversations List */}
-        <div className="md:col-span-1 bg-white border border-border rounded-card p-4 shadow-tactile-surface flex flex-col justify-between space-y-4">
-          <div>
+        <div className="md:w-64 lg:w-72 shrink-0 bg-white dark:bg-navy-900 border border-border dark:border-navy-800 rounded-card p-4 shadow-tactile-surface flex flex-col gap-4 min-h-0">
+          <div className="flex flex-col min-h-0 flex-1">
             <div className="flex items-center justify-between mb-3 px-1">
               <span className="text-xs font-bold text-ink flex items-center gap-1.5">
                 <MessageSquare className="w-3.5 h-3.5 text-academic" />
@@ -360,7 +379,7 @@ export function AiTutorPage({ onNavigate, showToast }) {
               </button>
             </div>
 
-            <div className="space-y-1.5 max-h-[420px] overflow-y-auto scrollbar-thin pr-1">
+            <div className="space-y-1.5 max-h-[360px] md:max-h-[480px] overflow-y-auto scrollbar-thin pr-1 flex-1">
               {conversations.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted">
                   No saved chats yet. Start a new conversation!
@@ -398,16 +417,20 @@ export function AiTutorPage({ onNavigate, showToast }) {
         </div>
 
         {/* Right Chat Panel */}
-        <div className="md:col-span-3 bg-white border border-border rounded-card flex flex-col justify-between shadow-tactile-raised overflow-hidden">
+        <div className="flex-1 bg-white dark:bg-navy-900 border border-border dark:border-navy-800 rounded-card flex flex-col justify-between shadow-tactile-raised overflow-hidden min-h-[480px]">
           {/* Messages Area */}
-          <div className="flex-1 p-5 overflow-y-auto max-h-[480px] space-y-4">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 p-5 overflow-y-auto space-y-4 overscroll-contain"
+          >
             {messages.length === 0 && !loading ? (
               <div className="py-12 text-center space-y-6 max-w-lg mx-auto">
                 <div className="w-14 h-14 rounded-2xl bg-academic-50 border border-academic-200 flex items-center justify-center text-academic mx-auto shadow-tactile-surface">
                   <Sparkles className="w-7 h-7" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-ink">What academic concept can I help with today?</h3>
+                  <h3 className="text-base font-bold text-ink">What would you like to learn today?</h3>
                   <p className="text-xs text-muted mt-1 leading-relaxed">
                     Ask any question across Computer Science, Mathematics, Physics, Chemistry, Engineering, Medicine, or Business.
                   </p>
@@ -483,7 +506,7 @@ export function AiTutorPage({ onNavigate, showToast }) {
                 </div>
                 <div className="bg-canvas border border-border rounded-card p-3.5 text-xs text-muted flex items-center gap-2 shadow-tactile-surface">
                   <Loader2 className="w-4 h-4 animate-spin text-academic" />
-                  <span>AI Academic Tutor is thinking…</span>
+                  <span>NEXA is thinking…</span>
                 </div>
               </div>
             )}
@@ -494,12 +517,10 @@ export function AiTutorPage({ onNavigate, showToast }) {
                 <span>{error}</span>
               </div>
             )}
-
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Input Box Area */}
-          <div className="p-4 border-t border-border bg-white">
+          <div className="p-4 border-t border-border dark:border-navy-800 bg-white dark:bg-navy-900 shrink-0">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -513,7 +534,7 @@ export function AiTutorPage({ onNavigate, showToast }) {
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 disabled={loading}
-                className="flex-1 text-xs p-3 bg-canvas border border-border rounded-card text-ink placeholder:text-muted focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic/30 shadow-tactile-surface"
+                className="flex-1 text-xs p-3 bg-canvas dark:bg-navy-950 border border-border dark:border-navy-800 rounded-card text-ink dark:text-white placeholder:text-muted focus:outline-none focus:border-academic focus:ring-1 focus:ring-academic/30 shadow-tactile-surface"
               />
               <Button
                 variant="academic"

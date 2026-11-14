@@ -164,7 +164,7 @@ export function TutorDashboardPage({ userProfile, onNavigate, showToast }) {
       // 3. Fetch real bookings belonging to this tutor
       const { data: bookingRows, error: bErr } = await supabase
         .from('tutor_bookings')
-        .select('*')
+        .select('id, student_id, tutor_id, subject, slot_time, status, notes, created_at, updated_at, mode, session_price_kobo, currency, payment_reference, payment_status')
         .eq('tutor_id', tutorId)
         .order('created_at', { ascending: false });
 

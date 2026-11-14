@@ -4,7 +4,7 @@
  * Server-side AI Academic Tutor Service supporting xAI Grok API.
  *
  * Responsibilities:
- *  1. Call xAI Grok API (https://api.x.ai/v1/chat/completions) with System Instructions
+ *  1. Call xAI Responses API (https://api.x.ai/v1/responses) with System Instructions
  *  2. Support multi-turn conversation context
  *  3. Fallback gracefully to smart academic response generator if GROK_API_KEY is not configured
  *  4. Keep API keys 100% server-side
@@ -13,10 +13,10 @@
 import https from 'https';
 
 const GROK_API_KEY = process.env.GROK_API_KEY || process.env.XAI_API_KEY || null;
-const GROK_API_URL = process.env.GROK_API_URL || 'https://api.x.ai/v1/chat/completions';
-const GROK_MODEL   = process.env.GROK_MODEL   || 'grok-2-latest';
+const GROK_API_URL = process.env.GROK_API_URL || 'https://api.x.ai/v1/responses';
+const GROK_MODEL   = process.env.GROK_MODEL   || 'grok-4.7';
 
-const SYSTEM_INSTRUCTION = `You are Studora AI Academic Coach, an expert, patient, and pedagogically sound academic assistant for university and college students. You have two modes of operation:
+const SYSTEM_INSTRUCTION = `You are NEXA by Studora, a personal academic intelligence and learning companion for university and college students. You are patient, rigorous, conversational, and honest about uncertainty. You have two modes of operation:
 
 ## MODE 1 — SUBJECT TUTORING
 When a student asks about academic concepts, coursework, or needs help understanding subject matter:
@@ -112,16 +112,16 @@ export async function generateAiTutorResponse(messages = [], academicContextBrie
 }
 
 /**
- * Calls xAI Grok Chat Completions Endpoint via Node https module.
+ * Calls the xAI Responses API via Node https module.
  */
 function callGrokApi(messages) {
   return new Promise((resolve, reject) => {
     const url = new URL(GROK_API_URL);
     const bodyStr = JSON.stringify({
       model: GROK_MODEL,
-      messages,
+      input: messages,
       temperature: 0.5,
-      max_tokens: 2048,
+      max_output_tokens: 2048,
     });
 
     const options = {
@@ -144,7 +144,12 @@ function callGrokApi(messages) {
         try {
           const parsed = JSON.parse(raw);
           if (res.statusCode >= 200 && res.statusCode < 300) {
-            const content = parsed.choices?.[0]?.message?.content;
+            const content = parsed.output_text || parsed.output
+              ?.filter((item) => item.type === 'message')
+              .flatMap((item) => item.content || [])
+              .filter((item) => item.type === 'output_text' || item.type === 'text')
+              .map((item) => item.text || '')
+              .join('');
             if (content) {
               resolve({ content });
             } else {

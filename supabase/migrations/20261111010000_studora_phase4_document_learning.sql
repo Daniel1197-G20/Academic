@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.student_documents (
   file_size_bytes INT NOT NULL,
   mime_type TEXT NOT NULL,
   storage_path TEXT NOT NULL,
+  source_text TEXT,
   processing_status TEXT NOT NULL DEFAULT 'uploaded', -- uploaded, processing, ready, failed, unsupported
   page_count INT NOT NULL DEFAULT 0,
   extracted_summary TEXT,
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.student_documents (
 
 CREATE INDEX IF NOT EXISTS idx_student_documents_user ON public.student_documents(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_student_documents_subject ON public.student_documents(user_id, subject_id);
+ALTER TABLE public.student_documents ADD COLUMN IF NOT EXISTS source_text TEXT;
 
 -- 2. Document Content Chunks (for contextual knowledge retrieval)
 CREATE TABLE IF NOT EXISTS public.document_chunks (

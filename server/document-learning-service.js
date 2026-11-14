@@ -5,13 +5,9 @@
  * Document-Based Learning, Knowledge Extraction & Personal AI Tutoring.
  *
  * Responsibilities:
- *  1. Document Upload, Validation & Persistence:
- *     - Strict MIME validation (application/pdf, text/plain, text/markdown)
- *     - Maximum file size protection (10MB)
- *     - Prevents duplicate uploads / overwrites safely
+ *  1. Text/Markdown intake and owner-scoped persistence (10MB maximum)
  *  2. Text Extraction & Processing Pipeline:
- *     - Readable text extraction preserving page boundaries
- *     - Scanned / unreadable PDF detection (fails gracefully with unsupported_scanned state)
+ *     - Text extraction preserving explicit or estimated page boundaries
  *     - Meaningful chunking with source tracking (page number, chunk index, section heading)
  *     - PostgreSQL Full-Text Search vector indexing
  *  3. Document Knowledge Retrieval (RAG):
@@ -22,16 +18,13 @@
  *     - Flashcards (Question & Answer pairs directly derived from document chunks)
  *     - Practice Questions (Multiple-choice and conceptual questions grounded in text)
  *     - Study Guides (Structured revision roadmap)
- *  5. Connection to Academic Intelligence:
- *     - Links extracted topics to Studora subject curriculum where matches exist
+ *  5. Extract topics and materials deterministically from source text
  */
 
 import { db } from './db.js';
-import fs from 'fs';
-import path from 'path';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-const ALLOWED_MIME_TYPES = ['application/pdf', 'text/plain', 'text/markdown'];
+const ALLOWED_MIME_TYPES = ['text/plain', 'text/markdown'];
 
 /**
  * ─────────────────────────────────────────────────────────────
@@ -44,24 +37,33 @@ export async function createStudentDocument(userId, {
   fileName,
   fileSizeBytes,
   mimeType,
-  storagePath,
+  rawTextContent,
   subjectId = null
 }) {
   if (!userId) throw new Error('userId is required');
   if (!title || !fileName) throw new Error('Document title and fileName are required');
 
-  if (fileSizeBytes > MAX_FILE_SIZE_BYTES) {
-    const err = new Error(`File exceeds maximum allowed size of 10MB (${(fileSizeBytes / 1024 / 1024).toFixed(1)}MB)`);
+  const normalizedName = String(fileName || '').trim().toLowerCase();
+  const normalizedMime = String(mimeType || '').toLowerCase().trim();
+  if (!['.txt', '.md', '.markdown'].some(ext => normalizedName.endsWith(ext)) || !ALLOWED_MIME_TYPES.includes(normalizedMime)) {
+    const err = new Error('Unsupported document format. Text and Markdown files are supported; PDF and DOCX processing is not configured on this server.');
+    err.statusCode = 415;
+    throw err;
+  }
+  if (typeof rawTextContent !== 'string' || !rawTextContent.trim() || rawTextContent.includes('\u0000')) {
+    const err = new Error('The uploaded file is empty or is not valid text.');
+    err.statusCode = 400;
+    throw err;
+  }
+  const actualSize = Buffer.byteLength(rawTextContent, 'utf8');
+  if (actualSize > MAX_FILE_SIZE_BYTES) {
+    const err = new Error(`File exceeds maximum allowed size of 10MB (${(actualSize / 1024 / 1024).toFixed(1)}MB)`);
     err.statusCode = 413;
     throw err;
   }
 
-  const normalizedMime = (mimeType || '').toLowerCase().trim();
-  if (!ALLOWED_MIME_TYPES.includes(normalizedMime) && !fileName.endsWith('.pdf') && !fileName.endsWith('.txt') && !fileName.endsWith('.md')) {
-    const err = new Error(`Unsupported file type: ${mimeType}. Studora currently supports PDF, TXT, and Markdown documents.`);
-    err.statusCode = 415;
-    throw err;
-  }
+  const duplicate = await db.query(`SELECT id FROM student_documents WHERE user_id = $1 AND file_name = $2 AND source_text = $3 LIMIT 1;`, [userId, fileName.trim(), rawTextContent]);
+  if (duplicate.rows.length) return getStudentDocumentById(userId, duplicate.rows[0].id);
 
   const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
   const now = new Date().toISOString();
@@ -78,11 +80,13 @@ export async function createStudentDocument(userId, {
     subjectId || null,
     title.trim(),
     fileName.trim(),
-    fileSizeBytes,
+    actualSize,
     normalizedMime || 'application/pdf',
-    storagePath,
+    `database:${docId}`,
     now
   ]);
+
+  await db.query(`UPDATE student_documents SET source_text = $1 WHERE id = $2 AND user_id = $3;`, [rawTextContent, docId, userId]);
 
   return getStudentDocumentById(userId, docId);
 }
@@ -148,6 +152,14 @@ export async function deleteStudentDocument(userId, docId) {
   return { success: true, documentId: docId };
 }
 
+export async function renameStudentDocument(userId, docId, title) {
+  const cleanTitle = typeof title === 'string' ? title.trim().slice(0, 160) : '';
+  if (!cleanTitle) throw Object.assign(new Error('A document title is required.'), { statusCode: 400 });
+  const result = await db.query(`UPDATE student_documents SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING id;`, [cleanTitle, docId, userId]);
+  if (!result.rows.length) throw Object.assign(new Error('Document not found or access denied.'), { statusCode: 404 });
+  return getStudentDocumentById(userId, docId);
+}
+
 /**
  * ─────────────────────────────────────────────────────────────
  * 2. TEXT EXTRACTION & CHUNKING ENGINE
@@ -166,41 +178,24 @@ export async function processDocumentContent(userId, docId, rawTextContent = nul
 
   // Set processing status
   await db.query(`
-    UPDATE student_documents SET processing_status = 'processing', updated_at = $1 WHERE id = $2;
-  `, [now, docId]);
+    UPDATE student_documents SET processing_status = 'processing', updated_at = $1 WHERE id = $2 AND user_id = $3;
+  `, [now, docId, userId]);
 
   try {
     let extractedPages = [];
 
-    if (rawTextContent !== null && typeof rawTextContent === 'string') {
-      extractedPages = parseRawTextIntoPages(rawTextContent);
-    } else {
-      // If no rawTextContent passed, read from storagePath if file exists
-      if (doc.storagePath && fs.existsSync(doc.storagePath)) {
-        const fileBuf = fs.readFileSync(doc.storagePath);
-        extractedPages = extractTextFromBuffer(fileBuf, doc.fileName);
-      } else {
-        throw new Error('Document file source not accessible on server.');
-      }
-    }
+    const storedSource = await db.query(`SELECT source_text FROM student_documents WHERE id = $1 AND user_id = $2;`, [docId, userId]);
+    const sourceText = typeof rawTextContent === 'string' ? rawTextContent : storedSource.rows[0]?.source_text;
+    if (typeof sourceText !== 'string') throw new Error('Stored source text is unavailable; upload the document again.');
+    extractedPages = parseRawTextIntoPages(sourceText);
 
     // Check if extraction produced any readable text
     const totalExtractedText = extractedPages.map(p => p.text).join('').trim();
-    if (!totalExtractedText || totalExtractedText.length < 20) {
-      // Unreadable / Scanned PDF without OCR support
-      await db.query(`
-        UPDATE student_documents SET
-          processing_status = 'unsupported_scanned',
-          error_message = 'Document appears to be a scanned image or empty. Optical Character Recognition (OCR) is not currently enabled for scanned images.',
-          updated_at = $1
-        WHERE id = $2;
-      `, [now, docId]);
-
-      return getStudentDocumentById(userId, docId);
-    }
+    if (!totalExtractedText) throw new Error('No readable text was found in this document.');
 
     // Clear previous chunks if reprocessing
     await db.query(`DELETE FROM document_chunks WHERE document_id = $1;`, [docId]);
+    await db.query(`DELETE FROM document_learning_resources WHERE document_id = $1;`, [docId]);
 
     // Split pages into meaningful chunks (~300-500 words per chunk, keeping page citations)
     const chunks = [];
@@ -245,9 +240,9 @@ export async function processDocumentContent(userId, docId, rawTextContent = nul
     }
 
     // Extract topics and executive summary from first few chunks
-    const previewText = chunks.slice(0, 3).map(c => c.content).join('\n\n');
-    const extractedTopics = extractTopicsFromText(previewText);
-    const summary = generateDocumentExecutiveSummary(doc.title, previewText);
+    const fullText = chunks.map(c => c.content).join('\n\n');
+    const extractedTopics = extractTopicsFromText(fullText);
+    const summary = generateDocumentExecutiveSummary(doc.title, fullText);
 
     // Update document to 'ready'
     await db.query(`
@@ -307,6 +302,7 @@ export async function retrieveRelevantDocumentChunks(userId, queryText, { docume
   if (cleanWords.length === 0) return [];
 
   const tsQueryString = cleanWords.join(' | ');
+  const safeLimit = Math.max(1, Math.min(8, Math.trunc(Number(limit) || 4)));
 
   let sql = `
     SELECT 
@@ -321,6 +317,7 @@ export async function retrieveRelevantDocumentChunks(userId, queryText, { docume
     FROM document_chunks c
     JOIN student_documents d ON c.document_id = d.id
     WHERE c.user_id = $1
+      AND d.processing_status = 'ready'
       AND c.search_vector @@ to_tsquery('english', $2)
   `;
   const params = [userId, tsQueryString];
@@ -330,7 +327,7 @@ export async function retrieveRelevantDocumentChunks(userId, queryText, { docume
     params.push(documentId);
   }
 
-  sql += ` ORDER BY rank DESC LIMIT ${Number(limit) || 4};`;
+  sql += ` ORDER BY rank DESC LIMIT ${safeLimit};`;
 
   try {
     const res = await db.query(sql, params);
@@ -351,7 +348,7 @@ export async function retrieveRelevantDocumentChunks(userId, queryText, { docume
       c.section_heading, c.content, d.title as document_title, 1.0 as rank
     FROM document_chunks c
     JOIN student_documents d ON c.document_id = d.id
-    WHERE c.user_id = $1 AND c.content ILIKE $2
+    WHERE c.user_id = $1 AND d.processing_status = 'ready' AND c.content ILIKE $2
   `;
   const fallbackParams = [userId, `%${primaryWord}%`];
 
@@ -360,7 +357,7 @@ export async function retrieveRelevantDocumentChunks(userId, queryText, { docume
     fallbackParams.push(documentId);
   }
 
-  fallbackSql += ` LIMIT ${Number(limit) || 4};`;
+  fallbackSql += ` LIMIT ${safeLimit};`;
 
   const fallbackRes = await db.query(fallbackSql, fallbackParams);
   return fallbackRes.rows;
@@ -520,43 +517,6 @@ function parseRawTextIntoPages(rawText) {
   return pages.length > 0 ? pages : [{ pageNumber: 1, text: rawText.trim() }];
 }
 
-function extractTextFromBuffer(buffer, fileName) {
-  // Check if buffer is standard text
-  const text = buffer.toString('utf8');
-  if (fileName.endsWith('.txt') || fileName.endsWith('.md')) {
-    return parseRawTextIntoPages(text);
-  }
-
-  // Basic PDF text stream extractor for standard text PDFs without heavy native bindings
-  if (text.startsWith('%PDF')) {
-    const streamMatches = [];
-    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
-    let match;
-    while ((match = streamRegex.exec(text)) !== null) {
-      const content = match[1];
-      // Extract text in parentheses (Tj or TJ operators)
-      const textSnippets = [];
-      const tjRegex = /\(([^)]+)\)\s*Tj/g;
-      let tjMatch;
-      while ((tjMatch = tjRegex.exec(content)) !== null) {
-        textSnippets.push(tjMatch[1]);
-      }
-      if (textSnippets.length > 0) {
-        streamMatches.push(textSnippets.join(' '));
-      }
-    }
-
-    if (streamMatches.length > 0) {
-      return parseRawTextIntoPages(streamMatches.join('\n\n'));
-    }
-
-    // Return empty array to trigger unsupported_scanned state
-    return [];
-  }
-
-  return parseRawTextIntoPages(text);
-}
-
 function splitIntoChunks(text, targetChars = 1200) {
   const paragraphs = text.split(/\n\s*\n/);
   const chunks = [];
@@ -637,11 +597,6 @@ function extractKeyConcepts(text) {
     if (concepts.length >= 5) break;
   }
 
-  if (concepts.length === 0) {
-    concepts.push('Foundational principles and theoretical frameworks defined in the material.');
-    concepts.push('Methodological step-by-step procedures outlined in the text.');
-  }
-
   return concepts;
 }
 
@@ -688,11 +643,11 @@ function generateFlashcardsFromChunks(chunks) {
     if (flashcards.length >= 6) break;
   }
 
-  if (flashcards.length === 0) {
+  if (flashcards.length === 0 && chunks[0]) {
     flashcards.push({
-      question: 'What is the core objective of this coursework material?',
-      answer: chunks[0]?.content.slice(0, 150) || 'Academic concept mastery.',
-      pageNumber: 1
+      question: 'Explain this excerpt in your own words.',
+      answer: chunks[0].content.slice(0, 350),
+      pageNumber: chunks[0].pageNumber
     });
   }
 
@@ -706,15 +661,9 @@ function generatePracticeQuestionsFromChunks(chunks) {
     const c = chunks[i];
     questions.push({
       id: `doc_q_${i + 1}`,
-      question: `Based on Section ${c.section_heading || i + 1} (Page ${c.pageNumber}), which of the following statements is correct?`,
-      options: [
-        { id: 'A', text: c.content.slice(0, 75).trim() + '.' },
-        { id: 'B', text: 'It contradicts standard academic empirical literature.' },
-        { id: 'C', text: 'It is exclusively applicable in non-standard edge scenarios.' },
-        { id: 'D', text: 'None of the above statements represent the cited material.' }
-      ],
-      correctAnswer: 'A',
-      explanation: `Explicitly confirmed in source document on Page ${c.pageNumber}.`,
+      question: `In your own words, explain this point from ${c.section_heading || `page ${c.pageNumber}`}: “${c.content.slice(0, 180).trim()}”`,
+      answerGuidance: 'Use the cited passage as your source and explain its meaning.',
+      sourceExcerpt: c.content.slice(0, 500),
       pageNumber: c.pageNumber
     });
   }
@@ -733,7 +682,7 @@ function formatDocumentRecord(row) {
     fileName: row.file_name,
     fileSizeBytes: Number(row.file_size_bytes),
     mimeType: row.mime_type,
-    storagePath: row.storage_path,
+    storagePath: null,
     processingStatus: row.processing_status,
     pageCount: Number(row.page_count || 0),
     extractedSummary: row.extracted_summary,

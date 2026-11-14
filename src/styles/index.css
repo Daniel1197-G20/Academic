@@ -667,9 +667,14 @@
   padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
 }
 
-/* Content breathing room inside the authenticated scroll region. */
+/* Content breathing room inside the authenticated scroll region.
+   On mobile (<1280px), the fixed bottom nav floats over the bottom of the viewport
+   (height ~65px + max(0.75rem, safe-area-inset-bottom) margin).
+   A bottom padding of calc(5rem + max(0.75rem, env(safe-area-inset-bottom, 0px)))
+   reserves exactly the space needed so all content and cards scroll completely free
+   of the floating navigation dock. */
 .mobile-nav-pb {
-  padding-bottom: 1.5rem;
+  padding-bottom: calc(5rem + max(0.75rem, env(safe-area-inset-bottom, 0px)));
 }
 
 @media (min-width: 1280px) {
@@ -685,9 +690,12 @@
     overflow: hidden;
   }
 
+  /* The scroll area extends across the full 100dvh viewport height so content scrolls
+     smoothly beneath the floating translucent glass bottom navigation, eliminating the
+     artificial blank block while preserving complete visibility of all scrollable items. */
   .responsive-scroll-area {
-    height: calc(100dvh - (88px + max(0px, env(safe-area-inset-bottom, 0px) - 12px)));
-    max-height: calc(100dvh - (88px + max(0px, env(safe-area-inset-bottom, 0px) - 12px)));
+    height: 100dvh;
+    max-height: 100dvh;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior-y: contain;

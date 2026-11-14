@@ -31,3 +31,8 @@ Thumbs.db
 
 # Tool-specific
 .impeccable/
+.agents/
+.audit-out/
+.aws/
+.codex/
+.playwright-cli/

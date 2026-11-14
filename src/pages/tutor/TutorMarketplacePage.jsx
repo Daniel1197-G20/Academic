@@ -55,7 +55,7 @@ function TutorCard({ tutor, onBook, onNavigate }) {
   const primarySubject = tutor.subjectNames?.[0] || 'Academic Specialist';
   const priceFormatted = tutor.sessionPriceKobo
     ? `₦${(tutor.sessionPriceKobo / 100).toLocaleString()}`
-    : '₦10,000';
+    : 'Rate not listed';
   const ratingValue = tutor.rating ? tutor.rating.toFixed(1) : null;
   const sessionCount = tutor.reviewCount || 0;
 

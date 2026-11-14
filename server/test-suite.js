@@ -376,6 +376,8 @@ async function runTestSuite() {
   assert(alexEntRes.data.entitlements.plan.code === 'basic', 'Demo user starts on Basic plan');
   assert(alexEntRes.data.entitlements.features.CGPA_BASIC === true, 'Basic plan has CGPA_BASIC enabled');
   assert(alexEntRes.data.entitlements.features.CGPA_ADVANCED === false, 'Basic plan has CGPA_ADVANCED disabled');
+  assert(alexEntRes.data.entitlements.features.TEST_PREP_BASIC === true, 'Basic plan allows basic practice test drills');
+  assert(alexEntRes.data.entitlements.features.TEST_PREP_ADVANCED === false, 'Basic plan gates advanced exam simulation');
   assert(alexEntRes.data.entitlements.features.VIDEO_TUTORING === false, 'Basic plan has VIDEO_TUTORING disabled');
   assert(alexEntRes.data.entitlements.limits.AI_TUTOR === 10, 'Basic plan AI Tutor limit is 10 queries/month');
 
@@ -432,6 +434,8 @@ async function runTestSuite() {
     authorization: `Bearer ${alexToken}`
   });
   assert(upgradedEnts.data.entitlements.features.CGPA_ADVANCED === true, 'Student plan unlocks CGPA_ADVANCED');
+  assert(upgradedEnts.data.entitlements.features.TEST_PREP_BASIC === true, 'Student plan retains basic practice test drills');
+  assert(upgradedEnts.data.entitlements.features.TEST_PREP_ADVANCED === true, 'Student plan unlocks advanced exam simulation');
   assert(upgradedEnts.data.entitlements.features.TUTOR_BOOKING === true, 'Student plan unlocks TUTOR_BOOKING');
   assert(upgradedEnts.data.entitlements.limits.AI_TUTOR === 100, 'Student plan increases AI limit to 100 queries/month');
   assert(upgradedEnts.data.entitlements.features.VIDEO_TUTORING === false, 'VIDEO_TUTORING still requires Pro/Premium');

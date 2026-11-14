@@ -257,6 +257,7 @@ export function StudoraChat({
     setLoading(true);
     setError(null);
 
+    let timeoutId;
     try {
       if (!isStreamConfigured()) {
         setError('GetStream Chat service is not configured on this environment.');
@@ -264,23 +265,37 @@ export function StudoraChat({
         return;
       }
 
-      const { client, userId } = await connectStreamUser({
-        name: userProfile?.full_name || currentUser?.displayName || 'Student',
-        image: userProfile?.avatar_url || null,
+      // 15-second connection watchdog timeout to prevent infinite hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Connection timed out. Please check your network or try reconnecting.'));
+        }, 15000);
       });
 
-      setChatClient(client);
+      const connectPromise = (async () => {
+        const { client, userId } = await connectStreamUser({
+          name: userProfile?.full_name || currentUser?.displayName || 'Student',
+          image: userProfile?.avatar_url || null,
+        });
 
-      const filter = {
-        type: 'messaging',
-        members: { $in: [userId] },
-      };
-      const sort = [{ last_message_at: -1 }, { updated_at: -1 }];
+        setChatClient(client);
 
-      const userChannels = await client.queryChannels(filter, sort, {
-        watch: true,
-        state: true,
-      });
+        const filter = {
+          type: 'messaging',
+          members: { $in: [userId] },
+        };
+        const sort = [{ last_message_at: -1 }, { updated_at: -1 }];
+
+        const userChannels = await client.queryChannels(filter, sort, {
+          watch: true,
+          state: true,
+        });
+
+        return { client, userChannels };
+      })();
+
+      const { client, userChannels } = await Promise.race([connectPromise, timeoutPromise]);
+      clearTimeout(timeoutId);
 
       setChannels(userChannels);
 
@@ -313,9 +328,11 @@ export function StudoraChat({
         setActiveChannel(userChannels[0]);
       }
     } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
       console.error('[chat] Initialization error:', err);
       setError(err.message || 'Failed to initialize chat connection.');
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
       setLoading(false);
     }
   }, [currentUserId, userProfile, currentUser, initialChannelId, initialRecipientId]);
@@ -662,7 +679,7 @@ export function StudoraChat({
   // ── 8. Loading state ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="bg-surface dark:bg-navy-900 border border-border dark:border-navy-800 rounded-card p-12 shadow-tactile-surface flex flex-col items-center justify-center space-y-4">
+      <div className="bg-surface dark:bg-navy-900 border border-border dark:border-navy-800 rounded-card p-12 shadow-tactile-surface flex flex-col items-center justify-center space-y-4 m-auto max-w-md w-full">
         <Loader2 className="w-8 h-8 text-academic animate-spin" />
         <div className="text-center">
           <h3 className="text-sm font-bold text-ink dark:text-navy-100 font-sans">
@@ -679,7 +696,7 @@ export function StudoraChat({
   // ── 9. Error state ─────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="bg-surface dark:bg-navy-900 border border-border dark:border-navy-800 rounded-card p-8 shadow-tactile-surface text-center space-y-4 max-w-xl mx-auto">
+      <div className="bg-surface dark:bg-navy-900 border border-border dark:border-navy-800 rounded-card p-8 shadow-tactile-surface text-center space-y-4 max-w-xl mx-auto my-auto w-full">
         <div className="w-12 h-12 rounded-2xl bg-academic-50 dark:bg-academic-950/60 border border-academic-200 dark:border-academic-800 flex items-center justify-center mx-auto text-academic">
           <WifiOff className="w-6 h-6" />
         </div>
@@ -690,7 +707,7 @@ export function StudoraChat({
           <p className="text-xs text-muted dark:text-navy-400 mt-1 leading-relaxed">{error}</p>
         </div>
         <div className="flex items-center justify-center gap-3 pt-2">
-          <Button variant="secondary" size="sm" icon={RefreshCw} onClick={initChat}>
+          <Button variant="academic" size="sm" icon={RefreshCw} onClick={initChat}>
             Retry Connection
           </Button>
           {onNavigate && (

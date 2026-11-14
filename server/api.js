@@ -53,6 +53,7 @@ import {
 } from './study-coach-service.js';
 import {
   createStudentDocument,
+  renameStudentDocument,
   getStudentDocuments,
   getStudentDocumentById,
   deleteStudentDocument,
@@ -1119,15 +1120,15 @@ export async function handleApiRequest(req, res) {
       if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
 
       try {
-        const body = await parseJsonBody(req);
-        const { title, fileName, fileSizeBytes, mimeType, storagePath, subjectId, rawTextContent } = body;
+        const body = await parseJsonBody(req, 11 * 1024 * 1024);
+        const { title, fileName, fileSizeBytes, mimeType, subjectId, rawTextContent } = body;
 
         const doc = await createStudentDocument(authUser.userId, {
           title,
           fileName,
           fileSizeBytes: Number(fileSizeBytes) || 1024,
           mimeType: mimeType || 'application/pdf',
-          storagePath: storagePath || `/tmp/doc_${Date.now()}.pdf`,
+          rawTextContent,
           subjectId: subjectId || null
         });
 
@@ -1149,6 +1150,20 @@ export async function handleApiRequest(req, res) {
       if (!doc) return sendJson(res, 404, { error: 'Document not found or access denied.' });
 
       return sendJson(res, 200, { success: true, document: doc });
+    }
+
+    // PATCH /api/documents/:id — Rename an owned document
+    if (pathname.startsWith('/api/documents/') && method === 'PATCH') {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) return sendJson(res, 401, { error: 'Unauthorized.' });
+      const docId = pathname.replace('/api/documents/', '');
+      try {
+        const { title } = await parseJsonBody(req);
+        const document = await renameStudentDocument(authUser.userId, docId, title);
+        return sendJson(res, 200, { success: true, document });
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { error: err.message });
+      }
     }
 
     // DELETE /api/documents/:id — Delete document and associated chunks/resources

@@ -47,6 +47,7 @@ export function useTutorMarketplace() {
           bio,
           teaching_approach,
           hourly_rate,
+          session_price_kobo,
           rating,
           review_count,
           is_verified,
@@ -128,6 +129,9 @@ export function useTutorMarketplace() {
           rating: row.rating ? parseFloat(row.rating) : null,
           reviewCount: row.review_count || 0,
           hourlyRate: row.hourly_rate || 0,
+          sessionPriceKobo: row.session_price_kobo != null && Number.isSafeInteger(Number(row.session_price_kobo))
+            ? Number(row.session_price_kobo)
+            : null,
           isVerified: row.is_verified,
           approvedAt: row.approved_at,
         };

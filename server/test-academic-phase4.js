@@ -30,11 +30,13 @@
  *     - Deleting document cascades cleanly to chunks and resources
  */
 
-import { initializeDatabase, db, closeDatabase } from './db.js';
-import { handleApiRequest, createSessionToken } from './api.js';
-
 process.env.APP_SECRET = process.env.APP_SECRET || 'test_secret_for_academic_phase4_suite_2026';
 process.env.NODE_ENV = 'test';
+
+// Set test mode before importing db.js, because it selects the database path
+// when the module is evaluated.
+const { initializeDatabase, db, closeDatabase } = await import('./db.js');
+const { handleApiRequest, createSessionToken } = await import('./api.js');
 
 let passedCount = 0;
 let failedCount = 0;
@@ -141,12 +143,22 @@ async function run() {
     await handleApiRequest(r1, s1);
     assert(s1.getStatus() === 401, 'Unauthenticated POST /api/documents/upload rejected with 401');
 
+    // PDF upload is rejected because no verified parser or private file storage is configured.
+    const { req: pdfReq, res: pdfRes } = createMockHttp('POST', '/api/documents/upload', {
+      title: 'Unsupported PDF', fileName: 'notes.pdf', fileSizeBytes: 512,
+      mimeType: 'application/pdf', rawTextContent: '%PDF-fake'
+    }, { authorization: `Bearer ${tokenA}` });
+    await handleApiRequest(pdfReq, pdfRes);
+    assert(pdfRes.getStatus() === 415, 'PDF upload rejected without parser/storage capability');
+
     // Oversized file (> 10MB)
     const { req: r2, res: s2 } = createMockHttp('POST', '/api/documents/upload', {
       title: 'Massive PDF',
-      fileName: 'massive.pdf',
+      fileName: 'massive.txt',
       fileSizeBytes: 15 * 1024 * 1024, // 15MB
-      rawTextContent: 'sample text'
+      mimeType: 'text/plain',
+      // The server validates measured UTF-8 content, not a client supplied size.
+      rawTextContent: 'x'.repeat(10 * 1024 * 1024 + 1)
     }, {
       authorization: `Bearer ${tokenA}`
     });
@@ -187,9 +199,9 @@ MergeSort guarantees worst-case $O(n \\log n)$ time complexity regardless of the
 
     const { req: r1, res: s1 } = createMockHttp('POST', '/api/documents/upload', {
       title: 'CS301 Lecture 4: Sorting & Divide-and-Conquer',
-      fileName: 'CS301_Lecture4.pdf',
+      fileName: 'CS301_Lecture4.txt',
       fileSizeBytes: 4096,
-      mimeType: 'application/pdf',
+      mimeType: 'text/plain',
       rawTextContent: lectureNotes
     }, {
       authorization: `Bearer ${tokenA}`
@@ -211,22 +223,20 @@ MergeSort guarantees worst-case $O(n \\log n)$ time complexity regardless of the
   // ─────────────────────────────────────────────────────────────
   console.log('\n--- 3. Scanned / Empty Document Handling ---');
   {
-    const emptyPdfContent = '%PDF-1.4 empty scanned bytes with zero selectable text';
     const { req: r1, res: s1 } = createMockHttp('POST', '/api/documents/upload', {
-      title: 'Scanned Handwritten Notes',
-      fileName: 'scanned_notes.pdf',
+      title: 'Empty Notes',
+      fileName: 'empty_notes.txt',
       fileSizeBytes: 2048,
-      mimeType: 'application/pdf',
-      rawTextContent: '' // empty text simulates image scan without OCR
+      mimeType: 'text/plain',
+      rawTextContent: ''
     }, {
       authorization: `Bearer ${tokenA}`
     });
     await handleApiRequest(r1, s1);
     const body1 = s1.getBody();
 
-    assert(s1.getStatus() === 201, 'Request handled gracefully');
-    assert(body1.document.processingStatus === 'unsupported_scanned', 'Scanned/empty PDF classified as unsupported_scanned');
-    assert(body1.document.errorMessage.includes('Optical Character Recognition'), 'Error message clearly notifies student about OCR limitations');
+    assert(s1.getStatus() === 400, 'Empty document rejected before persistence');
+    assert(body1.error.includes('empty'), 'Empty document receives a clear validation error');
   }
 
   // ─────────────────────────────────────────────────────────────

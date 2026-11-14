@@ -122,13 +122,18 @@ export function DocumentLearningSection({ onAskAiAboutDocument, showToast }) {
       let bodyPayload = {};
 
       if (uploadMode === 'file' && uploadFile) {
+        if (uploadFile.size > 10 * 1024 * 1024) throw new Error('Maximum file size is 10MB.');
+        const fileName = uploadFile.name;
+        const extension = fileName.toLowerCase().split('.').pop();
+        if (!['txt', 'md', 'markdown'].includes(extension)) {
+          throw new Error('PDF and DOCX processing is not available yet. Upload a .txt or .md file, or paste your notes.');
+        }
         bodyPayload = {
           title: uploadTitle.trim(),
-          fileName: uploadFile.name,
+          fileName,
           fileSizeBytes: uploadFile.size,
-          mimeType: uploadFile.type || 'application/pdf',
-          storagePath: `/tmp/${Date.now()}_${uploadFile.name}`,
-          rawTextContent: null
+          mimeType: extension === 'txt' ? 'text/plain' : 'text/markdown',
+          rawTextContent: await uploadFile.text()
         };
       } else {
         // Plaintext / Notes paste mode
@@ -141,9 +146,8 @@ export function DocumentLearningSection({ onAskAiAboutDocument, showToast }) {
         bodyPayload = {
           title: uploadTitle.trim(),
           fileName: `${uploadTitle.trim().replace(/\s+/g, '_')}.txt`,
-          fileSizeBytes: Buffer.byteLength(rawTextNote, 'utf8'),
+          fileSizeBytes: new TextEncoder().encode(rawTextNote).length,
           mimeType: 'text/plain',
-          storagePath: `/tmp/${Date.now()}.txt`,
           rawTextContent: rawTextNote.trim()
         };
       }
@@ -182,6 +186,17 @@ export function DocumentLearningSection({ onAskAiAboutDocument, showToast }) {
     }
   };
 
+  const handleRenameDocument = async (doc) => {
+    const title = window.prompt('New document title', doc.title);
+    if (title === null || !title.trim() || title.trim() === doc.title) return;
+    try {
+      await api.request(`/api/documents/${doc.id}`, { method: 'PATCH', body: JSON.stringify({ title: title.trim() }) });
+      await fetchDocuments();
+    } catch (err) {
+      showToast?.({ type: 'error', title: 'Rename Failed', message: err.message });
+    }
+  };
+
   const handleReprocess = async (docId) => {
     try {
       const res = await api.request(`/api/documents/${docId}/reprocess`, { method: 'POST' });
@@ -215,7 +230,7 @@ export function DocumentLearningSection({ onAskAiAboutDocument, showToast }) {
               <Badge variant="academic">Phase 4</Badge>
             </div>
             <p className="text-xs text-muted mt-0.5 leading-relaxed">
-              Upload your lecture slides, syllabus notes, and exam papers to ground the AI Tutor in your curriculum.
+              Add your course notes to ground NEXA by Studora in your learning materials.
             </p>
           </div>
         </div>
@@ -286,6 +301,7 @@ export function DocumentLearningSection({ onAskAiAboutDocument, showToast }) {
                         <span className="truncate flex-1 font-bold text-ink dark:text-white">
                           {doc.title}
                         </span>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handleRenameDocument(doc); }} className="text-muted hover:text-academic p-0.5" title="Rename">Rename</button>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -353,7 +369,7 @@ export function DocumentLearningSection({ onAskAiAboutDocument, showToast }) {
                     icon={Sparkles}
                     className="shadow-tactile-btn text-xs py-1"
                   >
-                    Ask AI Tutor
+                    Ask NEXA About This Document
                   </Button>
                 </div>
               </div>
@@ -593,14 +609,14 @@ export function DocumentLearningSection({ onAskAiAboutDocument, showToast }) {
             </div>
           ) : (
             <div>
-              <label className="font-bold text-ink block mb-1">Choose PDF Document</label>
+              <label className="font-bold text-ink block mb-1">Choose Text or Markdown Document</label>
               <input
                 type="file"
-                accept=".pdf,.txt,.md"
+                accept=".txt,.md,.markdown,text/plain,text/markdown"
                 onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                 className="w-full text-xs p-2 bg-canvas border border-border rounded-btn text-ink"
               />
-              <span className="text-[10px] text-muted mt-1 block">Maximum file size: 10MB</span>
+              <span className="text-[10px] text-muted mt-1 block">TXT and Markdown only • Maximum file size: 10MB. PDF processing is not configured yet.</span>
             </div>
           )}
 
