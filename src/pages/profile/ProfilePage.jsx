@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   User,
   School,
@@ -32,6 +32,20 @@ import { api } from '../../services/api/client';
 import { safeStorage, supabase } from '../../lib/supabase/client';
 import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { SubscriptionSettingsSection } from '../billing/SubscriptionSettingsSection';
+
+function profileListToText(value, fieldName) {
+  if (Array.isArray(value)) return value.join(', ');
+  if (typeof value !== 'string' || !value.trim()) return '';
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.join(', ');
+    console.warn(`Profile ${fieldName} was expected to be a list; preserving its raw value for editing.`);
+  } catch (error) {
+    console.warn(`Profile ${fieldName} was not valid JSON; preserving its raw value for editing:`, error);
+  }
+  return value;
+}
 
 export function ProfilePage({
   userProfile,
@@ -77,11 +91,7 @@ export function ProfilePage({
   });
 
   const [interests, setInterests] = useState(
-    Array.isArray(userProfile?.academic_interests)
-      ? userProfile.academic_interests.join(', ')
-      : typeof userProfile?.academic_interests === 'string'
-        ? (JSON.parse(userProfile.academic_interests || '[]')).join(', ')
-        : ''
+    profileListToText(userProfile?.academic_interests, 'academic_interests')
   );
   const [preferences, setPreferences] = useState(() => {
     if (Array.isArray(userProfile?.study_preferences)) {

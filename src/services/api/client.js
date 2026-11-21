@@ -85,17 +85,27 @@ class ApiClient {
 
     try {
       const response = await fetch(endpoint, config);
-      clearTimeout(timeoutId);
 
       const contentType = response.headers.get('content-type') || '';
       const isJson = contentType.includes('application/json');
 
       let data = {};
       if (isJson) {
-        data = await response.json().catch(() => ({}));
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          if (controller.signal.aborted) throw parseError;
+          data = {};
+        }
       } else {
         // Guard against HTML returned on SPA fallback
-        const text = await response.text().catch(() => '');
+        let text;
+        try {
+          text = await response.text();
+        } catch (readError) {
+          if (controller.signal.aborted) throw readError;
+          text = '';
+        }
         if (text.trim().startsWith('<') || text.trim().startsWith('<!DOCTYPE')) {
           const err = new Error(`API endpoint ${endpoint} returned HTML instead of JSON.`);
           err.status = response.status;
@@ -107,6 +117,7 @@ class ApiClient {
           data = {};
         }
       }
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         if (response.status === 401 && endpoint !== '/api/auth/login') {
@@ -121,7 +132,7 @@ class ApiClient {
       return data;
     } catch (err) {
       clearTimeout(timeoutId);
-      if (err.name === 'AbortError') {
+      if (err.name === 'AbortError' || controller.signal.aborted) {
         const timeoutError = new Error(`Request to ${endpoint} timed out.`);
         timeoutError.status = 408;
         throw timeoutError;

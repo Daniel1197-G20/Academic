@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Download, RefreshCw, Share, WifiOff, X } from 'lucide-react';
+import { Check, RefreshCw, Share, WifiOff, X } from 'lucide-react';
 import { safeStorage } from '../../lib/supabase/client';
 
 const INSTALL_DISMISSED_KEY = 'studora-install-dismissed-until';
@@ -138,7 +138,7 @@ export function PWAExperience() {
     message = <span>A new Studora version is available.</span>;
     action = <button type="button" onClick={applyUpdate} className="text-xs font-bold text-[#176B4D] underline underline-offset-4">Prepare update</button>;
   } else if (!standalone && canShowInstall && (installPrompt || installableOnIOS)) {
-    icon = <Download className="h-4 w-4 shrink-0" aria-hidden="true" />;
+    icon = <img src="/icons/studora-app.svg" alt="" className="h-6 w-6 shrink-0" />;
     message = <span>Add Studora to your home screen for a standalone app experience.</span>;
     action = <button type="button" onClick={requestInstall} className="text-xs font-bold text-[#176B4D] underline underline-offset-4">{installableOnIOS ? 'How to add' : 'Install'}</button>;
   }

@@ -60,57 +60,57 @@ export function LearningWorkspacePage({
   const [dailyQuestions, setDailyQuestions] = useState(null);
   const [activeDrill, setActiveDrill] = useState(null);
   const [drillLoading, setDrillLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadingError, setLoadingError] = useState(null);
-  const workspaceRequestIdRef = useRef(0);
+  const [analysisLoading, setAnalysisLoading] = useState(true);
+  const [questionsLoading, setQuestionsLoading] = useState(true);
+  const [analysisError, setAnalysisError] = useState(false);
+  const [questionsError, setQuestionsError] = useState(false);
+  const analysisRequestIdRef = useRef(0);
+  const questionsRequestIdRef = useRef(0);
 
   // NEXA Chat direct prompt transfer
   const [nexaInitialPrompt, setNexaInitialPrompt] = useState('');
 
   // Fetch student academic intelligence & daily questions
-  const fetchWorkspaceData = useCallback(async () => {
-    const requestId = ++workspaceRequestIdRef.current;
-    setLoading(true);
-    setLoadingError(null);
+  const fetchAnalysis = useCallback(async () => {
+    const requestId = ++analysisRequestIdRef.current;
+    setAnalysisLoading(true);
+    setAnalysisError(false);
     try {
-      const [analysisResult, questionsResult] = await Promise.allSettled([
-        api.request('/api/academic/analysis'),
-        api.request('/api/study/daily-questions')
-      ]);
-      if (requestId !== workspaceRequestIdRef.current) return;
-      const failures = [];
-
-      if (analysisResult.status === 'fulfilled' && analysisResult.value?.success) {
-        setAnalysis(analysisResult.value);
-      } else {
-        const detail = analysisResult.status === 'rejected'
-          ? analysisResult.reason
-          : analysisResult.value?.error;
-        console.warn('Failed to load learning workspace analysis:', detail);
-        failures.push('academic analysis');
-      }
-
-      if (questionsResult.status === 'fulfilled' && questionsResult.value?.success) {
-        setDailyQuestions(questionsResult.value);
-      } else {
-        const detail = questionsResult.status === 'rejected'
-          ? questionsResult.reason
-          : questionsResult.value?.error;
-        console.warn('Failed to load learning workspace daily questions:', detail);
-        failures.push('daily practice');
-      }
-
-      if (failures.length) {
-        setLoadingError(`Unable to load ${failures.join(' and ')}. Check your connection and retry.`);
-      }
+      const result = await api.request('/api/academic/analysis');
+      if (requestId !== analysisRequestIdRef.current) return;
+      if (!result?.success) throw new Error(result?.error || 'Academic analysis response was invalid.');
+      setAnalysis(result);
     } catch (error) {
-      if (requestId !== workspaceRequestIdRef.current) return;
-      console.warn('Failed to load learning workspace data:', error);
-      setLoadingError('Unable to load your learning data. Check your connection and retry.');
+      if (requestId !== analysisRequestIdRef.current) return;
+      console.warn('Failed to load learning workspace academic analysis:', error);
+      setAnalysisError(true);
     } finally {
-      if (requestId === workspaceRequestIdRef.current) setLoading(false);
+      if (requestId === analysisRequestIdRef.current) setAnalysisLoading(false);
     }
   }, []);
+
+  const fetchDailyQuestions = useCallback(async () => {
+    const requestId = ++questionsRequestIdRef.current;
+    setQuestionsLoading(true);
+    setQuestionsError(false);
+    try {
+      const result = await api.request('/api/study/daily-questions');
+      if (requestId !== questionsRequestIdRef.current) return;
+      if (!result?.success) throw new Error(result?.error || 'Daily practice response was invalid.');
+      setDailyQuestions(result);
+    } catch (error) {
+      if (requestId !== questionsRequestIdRef.current) return;
+      console.warn('Failed to load learning workspace daily practice:', error);
+      setQuestionsError(true);
+    } finally {
+      if (requestId === questionsRequestIdRef.current) setQuestionsLoading(false);
+    }
+  }, []);
+
+  const fetchWorkspaceData = useCallback(() => {
+    fetchAnalysis();
+    fetchDailyQuestions();
+  }, [fetchAnalysis, fetchDailyQuestions]);
 
   useEffect(() => {
     fetchWorkspaceData();
@@ -254,19 +254,30 @@ export function LearningWorkspacePage({
         })}
       </div>
 
-      {loading && (
+      {(analysisLoading || questionsLoading) && (
         <div role="status" aria-live="polite" className="rounded-xl border border-[#DDEFE5] bg-[#F6F7F3] px-4 py-3 text-xs text-[#667085]">
-          Loading your academic insights and daily practice…
+          {analysisLoading && 'Loading academic analysis…'}{analysisLoading && questionsLoading && ' '}{questionsLoading && 'Loading daily practice…'}
         </div>
       )}
-      {loadingError && (
+      {analysisError && (
         <div role="alert" className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <p>{loadingError}</p>
+            <p>Unable to load academic analysis. Check your connection and retry.</p>
           </div>
-          <Button variant="secondary" size="sm" onClick={fetchWorkspaceData} icon={RotateCcw} className="shrink-0">
-            Retry
+          <Button variant="secondary" size="sm" onClick={fetchAnalysis} icon={RotateCcw} className="shrink-0">
+            Retry analysis
+          </Button>
+        </div>
+      )}
+      {questionsError && (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <p>Unable to load daily practice. Check your connection and retry.</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={fetchDailyQuestions} icon={RotateCcw} className="shrink-0">
+            Retry practice
           </Button>
         </div>
       )}

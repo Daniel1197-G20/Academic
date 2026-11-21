@@ -31,6 +31,11 @@
     --color-muted: #667085;
     --color-border: #E5E7EB;
     --color-gold: #C89B3C;
+    background-color: #F6F7F3;
+  }
+
+  :root.dark {
+    background-color: #0a1510;
   }
 
   body {
