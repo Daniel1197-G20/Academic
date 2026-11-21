@@ -36,3 +36,5 @@ Thumbs.db
 .aws/
 .codex/
 .playwright-cli/
+.vercel
+.env*

@@ -788,7 +788,7 @@ export async function initializeDatabase() {
       amount_kobo: 250000, // ₦2,500
       currency: 'NGN',
       interval: 'monthly',
-      paystack_plan_code: 'PLN_student_monthly',
+      paystack_plan_code: process.env.PAYSTACK_PLAN_STUDENT_CODE || 'PLN_student_monthly',
       is_active: true,
       display_order: 2
     },
@@ -800,7 +800,7 @@ export async function initializeDatabase() {
       amount_kobo: 500000, // ₦5,000
       currency: 'NGN',
       interval: 'monthly',
-      paystack_plan_code: 'PLN_pro_monthly',
+      paystack_plan_code: process.env.PAYSTACK_PLAN_PRO_CODE || 'PLN_pro_monthly',
       is_active: true,
       display_order: 3
     },
@@ -812,7 +812,7 @@ export async function initializeDatabase() {
       amount_kobo: 1000000, // ₦10,000
       currency: 'NGN',
       interval: 'monthly',
-      paystack_plan_code: 'PLN_premium_monthly',
+      paystack_plan_code: process.env.PAYSTACK_PLAN_PREMIUM_CODE || 'PLN_premium_monthly',
       is_active: true,
       display_order: 4
     }

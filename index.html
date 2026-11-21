@@ -2,14 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#176B4D" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Studora" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icons/studora-192.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/studora-favicon.svg" />
     <meta name="description" content="Studora is an all-in-one academic platform for managing your CGPA, planning your studies, preparing for tests, learning with AI, and connecting with tutors." />
     <meta property="og:title" content="Studora — Study smarter. Go further." />
     <meta property="og:description" content="Studora helps you plan your semester, track your academic progress, prepare for tests, learn with AI, and connect with tutors — all in one academic platform." />
@@ -18,40 +21,32 @@
     <meta name="twitter:title" content="Studora — Study smarter. Go further." />
     <meta name="twitter:description" content="Studora helps you plan your semester, track your academic progress, prepare for tests, learn with AI, and connect with tutors — all in one academic platform." />
     <title>Studora — Study smarter. Go further.</title>
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('studora-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) document.documentElement.classList.add('dark');
+      } catch (_) {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
+      }
+    </script>
+    <style>
+      .dark #initial-splash { background: #0a1510 !important; }
+      .dark #initial-splash .splash-title { color: #f0fdf4 !important; }
+      .dark #initial-splash .splash-subtitle { color: #a4b2a9 !important; }
+    </style>
     <!-- Preload Self-Hosted Primary Font -->
     <link rel="preload" href="/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23176B4D' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M4.5 7.5C4.5 5.567 6.067 4 8 4H14C17.314 4 20 6.686 20 10C20 13.314 17.314 16 14 16H9.5'/><path d='M19.5 16.5C19.5 18.433 17.933 20 16 20H10C6.686 20 4 17.314 4 14C4 10.686 6.686 8 10 8H14.5'/><path d='M12 4.5L14 2.5L16 4.5'/></svg>" />
   </head>
   <body class="bg-[#F6F7F3] text-[#111827] antialiased selection:bg-[#DDEFE5] selection:text-[#176B4D] overflow-x-clip min-h-screen">
     <div id="root">
-      <div id="initial-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F6F7F3;z-index:99999;font-family:'Manrope',-apple-system,sans-serif;">
-        <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-          <div style="position:absolute;width:96px;height:96px;border-radius:28px;background:rgba(23,107,77,0.14);animation:initPulse 2s cubic-bezier(0.16,1,0.3,1) infinite;"></div>
-          <div style="position:absolute;width:112px;height:112px;border-radius:34px;background:rgba(23,107,77,0.08);animation:initPulse 2s cubic-bezier(0.16,1,0.3,1) 400ms infinite;"></div>
-          <div style="width:80px;height:80px;border-radius:22px;background:linear-gradient(135deg,#176B4D 0%,#0E3D2C 100%);box-shadow:0 12px 28px rgba(23,107,77,0.32),0 4px 10px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;animation:initFloat 2.4s ease-in-out infinite;border:1px solid rgba(255,255,255,0.25);">
-            <div style="position:absolute;top:0;left:0;width:30px;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent);transform:rotate(25deg);animation:initSheen 2.6s ease-in-out infinite;"></div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
-              <path d="M4.5 7.5C4.5 5.567 6.067 4 8 4H14C17.314 4 20 6.686 20 10C20 13.314 17.314 16 14 16H9.5"/>
-              <path d="M19.5 16.5C19.5 18.433 17.933 20 16 20H10C6.686 20 4 17.314 4 14C4 10.686 6.686 8 10 8H14.5"/>
-              <path d="M12 4.5L14 2.5L16 4.5"/>
-            </svg>
-          </div>
-        </div>
+      <div id="initial-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F6F7F3;z-index:99999;font-family:'Manrope',-apple-system,sans-serif;padding:24px;">
+        <img src="/icons/studora-192.png" width="80" height="80" alt="" style="display:block;border-radius:22px;box-shadow:0 12px 28px rgba(23,107,77,0.24);" />
         <div style="margin-top:22px;text-align:center;">
-          <div style="font-weight:800;font-size:22px;color:#111827;letter-spacing:-0.02em;">Studora</div>
-          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:#667085;margin-top:4px;font-weight:700;">Study smarter. Go further.</div>
+          <div class="splash-title" style="font-weight:800;font-size:22px;color:#111827;letter-spacing:-0.02em;">Studora</div>
+          <div class="splash-subtitle" style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:#667085;margin-top:4px;font-weight:700;">Study smarter. Go further.</div>
         </div>
-        <div style="margin-top:20px;width:160px;height:5px;background:#E5E7EB;border-radius:9999px;overflow:hidden;position:relative;box-shadow:inset 0 1px 2px rgba(0,0,0,0.06);">
-          <div style="width:70px;height:100%;background:linear-gradient(90deg,#176B4D,#338F6A,#104633);border-radius:9999px;position:absolute;animation:initBar 1.5s cubic-bezier(0.4,0,0.2,1) infinite;"></div>
-        </div>
-        <div style="font-size:12px;color:#667085;margin-top:14px;font-weight:500;animation:initBreathe 1.5s ease-in-out infinite;">Loading Studora Workspace...</div>
-        <style>
-          @keyframes initPulse { 0% { transform:scale(0.92); opacity:0.65; } 50% { transform:scale(1.18); opacity:0.18; } 100% { transform:scale(1.35); opacity:0; } }
-          @keyframes initFloat { 0%, 100% { transform:translateY(0) scale(1); } 50% { transform:translateY(-5px) scale(1.02); } }
-          @keyframes initSheen { 0% { transform:translateX(-60px) rotate(25deg); } 100% { transform:translateX(140px) rotate(25deg); } }
-          @keyframes initBar { 0% { transform:translateX(-80px); } 50% { transform:translateX(45px); } 100% { transform:translateX(170px); } }
-          @keyframes initBreathe { 0%, 100% { opacity:0.6; } 50% { opacity:1; } }
-        </style>
+        <div style="font-size:12px;color:#667085;margin-top:14px;font-weight:500;">Loading Studora…</div>
       </div>
     </div>
     <script type="module" src="/src/main.jsx"></script>

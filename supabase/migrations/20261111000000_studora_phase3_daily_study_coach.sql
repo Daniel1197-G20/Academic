@@ -3,7 +3,7 @@
 
 -- 1. Student Study Preferences
 CREATE TABLE IF NOT EXISTS public.student_study_preferences (
-  user_id TEXT PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   academic_goals TEXT DEFAULT '',
   target_gpa NUMERIC(3, 2),
   daily_available_minutes INT NOT NULL DEFAULT 60,
@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_student_study_prefs_user ON public.student_study_
 -- 2. Daily Study Plans (Proactive Daily Container)
 CREATE TABLE IF NOT EXISTS public.daily_study_plans (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   plan_date DATE NOT NULL DEFAULT CURRENT_DATE,
   status TEXT NOT NULL DEFAULT 'active', -- active, completed, adapted, archived
   target_study_minutes INT NOT NULL DEFAULT 60,
@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_daily_study_plans_user_date ON public.daily_study
 CREATE TABLE IF NOT EXISTS public.daily_study_tasks (
   id TEXT PRIMARY KEY,
   daily_plan_id TEXT NOT NULL REFERENCES public.daily_study_plans(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   subject_id TEXT REFERENCES public.subjects(id) ON DELETE SET NULL,
   topic_id TEXT REFERENCES public.topics(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
@@ -72,12 +72,15 @@ ALTER TABLE public.daily_study_tasks ENABLE ROW LEVEL SECURITY;
 -- Policies
 DROP POLICY IF EXISTS "Users manage their own study preferences" ON public.student_study_preferences;
 CREATE POLICY "Users manage their own study preferences" ON public.student_study_preferences
-  FOR ALL USING (auth.uid()::text = user_id);
+  FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users manage their own daily study plans" ON public.daily_study_plans;
 CREATE POLICY "Users manage their own daily study plans" ON public.daily_study_plans
-  FOR ALL USING (auth.uid()::text = user_id);
+  FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users manage their own daily study tasks" ON public.daily_study_tasks;
 CREATE POLICY "Users manage their own daily study tasks" ON public.daily_study_tasks
-  FOR ALL USING (auth.uid()::text = user_id);
+  FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);

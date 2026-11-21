@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Cookie, Shield, Lock, Save } from 'lucide-react';
 import { Modal, Button, Badge } from '../ui';
 import { api } from '../../services/api/client';
+import { safeStorage } from '../../lib/supabase/client';
 
 export function CookieSettingsModal({
   isOpen,
@@ -16,7 +17,7 @@ export function CookieSettingsModal({
   useEffect(() => {
     if (isOpen) {
       try {
-        const saved = localStorage.getItem('academic_consent_preferences');
+        const saved = safeStorage.getItem('academic_consent_preferences');
         if (saved) {
           const parsed = JSON.parse(saved);
           setAnalyticsEnabled(!!parsed.analytics);
@@ -39,8 +40,8 @@ export function CookieSettingsModal({
     };
 
     try {
-      localStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
-      localStorage.setItem('academic_consent_timestamp', new Date().toISOString());
+      safeStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
+      safeStorage.setItem('academic_consent_timestamp', new Date().toISOString());
 
       // Sync with backend audit log if authenticated or available
       await api.recordConsent([

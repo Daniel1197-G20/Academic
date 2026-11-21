@@ -12,7 +12,7 @@
  *  - Personal Study Preferences Modal (Available hours, target GPA, upcoming exams)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Sparkles,
   Calendar,
@@ -40,6 +40,8 @@ export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, onDisc
   const [preferences, setPreferences] = useState(null);
   const [dailyQuestionsData, setDailyQuestionsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const loadRequestIdRef = useRef(0);
   const [regenerating, setRegenerating] = useState(false);
   const [isPrefsModalOpen, setIsPrefsModalOpen] = useState(false);
   const [showQuestionsPreview, setShowQuestionsPreview] = useState(false);
@@ -52,30 +54,51 @@ export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, onDisc
   const [examDate, setExamDate] = useState('');
 
   const fetchDailyPlanAndPrefs = useCallback(async () => {
+    const requestId = ++loadRequestIdRef.current;
     setLoading(true);
+    setLoadError(null);
     try {
-      const [planRes, prefRes, questionsRes] = await Promise.all([
+      const [planResult, prefResult, questionsResult] = await Promise.allSettled([
         api.request('/api/study/daily-plan'),
         api.request('/api/study/preferences'),
-        api.request('/api/study/daily-questions').catch(() => null)
+        api.request('/api/study/daily-questions')
       ]);
+      if (requestId !== loadRequestIdRef.current) return;
 
-      if (planRes && planRes.plan) {
+      const planRes = planResult.status === 'fulfilled' ? planResult.value : null;
+      const prefRes = prefResult.status === 'fulfilled' ? prefResult.value : null;
+      const questionsRes = questionsResult.status === 'fulfilled' ? questionsResult.value : null;
+      const failures = [];
+
+      if (planRes?.plan) {
         setDailyPlan(planRes.plan);
+      } else {
+        console.warn('Failed to load daily study plan:', planResult.status === 'rejected' ? planResult.reason : planRes?.error);
+        failures.push('study plan');
       }
-      if (prefRes && prefRes.preferences) {
+      if (prefRes?.preferences) {
         setPreferences(prefRes.preferences);
         setPrefDailyMinutes(prefRes.preferences.dailyAvailableMinutes || 60);
         setPrefAcademicGoals(prefRes.preferences.academicGoals || '');
         setPrefTargetGpa(prefRes.preferences.targetGpa || '');
+      } else {
+        console.warn('Failed to load study preferences:', prefResult.status === 'rejected' ? prefResult.reason : prefRes?.error);
+        failures.push('study preferences');
       }
-      if (questionsRes && questionsRes.success) {
+      if (questionsRes?.success) {
         setDailyQuestionsData(questionsRes);
+      } else {
+        console.warn('Failed to load daily practice questions:', questionsResult.status === 'rejected' ? questionsResult.reason : questionsRes?.error);
+        failures.push('daily practice');
       }
+
+      if (failures.length) setLoadError(`Unable to load ${failures.join(' and ')}. Check your connection and retry.`);
     } catch (err) {
-      console.warn('Failed to load daily plan or preferences:', err.message);
+      if (requestId !== loadRequestIdRef.current) return;
+      console.warn('Failed to load daily plan or preferences:', err);
+      setLoadError('Unable to load your study plan. Check your connection and retry.');
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) setLoading(false);
     }
   }, []);
 
@@ -177,6 +200,15 @@ export function DailyStudyCoachSection({ onStartTaskSession, onOpenDrill, onDisc
 
   return (
     <div className="space-y-4">
+      {loadError && (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <p>{loadError}</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={fetchDailyPlanAndPrefs} icon={RotateCcw} className="shrink-0">Retry</Button>
+        </div>
+      )}
       {/* ── Top Header Strip ── */}
       <div className="bg-white dark:bg-[#161B22] border border-border dark:border-gray-800 rounded-card p-5 shadow-tactile-surface flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">

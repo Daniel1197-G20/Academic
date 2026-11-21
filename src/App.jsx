@@ -20,7 +20,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NotFoundPage } from './components/common/NotFoundPage';
 import { PageLoader } from './components/common/PageLoader';
 import { api } from './services/api/client';
-import { supabase } from './lib/supabase/client';
+import { safeStorage, supabase } from './lib/supabase/client';
 import { syncEngine, SYNC_EVENTS } from './lib/sync/syncEngine';
 import { disconnectStreamUser } from './lib/stream/client';
 import { onAuthStateChangedListener, notifyAuthStateChange } from './services/firebase/firebaseConfig';
@@ -28,6 +28,7 @@ import { Users, Compass, Sparkles, FileCheck2, ArrowLeft, BookOpen, Copy, Check,
 import { BillingProvider } from './context/BillingContext';
 import { FeatureGate } from './components/billing/FeatureGate';
 import { CampusBackground } from './components/ui/CampusBackground';
+import { PWAExperience } from './components/common/PWAExperience';
 
 // Lazy-loaded routes & heavy pages to code-split bundles
 const AuthPage = React.lazy(() => import('./pages/auth/AuthPage').then(m => ({ default: m.AuthPage })));
@@ -164,7 +165,7 @@ function AppContent() {
   const [completedAttempts, setCompletedAttempts] = useState([]);
   const [isDark, setIsDark] = useState(() => {
     // Respect OS preference or stored preference
-    const stored = localStorage.getItem('studora-theme');
+    const stored = safeStorage.getItem('studora-theme');
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
@@ -176,7 +177,7 @@ function AppContent() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('studora-theme', isDark ? 'dark' : 'light');
+    safeStorage.setItem('studora-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
   const handleToggleDark = useCallback(() => setIsDark(d => !d), []);
@@ -603,6 +604,10 @@ function AppContent() {
   // --- Logged-Out Views (Public Landing Page, Pricing, Auth, Legal & 404 Pages) ---
   if (!currentUser) {
     return (
+      <ErrorBoundary
+        key={`public-${activeTab}`}
+        onGoHome={() => navigateRoute('landing')}
+      >
       <React.Suspense fallback={<PageLoader message="Loading Studora..." />}>
         {(() => {
           if (activeTab === 'privacy') {
@@ -727,6 +732,7 @@ function AppContent() {
           );
         })()}
       </React.Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -822,7 +828,7 @@ function AppContent() {
               ? 'relative z-10 p-0 sm:p-3 md:p-5 lg:p-6 max-w-[1520px] flex flex-col min-h-0 h-full'
               : 'relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mobile-nav-pb'
             }`}>
-            <ErrorBoundary onGoHome={() => navigateRoute('dashboard')}>
+            <ErrorBoundary key={activeTab} onGoHome={() => navigateRoute('dashboard')}>
               <Suspense fallback={<PageLoader message="Loading Studora..." />}>
                 {(activeTab === 'dashboard' || activeTab === 'overview') && (
                   <DashboardPage
@@ -1300,6 +1306,7 @@ export default function App() {
   return (
     <ErrorBoundary onGoHome={() => { window.location.href = '/'; }}>
       <ToastProvider>
+        <PWAExperience />
         <AppContent />
       </ToastProvider>
     </ErrorBoundary>

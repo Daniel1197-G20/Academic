@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.user_email_preferences (
   academic_digest_opt_in BOOLEAN NOT NULL DEFAULT true,
   booking_notifications_opt_in BOOLEAN NOT NULL DEFAULT true,
   security_alerts_opt_in BOOLEAN NOT NULL DEFAULT true, -- Always true for operational security
-  unsubscribe_token TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(24), 'hex'),
+  unsubscribe_token TEXT UNIQUE NOT NULL DEFAULT encode(extensions.gen_random_bytes(24), 'hex'),
   unsubscribed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -129,6 +129,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user_email_preferences()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 BEGIN
   INSERT INTO public.user_email_preferences (user_id)
@@ -137,6 +138,11 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- The trigger is the only caller; do not expose this SECURITY DEFINER function
+-- as a PostgREST RPC to anon or authenticated clients.
+REVOKE EXECUTE ON FUNCTION public.handle_new_user_email_preferences()
+  FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_new_user_email_preferences ON auth.users;
 CREATE TRIGGER trg_new_user_email_preferences

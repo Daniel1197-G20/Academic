@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#176B4D">
+    <title>Studora is offline</title>
+    <link rel="icon" href="/icons/favicon-32.png" type="image/png">
+    <style>
+      :root { color-scheme: light; font-family: Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F6F7F3; color: #111827; }
+      * { box-sizing: border-box; }
+      body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); }
+      main { width: min(100%, 390px); text-align: left; }
+      img { width: 58px; height: 58px; display: block; margin-bottom: 30px; }
+      p.kicker { margin: 0 0 12px; color: #176B4D; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+      h1 { margin: 0; font-size: clamp(30px, 8vw, 42px); line-height: 1.08; letter-spacing: -.045em; }
+      p.copy { margin: 16px 0 26px; color: #667085; font-size: 15px; line-height: 1.65; }
+      button { min-height: 48px; padding: 0 20px; border: 0; border-radius: 12px; background: #176B4D; color: #fff; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; }
+      button:active { transform: scale(.98); }
+      #status { min-height: 20px; margin-top: 14px; color: #667085; font-size: 12px; }
+      @media (prefers-reduced-motion: no-preference) { button { transition: transform 140ms ease; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/studora-192.png" alt="Studora">
+      <p class="kicker">Study smarter. Go further.</p>
+      <h1>You’re offline right now.</h1>
+      <p class="copy">Studora couldn’t reach the network. Your private academic data is not stored for offline use. Reconnect, then try again.</p>
+      <button type="button" id="retry">Try again</button>
+      <div id="status" role="status" aria-live="polite">Waiting for a connection.</div>
+    </main>
+    <script>
+      const status = document.getElementById('status');
+      const retry = () => {
+        status.textContent = navigator.onLine ? 'Reconnecting to Studora…' : 'Still offline. Check your connection and try again.';
+        if (navigator.onLine) window.location.reload();
+      };
+      document.getElementById('retry').addEventListener('click', retry);
+      window.addEventListener('online', () => { status.textContent = 'Connection restored. Tap “Try again” to reopen Studora.'; });
+      window.addEventListener('offline', () => { status.textContent = 'Connection lost. Waiting for a connection.'; });
+    </script>
+  </body>
+</html>

@@ -13,7 +13,7 @@
  *  F. Academic Progress — Empirical topic mastery breakdown, strengths, weaknesses, and telemetry metrics.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Sparkles,
   BookOpen,
@@ -61,29 +61,54 @@ export function LearningWorkspacePage({
   const [activeDrill, setActiveDrill] = useState(null);
   const [drillLoading, setDrillLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState(null);
+  const workspaceRequestIdRef = useRef(0);
 
   // NEXA Chat direct prompt transfer
   const [nexaInitialPrompt, setNexaInitialPrompt] = useState('');
 
   // Fetch student academic intelligence & daily questions
   const fetchWorkspaceData = useCallback(async () => {
+    const requestId = ++workspaceRequestIdRef.current;
     setLoading(true);
+    setLoadingError(null);
     try {
-      const [analysisRes, questionsRes] = await Promise.all([
-        api.request('/api/academic/analysis').catch(() => null),
-        api.request('/api/study/daily-questions').catch(() => null)
+      const [analysisResult, questionsResult] = await Promise.allSettled([
+        api.request('/api/academic/analysis'),
+        api.request('/api/study/daily-questions')
       ]);
+      if (requestId !== workspaceRequestIdRef.current) return;
+      const failures = [];
 
-      if (analysisRes && analysisRes.success) {
-        setAnalysis(analysisRes);
+      if (analysisResult.status === 'fulfilled' && analysisResult.value?.success) {
+        setAnalysis(analysisResult.value);
+      } else {
+        const detail = analysisResult.status === 'rejected'
+          ? analysisResult.reason
+          : analysisResult.value?.error;
+        console.warn('Failed to load learning workspace analysis:', detail);
+        failures.push('academic analysis');
       }
-      if (questionsRes && questionsRes.success) {
-        setDailyQuestions(questionsRes);
+
+      if (questionsResult.status === 'fulfilled' && questionsResult.value?.success) {
+        setDailyQuestions(questionsResult.value);
+      } else {
+        const detail = questionsResult.status === 'rejected'
+          ? questionsResult.reason
+          : questionsResult.value?.error;
+        console.warn('Failed to load learning workspace daily questions:', detail);
+        failures.push('daily practice');
       }
-    } catch (err) {
-      console.warn('Failed to load learning workspace data:', err.message);
+
+      if (failures.length) {
+        setLoadingError(`Unable to load ${failures.join(' and ')}. Check your connection and retry.`);
+      }
+    } catch (error) {
+      if (requestId !== workspaceRequestIdRef.current) return;
+      console.warn('Failed to load learning workspace data:', error);
+      setLoadingError('Unable to load your learning data. Check your connection and retry.');
     } finally {
-      setLoading(false);
+      if (requestId === workspaceRequestIdRef.current) setLoading(false);
     }
   }, []);
 
@@ -228,6 +253,23 @@ export function LearningWorkspacePage({
           );
         })}
       </div>
+
+      {loading && (
+        <div role="status" aria-live="polite" className="rounded-xl border border-[#DDEFE5] bg-[#F6F7F3] px-4 py-3 text-xs text-[#667085]">
+          Loading your academic insights and daily practice…
+        </div>
+      )}
+      {loadingError && (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <p>{loadingError}</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={fetchWorkspaceData} icon={RotateCcw} className="shrink-0">
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* ── 3. WORKSPACE SECTIONS ── */}
 

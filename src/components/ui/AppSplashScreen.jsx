@@ -1,11 +1,7 @@
 import React from 'react';
-import { StudoraMark } from './StudoraLogo';
 
 /**
- * AppSplashScreen
- * Premium animated brand splash screen displayed when a visitor enters Studora.
- * Features an extruded brand icon tile, concentric pulsing ripple rings, 
- * floating micro-motion, metallic light sheen sweep, and an indeterminate progress bar.
+ * Lightweight brand splash shown while authentication is restored.
  */
 export function AppSplashScreen({ 
   message = "Initializing Studora Workspace...", 
@@ -21,32 +17,8 @@ export function AppSplashScreen({
       aria-live="polite"
       aria-label="Loading Studora"
     >
-      {/* Ambient background glow */}
-      <div 
-        className="absolute w-80 h-80 rounded-full bg-academic-100/60 blur-3xl pointer-events-none -translate-y-4" 
-        aria-hidden="true" 
-      />
-
       <div className="relative z-10 flex flex-col items-center px-4">
-        {/* Animated App Icon Lockup */}
-        <div className="relative flex items-center justify-center">
-          {/* Concentric pulsing ripple ring 1 */}
-          <div className="absolute w-24 h-24 rounded-[30px] bg-academic/15 animate-pulse-halo" />
-          
-          {/* Concentric pulsing ripple ring 2 */}
-          <div className="absolute w-28 h-28 rounded-[34px] bg-academic/10 animate-pulse-halo [animation-delay:400ms]" />
-
-          {/* Core App Icon Tile */}
-          <div className="relative w-20 h-20 rounded-[22px] bg-gradient-to-br from-[#176B4D] via-[#145d43] to-[#0E3D2C] shadow-[0_12px_28px_rgba(23,107,77,0.32),0_4px_12px_rgba(0,0,0,0.06)] border border-white/25 flex items-center justify-center text-white overflow-hidden animate-icon-float">
-            {/* Glossy metallic light sheen sweep across the mark */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="w-12 h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-icon-sheen" />
-            </div>
-
-            {/* Crisp Studora Mark Icon */}
-            <StudoraMark className="w-10 h-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]" strokeWidth={2.4} />
-          </div>
-        </div>
+        <img src="/icons/studora-192.png" alt="" className="relative z-10 h-20 w-20 rounded-[22px] shadow-[0_12px_28px_rgba(23,107,77,0.24)]" />
 
         {/* Brand Lockup & Staged Message */}
         <div className="mt-6 text-center space-y-1">
@@ -58,13 +30,8 @@ export function AppSplashScreen({
           </p>
         </div>
 
-        {/* Indeterminate Sleek Progress Rail */}
-        <div className="mt-5 w-44 h-1.5 rounded-full bg-[#E5E7EB] overflow-hidden relative shadow-inner">
-          <div className="absolute top-0 bottom-0 w-24 rounded-full bg-gradient-to-r from-academic-600 via-academic-400 to-academic-700 animate-bar-indeterminate" />
-        </div>
-
         {/* Status text */}
-        <p className="text-xs text-muted font-medium mt-3.5 animate-pulse">
+        <p className="text-xs text-muted font-medium mt-3.5">
           {message}
         </p>
       </div>

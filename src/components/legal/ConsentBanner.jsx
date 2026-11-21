@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Cookie, Check, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../ui';
 import { api } from '../../services/api/client';
+import { safeStorage } from '../../lib/supabase/client';
 
 export function ConsentBanner({ onOpenSettings }) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     // Check if consent has already been recorded
-    const timestamp = localStorage.getItem('academic_consent_timestamp');
+    const timestamp = safeStorage.getItem('academic_consent_timestamp');
     if (!timestamp) {
       const timer = setTimeout(() => setIsVisible(true), 600);
       return () => clearTimeout(timer);
@@ -24,8 +25,8 @@ export function ConsentBanner({ onOpenSettings }) {
       policyVersion: '1.0'
     };
 
-    localStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
-    localStorage.setItem('academic_consent_timestamp', new Date().toISOString());
+    safeStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
+    safeStorage.setItem('academic_consent_timestamp', new Date().toISOString());
     setIsVisible(false);
 
     // Sync with backend audit log if possible
@@ -44,8 +45,8 @@ export function ConsentBanner({ onOpenSettings }) {
       policyVersion: '1.0'
     };
 
-    localStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
-    localStorage.setItem('academic_consent_timestamp', new Date().toISOString());
+    safeStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
+    safeStorage.setItem('academic_consent_timestamp', new Date().toISOString());
     setIsVisible(false);
 
     // Sync with backend audit log if possible

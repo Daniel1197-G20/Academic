@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { Button, Input, Badge, Modal, Avatar, PageHeader, Tabs } from '../../components/ui';
 import { api } from '../../services/api/client';
-import { supabase } from '../../lib/supabase/client';
+import { safeStorage, supabase } from '../../lib/supabase/client';
 import { syncEngine, SYNC_EVENTS } from '../../lib/sync/syncEngine';
 import { SubscriptionSettingsSection } from '../billing/SubscriptionSettingsSection';
 
@@ -146,7 +146,7 @@ export function ProfilePage({
   // Appearance / Dark Mode State
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('studora_theme');
+      const saved = safeStorage.getItem('studora_theme');
       if (saved) return saved === 'dark';
       return document.documentElement.classList.contains('dark') ||
         (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -157,7 +157,7 @@ export function ProfilePage({
   const toggleTheme = (enableDark) => {
     setIsDarkMode(enableDark);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('studora_theme', enableDark ? 'dark' : 'light');
+      safeStorage.setItem('studora_theme', enableDark ? 'dark' : 'light');
       if (enableDark) {
         document.documentElement.classList.add('dark');
       } else {
@@ -327,55 +327,8 @@ export function ProfilePage({
         registered_subject_ids: selectedSubjects
       };
 
-      // 1. Authoritative persistence via Supabase client if available
-      let supabaseUpdatedProfile = null;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const authUid = session?.user?.id || userProfile?.id;
-        if (authUid) {
-          // Attempt update with dedicated columns first; fallback gracefully if custom column migration is pending
-          let updatePayload = {
-            full_name: fullName.trim(),
-            avatar_url: avatarUrl || null,
-            institution: institution.trim(),
-            department: department.trim(),
-            academic_level: academicLevel.trim(),
-            matric_number: matricNumber.trim() || null,
-            bio: bio.trim(),
-            academic_interests: interestsArray,
-            study_preferences: structuredStudyPreferences,
-            updated_at: new Date().toISOString()
-          };
-
-          const { data: directData, error: directErr } = await supabase
-            .from('profiles')
-            .update({
-              ...updatePayload,
-              course_of_study: courseOfStudy.trim(),
-              registered_subject_ids: selectedSubjects
-            })
-            .eq('id', authUid)
-            .select();
-
-          if (!directErr && directData && directData[0]) {
-            supabaseUpdatedProfile = directData[0];
-          } else {
-            // Fallback: update without unmigrated top-level columns (stored in structured study_preferences)
-            const { data: fbData, error: fbErr } = await supabase
-              .from('profiles')
-              .update(updatePayload)
-              .eq('id', authUid)
-              .select();
-            if (!fbErr && fbData && fbData[0]) {
-              supabaseUpdatedProfile = fbData[0];
-            }
-          }
-        }
-      } catch (sbErr) {
-        console.warn('Notice updating profile via Supabase:', sbErr);
-      }
-
-      // 2. Synchronize to backend API
+      // Persist through the API client, which uses Supabase under the active
+      // Supabase session and retains the legacy route only for older sessions.
       const res = await api.updateProfile({
         fullName: fullName.trim(),
         avatarUrl,
@@ -390,7 +343,7 @@ export function ProfilePage({
         registeredSubjects: selectedSubjects
       });
 
-      const finalProfile = supabaseUpdatedProfile || res?.profile || {
+      const finalProfile = res?.profile || {
         ...userProfile,
         full_name: fullName.trim(),
         avatar_url: avatarUrl,

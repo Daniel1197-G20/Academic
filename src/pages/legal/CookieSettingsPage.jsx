@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Cookie, Lock, Shield, ArrowLeft, Save, CheckCircle2 } from 'lucide-react';
 import { Button, Badge, PageHeader } from '../../components/ui';
 import { api } from '../../services/api/client';
+import { safeStorage } from '../../lib/supabase/client';
 
 export function CookieSettingsPage({ onBack, showToast }) {
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
@@ -11,7 +12,7 @@ export function CookieSettingsPage({ onBack, showToast }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('academic_consent_preferences');
+      const saved = safeStorage.getItem('academic_consent_preferences');
       if (saved) {
         const parsed = JSON.parse(saved);
         setAnalyticsEnabled(!!parsed.analytics);
@@ -35,8 +36,8 @@ export function CookieSettingsPage({ onBack, showToast }) {
     };
 
     try {
-      localStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
-      localStorage.setItem('academic_consent_timestamp', new Date().toISOString());
+      safeStorage.setItem('academic_consent_preferences', JSON.stringify(preferences));
+      safeStorage.setItem('academic_consent_timestamp', new Date().toISOString());
 
       await api.recordConsent([
         { type: 'analytics_cookies', status: analyticsEnabled ? 'granted' : 'revoked', version: '1.0' },

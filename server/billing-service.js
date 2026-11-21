@@ -8,13 +8,19 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_academic
 const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_academic_platform_mock_key_2026';
 const PAYSTACK_BASE_URL = process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
 
-export const IS_TEST_MODE = PAYSTACK_SECRET_KEY.startsWith('sk_test_') || PAYSTACK_SECRET_KEY.includes('mock');
+if (process.env.NODE_ENV === 'production' && !process.env.PAYSTACK_SECRET_KEY) {
+  throw new Error('[server/billing-service.js] Missing required environment variable: PAYSTACK_SECRET_KEY');
+}
 
-// PAYSTACK_WEBHOOK_SECRET must be explicitly configured.
-// It must NOT fall back to PAYSTACK_SECRET_KEY because that key is present
-// in the public repository as a dev placeholder — any fallback would make
-// webhook signatures trivially forgeable in a production deploy.
-if (!process.env.PAYSTACK_WEBHOOK_SECRET && !IS_TEST_MODE) {
+export const IS_TEST_MODE = PAYSTACK_SECRET_KEY.startsWith('sk_test_') || PAYSTACK_SECRET_KEY.includes('mock');
+if (process.env.NODE_ENV === 'production' && !PAYSTACK_SECRET_KEY.startsWith('sk_live_')) {
+  throw new Error('[server/billing-service.js] Production requires a live Paystack secret key (sk_live_...).');
+}
+
+// PAYSTACK_WEBHOOK_SECRET is required in production for the timestamped
+// Paystack-Signature header. The legacy x-paystack-signature continues to use
+// the configured Paystack API secret as documented by Paystack.
+if (!process.env.PAYSTACK_WEBHOOK_SECRET && (process.env.NODE_ENV === 'production' || !IS_TEST_MODE)) {
   throw new Error('[server/billing-service.js] Missing required environment variable: PAYSTACK_WEBHOOK_SECRET');
 }
 // In test/dev mode a missing secret is tolerated — live webhooks are not expected.
@@ -77,7 +83,7 @@ async function paystackRequest(endpoint, method = 'GET', data = null) {
   });
 }
 
-function mockPaystackResponse(endpoint, method, data) {
+async function mockPaystackResponse(endpoint, method, data) {
   if (endpoint.startsWith('/transaction/initialize')) {
     const ref = data.reference || 'ACADEMIC_2026_' + crypto.randomBytes(4).toString('hex').toUpperCase();
     return Promise.resolve({
@@ -93,6 +99,13 @@ function mockPaystackResponse(endpoint, method, data) {
 
   if (endpoint.startsWith('/transaction/verify/')) {
     const ref = endpoint.replace('/transaction/verify/', '');
+    const txRes = await db.query(`
+      SELECT pt.amount_kobo, pt.currency, u.email
+      FROM payment_transactions pt
+      JOIN users u ON u.id = pt.user_id
+      WHERE pt.reference = $1 LIMIT 1;
+    `, [ref]);
+    const tx = txRes.rows[0];
     return Promise.resolve({
       status: true,
       message: 'Verification successful (test mode)',
@@ -101,16 +114,16 @@ function mockPaystackResponse(endpoint, method, data) {
         domain: 'test',
         status: 'success',
         reference: ref,
-        amount: 250000,
+        amount: Number(tx?.amount_kobo ?? 250000),
         gateway_response: 'Successful',
         paid_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         channel: 'card',
-        currency: 'NGN',
+        currency: tx?.currency || 'NGN',
         customer: {
           id: 12345,
           customer_code: 'CUS_mock_student_123',
-          email: 'student@example.com'
+          email: tx?.email || 'student@example.com'
         },
         authorization: {
           authorization_code: 'AUTH_mock_' + crypto.randomBytes(4).toString('hex'),
@@ -397,6 +410,19 @@ export async function initializeCheckout({ userId, planCode, callbackUrl }) {
 
   const plan = planRes.rows[0];
 
+  const planCodeEnvKey = {
+    student: 'PAYSTACK_PLAN_STUDENT_CODE',
+    pro: 'PAYSTACK_PLAN_PRO_CODE',
+    premium: 'PAYSTACK_PLAN_PREMIUM_CODE'
+  }[plan.code];
+  if (!IS_TEST_MODE && (!planCodeEnvKey || !process.env[planCodeEnvKey] ||
+      plan.paystack_plan_code !== process.env[planCodeEnvKey])) {
+    const err = new Error(`Paystack recurring plan is not configured for ${plan.name}.`);
+    err.statusCode = 503;
+    err.code = 'PAYSTACK_PLAN_NOT_CONFIGURED';
+    throw err;
+  }
+
   // Prevent duplicate payment initialization if already on active plan
   const currentSub = await getUserSubscription(userId);
   if (currentSub.isActive && currentSub.planCode === plan.code && !currentSub.cancelAtPeriodEnd) {
@@ -458,7 +484,7 @@ export async function initializeCheckout({ userId, planCode, callbackUrl }) {
 /**
  * 6. Verify Transaction and Fulfill Subscription
  */
-export async function verifyPayment(reference) {
+export async function verifyPayment(reference, expectedUserId = null) {
   if (!reference) {
     const err = new Error('Payment reference is required.');
     err.statusCode = 400;
@@ -480,6 +506,12 @@ export async function verifyPayment(reference) {
 
   const tx = txRes.rows[0];
 
+  if (expectedUserId && tx.user_id !== expectedUserId) {
+    const err = new Error('Payment reference does not belong to the authenticated user.');
+    err.statusCode = 404;
+    throw err;
+  }
+
   // If already confirmed successful, return idempotently
   if (tx.status === 'success') {
     return {
@@ -495,7 +527,19 @@ export async function verifyPayment(reference) {
   // Query Paystack verification API
   const paystackData = await paystackRequest(`/transaction/verify/${encodeURIComponent(reference)}`, 'GET');
 
-  if (paystackData.data?.status === 'success') {
+  const verified = paystackData.data;
+  if (verified?.status === 'success') {
+    // Never grant access based on a successful status alone. Compare the
+    // immutable transaction details against the server-side ledger.
+    if (verified.reference !== tx.reference ||
+        Number(verified.amount) !== Number(tx.amount_kobo) ||
+        String(verified.currency || '').toUpperCase() !== String(tx.currency || '').toUpperCase()) {
+      const err = new Error('Verified payment details do not match the pending transaction.');
+      err.statusCode = 409;
+      err.code = 'PAYMENT_DETAILS_MISMATCH';
+      throw err;
+    }
+
     const paidAt = paystackData.data.paid_at ? new Date(paystackData.data.paid_at) : new Date();
     const periodEnd = new Date(paidAt);
     periodEnd.setDate(periodEnd.getDate() + 30);
@@ -577,6 +621,47 @@ export async function cancelSubscription(userId) {
     };
   }
 
+  if (sub.cancelAtPeriodEnd || sub.status === 'non_renewing') {
+    return {
+      success: true,
+      message: 'Your subscription is already set to end after the current billing period.',
+      currentPeriodEnd: sub.currentPeriodEnd
+    };
+  }
+
+  const providerSub = await db.query(`
+    SELECT paystack_subscription_code, paystack_email_token, current_period_end
+    FROM user_subscriptions WHERE id = $1;
+  `, [sub.id]);
+  const providerData = providerSub.rows[0];
+
+  // Disable renewal at Paystack before changing local state. A locally
+  // cancelled record must never continue to be charged by the provider.
+  if (!providerData?.paystack_subscription_code && !IS_TEST_MODE) {
+    const err = new Error('This subscription is not linked to a Paystack subscription yet. Please contact support to stop renewal.');
+    err.statusCode = 409;
+    err.code = 'PAYSTACK_SUBSCRIPTION_NOT_LINKED';
+    throw err;
+  }
+  if (providerData?.paystack_subscription_code) {
+    if (!providerData.paystack_email_token) {
+      const err = new Error('Paystack subscription cancellation token is missing. Please contact support.');
+      err.statusCode = 409;
+      err.code = 'PAYSTACK_CANCELLATION_TOKEN_MISSING';
+      throw err;
+    }
+    const disabled = await paystackRequest('/subscription/disable', 'POST', {
+      code: providerData.paystack_subscription_code,
+      token: providerData.paystack_email_token
+    });
+    if (disabled?.status === false) {
+      const err = new Error(disabled.message || 'Paystack could not disable subscription renewal.');
+      err.statusCode = 502;
+      err.code = 'PAYSTACK_CANCELLATION_FAILED';
+      throw err;
+    }
+  }
+
   await db.query(`
     UPDATE user_subscriptions
     SET status = 'non_renewing', cancel_at_period_end = true, updated_at = CURRENT_TIMESTAMP
@@ -593,28 +678,55 @@ export async function cancelSubscription(userId) {
 /**
  * 8. Process Paystack Webhook (Idempotent signature-verified handler)
  */
-export async function handlePaystackWebhook(rawBody, signature) {
-  if (!rawBody) {
+export async function handlePaystackWebhook(rawBody, signature, paystackSignature = '') {
+  if (!rawBody || rawBody.length === 0) {
     const err = new Error('Empty webhook payload.');
     err.statusCode = 400;
     throw err;
   }
+  const rawBodyBytes = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody);
+  const rawBodyText = rawBodyBytes.toString('utf8');
 
   // Verify HMAC SHA512 Signature
   // In production (IS_TEST_MODE === false), PAYSTACK_WEBHOOK_SECRET is required and enforced at startup.
   // In test/dev mode, skip signature verification only when no secret is configured (PAYSTACK_WEBHOOK_SECRET is null).
   // When a test secret IS configured (injected via process.env), enforce verification so the test suite
   // exercises the real signature path rather than silently bypassing it.
-  if (PAYSTACK_WEBHOOK_SECRET) {
-    const expectedSig = crypto.createHmac('sha512', PAYSTACK_WEBHOOK_SECRET).update(rawBody).digest('hex');
-    if (signature !== expectedSig) {
+  let signatureValid = false;
+  if (paystackSignature && PAYSTACK_WEBHOOK_SECRET) {
+    const parts = paystackSignature.split(',').map(part => part.trim());
+    const timestampPart = parts.find(part => part.startsWith('t='))?.slice(2);
+    const timestamp = /^\d+$/.test(timestampPart || '') ? Number(timestampPart) : null;
+    const versions = parts.filter(part => part.startsWith('v1='))
+      .map(part => part.slice(3).split(':').at(-1))
+      .filter(hex => /^[0-9a-f]{128}$/.test(hex || ''));
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (timestamp !== null && Math.abs(currentTime - timestamp) <= 300) {
+      const expected = crypto.createHmac('sha512', PAYSTACK_WEBHOOK_SECRET)
+        .update(`${timestamp}.`).update(rawBodyBytes).digest();
+      signatureValid = versions.some(hex => crypto.timingSafeEqual(expected, Buffer.from(hex, 'hex')));
+    }
+  }
+  if (!signatureValid && signature) {
+    // Legacy x-paystack-signature uses the API secret. Also accept the
+    // explicitly configured webhook secret for compatibility with existing
+    // deployments that signed this header using that value.
+    const secrets = [...new Set([PAYSTACK_SECRET_KEY, PAYSTACK_WEBHOOK_SECRET].filter(Boolean))];
+    signatureValid = secrets.some(secret => {
+      const expected = crypto.createHmac('sha512', secret).update(rawBodyBytes).digest();
+      return /^[0-9a-f]{128}$/.test(signature) && crypto.timingSafeEqual(expected, Buffer.from(signature, 'hex'));
+    });
+  }
+
+  if (!signatureValid) {
+    if (PAYSTACK_WEBHOOK_SECRET || !IS_TEST_MODE) {
       const err = new Error('Invalid Paystack webhook signature.');
       err.statusCode = 401;
       err.code = 'WEBHOOK_INVALID_SIGNATURE';
       throw err;
     }
-  } else if (!IS_TEST_MODE) {
-    // Should never reach here: startup guard at line 17-18 prevents this in production.
+  }
+  if (!PAYSTACK_WEBHOOK_SECRET && !IS_TEST_MODE) {
     const err = new Error('Webhook secret not configured; cannot verify signature.');
     err.statusCode = 500;
     err.code = 'WEBHOOK_SECRET_MISSING';
@@ -624,7 +736,7 @@ export async function handlePaystackWebhook(rawBody, signature) {
 
   let event;
   try {
-    event = JSON.parse(rawBody);
+    event = JSON.parse(rawBodyText);
   } catch (e) {
     const err = new Error('Malformed webhook JSON payload.');
     err.statusCode = 400;
@@ -641,7 +753,7 @@ export async function handlePaystackWebhook(rawBody, signature) {
     VALUES ($1, $2, $3, $4, false)
     ON CONFLICT (event_id) DO NOTHING
     RETURNING id, processed;
-  `, [hookDbId, eventId, eventType, rawBody]);
+  `, [hookDbId, eventId, eventType, rawBodyText]);
 
   // If already present, check if processed
   if (insertRes.rows.length === 0) {
@@ -657,7 +769,18 @@ export async function handlePaystackWebhook(rawBody, signature) {
       const data = event.data;
       const ref = data.reference;
       if (ref) {
-        await verifyPayment(ref);
+        const existing = await db.query(`SELECT status, metadata FROM payment_transactions WHERE reference = $1;`, [ref]);
+        let isRecordedRenewal = false;
+        if (existing.rows.length) {
+          try {
+            isRecordedRenewal = JSON.parse(existing.rows[0].metadata || '{}').recurring === true;
+          } catch (_) {}
+        }
+        if (existing.rows.length && !isRecordedRenewal) {
+          await verifyPayment(ref);
+        } else if (!existing.rows.length) {
+          await applyRenewalCharge(data, ref);
+        }
       }
     } else if (eventType === 'subscription.create') {
       const data = event.data;
@@ -676,7 +799,8 @@ export async function handlePaystackWebhook(rawBody, signature) {
       if (subCode) {
         await db.query(`
           UPDATE user_subscriptions 
-          SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+          SET status = CASE WHEN current_period_end > CURRENT_TIMESTAMP THEN 'non_renewing' ELSE 'expired' END,
+              cancel_at_period_end = true, updated_at = CURRENT_TIMESTAMP
           WHERE paystack_subscription_code = $1;
         `, [subCode]);
       }
@@ -690,10 +814,17 @@ export async function handlePaystackWebhook(rawBody, signature) {
           WHERE paystack_subscription_code = $1;
         `, [subCode]);
       }
-    } else if (eventType === 'invoice.failed') {
+    } else if (eventType === 'invoice.payment_failed' || eventType === 'invoice.failed') {
       const data = event.data;
       const customerCode = data.customer?.customer_code;
-      if (customerCode) {
+      const subscriptionCode = data.subscription?.subscription_code || data.subscription_code;
+      if (subscriptionCode) {
+        await db.query(`
+          UPDATE user_subscriptions
+          SET status = 'past_due', updated_at = CURRENT_TIMESTAMP
+          WHERE paystack_subscription_code = $1;
+        `, [subscriptionCode]);
+      } else if (customerCode) {
         await db.query(`
           UPDATE user_subscriptions 
           SET status = 'past_due', updated_at = CURRENT_TIMESTAMP
@@ -712,9 +843,69 @@ export async function handlePaystackWebhook(rawBody, signature) {
     return { acknowledged: true, processed: true, eventType };
   } catch (err) {
     console.error(`Error processing Paystack webhook event ${eventType}:`, err);
-    // Even if processing fails, do not throw 500 to Paystack if it was acknowledged to prevent retry storm
-    return { acknowledged: true, error: err.message };
+    // Leave the event unprocessed and return a failure to Paystack so delivery
+    // is retried. The event journal and transaction references make retries safe.
+    err.statusCode = err.statusCode || 500;
+    throw err;
   }
+}
+
+/** Verify and record an automatically collected recurring subscription charge. */
+async function applyRenewalCharge(webhookData, reference) {
+  const paystackData = await paystackRequest(`/transaction/verify/${encodeURIComponent(reference)}`, 'GET');
+  const payment = paystackData.data;
+  if (payment?.status !== 'success' || payment.reference !== reference) return;
+
+  const customerCode = payment.customer?.customer_code || webhookData.customer?.customer_code;
+  const subRes = await db.query(`
+    SELECT us.id, us.user_id, us.plan_id, us.current_period_end, sp.amount_kobo, sp.currency, sp.interval
+    FROM user_subscriptions us
+    JOIN subscription_plans sp ON sp.id = us.plan_id
+    WHERE us.paystack_customer_code = $1
+      AND us.status IN ('active', 'non_renewing', 'past_due')
+    ORDER BY us.updated_at DESC LIMIT 1;
+  `, [customerCode]);
+  const sub = subRes.rows[0];
+  if (!sub) throw new Error('No active subscription matches the recurring Paystack charge.');
+
+  if (Number(payment.amount) !== Number(sub.amount_kobo) ||
+      String(payment.currency || '').toUpperCase() !== String(sub.currency || '').toUpperCase()) {
+    const err = new Error('Recurring charge amount or currency does not match the subscription plan.');
+    err.code = 'RENEWAL_DETAILS_MISMATCH';
+    throw err;
+  }
+
+  const paidAt = payment.paid_at ? new Date(payment.paid_at) : new Date();
+  const txId = `tx_${String(payment.id || reference)}`;
+  await db.transaction(async (tx) => {
+    const inserted = await tx.query(`
+      INSERT INTO payment_transactions
+        (id, user_id, subscription_id, plan_id, provider, provider_transaction_id, reference,
+         amount_kobo, currency, status, metadata, paid_at)
+      VALUES ($1, $2, $3, $4, 'paystack', $5, $6, $7, $8, 'success', $9, $10)
+      ON CONFLICT (reference) DO NOTHING
+      RETURNING id;
+    `, [txId, sub.user_id, sub.id, sub.plan_id, String(payment.id || ''), reference,
+        payment.amount, payment.currency, JSON.stringify({ recurring: true }), paidAt.toISOString()]);
+
+    // Concurrent webhook retries can race on the same reference. Only the
+    // transaction that inserts the ledger row advances the billing period.
+    if (!inserted.rows.length) return;
+
+    const currentEnd = new Date(sub.current_period_end);
+    const periodStart = currentEnd > paidAt ? currentEnd : paidAt;
+    const periodEnd = new Date(periodStart);
+    if (sub.interval === 'monthly') periodEnd.setMonth(periodEnd.getMonth() + 1);
+    else if (sub.interval === 'annually' || sub.interval === 'yearly') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+    else periodEnd.setDate(periodEnd.getDate() + 30);
+
+    await tx.query(`
+      UPDATE user_subscriptions
+      SET status = 'active', current_period_start = $1, current_period_end = $2,
+          cancel_at_period_end = false, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3;
+    `, [periodStart.toISOString(), periodEnd.toISOString(), sub.id]);
+  });
 }
 
 /**

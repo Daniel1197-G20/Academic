@@ -5,7 +5,7 @@ import { Button } from '../ui';
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retryKey: 0 };
   }
 
   static getDerivedStateFromError(error) {
@@ -17,12 +17,16 @@ export class ErrorBoundary extends React.Component {
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
     if (this.props.onReset) {
       this.props.onReset();
-    } else {
-      window.location.reload();
     }
+    // Remount the failed subtree so effects, local state, and lazy children get
+    // a clean attempt. Keep the error panel visible until that render starts.
+    this.setState(state => ({
+      hasError: false,
+      error: null,
+      retryKey: state.retryKey + 1
+    }));
   };
 
   handleGoHome = () => {
@@ -77,6 +81,10 @@ export class ErrorBoundary extends React.Component {
       );
     }
 
-    return this.props.children;
+    return (
+      <React.Fragment key={this.state.retryKey}>
+        {this.props.children}
+      </React.Fragment>
+    );
   }
 }

@@ -47,6 +47,8 @@ const STARTER_PROMPTS = [
 export function AiTutorPage({ onNavigate, showToast }) {
   const [activeTab, setActiveTab] = useState('tutor'); // 'tutor' | 'analysis' | 'documents'
   const [conversations, setConversations] = useState([]);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [conversationsError, setConversationsError] = useState(false);
   const [activeConvId, setActiveConvId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputPrompt, setInputPrompt] = useState('');
@@ -58,6 +60,7 @@ export function AiTutorPage({ onNavigate, showToast }) {
 
   const messagesContainerRef = useRef(null);
   const isAutoScrollEnabledRef = useRef(true);
+  const conversationsRequestIdRef = useRef(0);
 
   // Scroll only the messages container, never the window or outer page
   const scrollToBottom = (behavior = 'smooth') => {
@@ -87,13 +90,26 @@ export function AiTutorPage({ onNavigate, showToast }) {
 
   // Fetch conversation list
   const fetchConversations = useCallback(async () => {
+    const requestId = ++conversationsRequestIdRef.current;
+    setConversationsLoading(true);
+    setConversationsError(false);
     try {
       const data = await api.request('/api/ai/conversations');
-      if (data && data.conversations) {
+      if (requestId !== conversationsRequestIdRef.current) return;
+      if (Array.isArray(data?.conversations)) {
         setConversations(data.conversations);
+      } else {
+        throw new Error('Conversation history response was invalid');
       }
     } catch (err) {
-      console.warn('Failed to load conversations:', err.message);
+      if (requestId === conversationsRequestIdRef.current) {
+        console.warn('Failed to load conversations:', err);
+        setConversationsError(true);
+      }
+    } finally {
+      if (requestId === conversationsRequestIdRef.current) {
+        setConversationsLoading(false);
+      }
     }
   }, []);
 
@@ -369,15 +385,24 @@ export function AiTutorPage({ onNavigate, showToast }) {
                 <button
                   type="button"
                   onClick={fetchConversations}
+                  disabled={conversationsLoading}
                   className="text-muted hover:text-ink text-[11px]"
-                  title="Refresh"
+                  title="Refresh saved chats"
+                  aria-label="Refresh saved chats"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className={`w-3.5 h-3.5 ${conversationsLoading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
 
               <div className="space-y-1.5 max-h-[360px] md:max-h-[480px] overflow-y-auto scrollbar-thin pr-1 flex-1">
-                {conversations.length === 0 ? (
+                {conversationsLoading ? (
+                  <div role="status" className="py-8 text-center text-xs text-muted">Loading saved chats…</div>
+                ) : conversationsError ? (
+                  <div role="alert" className="space-y-3 py-6 text-center text-xs text-muted">
+                    <p>Couldn’t load saved chats. Check your connection and retry.</p>
+                    <Button variant="secondary" size="sm" onClick={fetchConversations} icon={RefreshCw}>Retry</Button>
+                  </div>
+                ) : conversations.length === 0 ? (
                   <div className="py-8 text-center text-xs text-muted">
                     No saved chats yet. Start a new conversation!
                   </div>

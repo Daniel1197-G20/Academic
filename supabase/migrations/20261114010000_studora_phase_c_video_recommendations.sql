@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS public.student_video_progress (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   video_id TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'viewed', -- 'viewed' | 'completed'
   last_watched_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -23,4 +23,5 @@ ALTER TABLE public.student_video_progress ENABLE ROW LEVEL SECURITY;
 -- Strict Isolation Policy: Users can only select and modify their own video progress records
 DROP POLICY IF EXISTS "Students manage their own video progress" ON public.student_video_progress;
 CREATE POLICY "Students manage their own video progress" ON public.student_video_progress
-  FOR ALL USING (auth.uid()::text = user_id);
+  FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);

@@ -34,6 +34,17 @@ const PAYSTACK_BASE_URL   = process.env.PAYSTACK_BASE_URL   || 'https://api.pays
 
 export const IS_TUTOR_TEST_MODE = PAYSTACK_SECRET_KEY.startsWith('sk_test_') || PAYSTACK_SECRET_KEY.includes('mock');
 
+// Never allow the development mock key or a test Paystack key to silently
+// activate the production tutor-finance routes.
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.PAYSTACK_SECRET_KEY || !PAYSTACK_SECRET_KEY.startsWith('sk_live_')) {
+    throw new Error('[tutor-financial-service.js] Production requires a live Paystack secret key (sk_live_...).');
+  }
+  if (!process.env.PAYSTACK_WEBHOOK_SECRET) {
+    throw new Error('[tutor-financial-service.js] Missing required env: PAYSTACK_WEBHOOK_SECRET');
+  }
+}
+
 // Webhook secret: must NOT fall back to secret key — that would make signatures forgeable.
 if (!process.env.PAYSTACK_WEBHOOK_SECRET && !IS_TUTOR_TEST_MODE) {
   throw new Error('[tutor-financial-service.js] Missing required env: PAYSTACK_WEBHOOK_SECRET');

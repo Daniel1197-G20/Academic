@@ -4,7 +4,7 @@
 -- 1. Student Academic Documents
 CREATE TABLE IF NOT EXISTS public.student_documents (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   subject_id TEXT REFERENCES public.subjects(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
   file_name TEXT NOT NULL,
@@ -29,7 +29,7 @@ ALTER TABLE public.student_documents ADD COLUMN IF NOT EXISTS source_text TEXT;
 CREATE TABLE IF NOT EXISTS public.document_chunks (
   id TEXT PRIMARY KEY,
   document_id TEXT NOT NULL REFERENCES public.student_documents(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   page_number INT NOT NULL DEFAULT 1,
   chunk_index INT NOT NULL DEFAULT 0,
   section_heading TEXT,
@@ -47,7 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_tsv ON public.document_chunks USI
 CREATE TABLE IF NOT EXISTS public.document_learning_resources (
   id TEXT PRIMARY KEY,
   document_id TEXT NOT NULL REFERENCES public.student_documents(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   resource_type TEXT NOT NULL, -- summary, flashcards, practice_questions, study_guide
   title TEXT NOT NULL,
   payload JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -66,12 +66,15 @@ ALTER TABLE public.document_learning_resources ENABLE ROW LEVEL SECURITY;
 -- Policies
 DROP POLICY IF EXISTS "Students manage their own documents" ON public.student_documents;
 CREATE POLICY "Students manage their own documents" ON public.student_documents
-  FOR ALL USING (auth.uid()::text = user_id);
+  FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Students manage their own document chunks" ON public.document_chunks;
 CREATE POLICY "Students manage their own document chunks" ON public.document_chunks
-  FOR ALL USING (auth.uid()::text = user_id);
+  FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Students manage their own document resources" ON public.document_learning_resources;
 CREATE POLICY "Students manage their own document resources" ON public.document_learning_resources
-  FOR ALL USING (auth.uid()::text = user_id);
+  FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);

@@ -320,7 +320,7 @@ export async function getAuthenticatedUser(req) {
 // Helper to parse JSON body with max payload size protection
 export async function parseJsonBody(req, maxBytes = 1024 * 1024) {
   return new Promise((resolve, reject) => {
-    let body = '';
+    const chunks = [];
     let bytesReceived = 0;
     req.on('data', chunk => {
       bytesReceived += chunk.length;
@@ -330,10 +330,11 @@ export async function parseJsonBody(req, maxBytes = 1024 * 1024) {
         reject(err);
         return;
       }
-      body += chunk;
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     });
     req.on('end', () => {
-      req.rawBody = body;
+      req.rawBody = Buffer.concat(chunks);
+      const body = req.rawBody.toString('utf8');
       try {
         resolve(body ? JSON.parse(body) : {});
       } catch (err) {
@@ -1499,7 +1500,7 @@ export async function handleApiRequest(req, res) {
 
       const { reference } = await parseJsonBody(req);
       try {
-        const result = await verifyPayment(reference);
+        const result = await verifyPayment(reference, authUser.userId);
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, err.statusCode || 400, { error: err.message });
@@ -1530,6 +1531,7 @@ export async function handleApiRequest(req, res) {
     if (pathname === '/api/webhooks/paystack' && method === 'POST') {
       await parseJsonBody(req);
       const signature = req.headers['x-paystack-signature'] || '';
+      const paystackSignature = req.headers['paystack-signature'] || '';
       const rawBody   = req.rawBody || '';
 
       // Parse event type to route to appropriate handler
@@ -1557,7 +1559,7 @@ export async function handleApiRequest(req, res) {
 
       // Default: billing/subscription events handled by billing-service
       try {
-        const result = await handlePaystackWebhook(rawBody, signature);
+        const result = await handlePaystackWebhook(rawBody, signature, paystackSignature);
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, err.statusCode || 400, { error: err.message, code: err.code });
@@ -1996,7 +1998,7 @@ export async function handleApiRequest(req, res) {
     if (pathname === '/api/email/webhook/resend' && method === 'POST') {
       try {
         await parseJsonBody(req);
-        const verifiedEvent = verifyResendWebhook(req.rawBody || '', req.headers);
+        const verifiedEvent = verifyResendWebhook(req.rawBody?.toString('utf8') || '', req.headers);
         const result = await processResendWebhook(verifiedEvent);
         return sendJson(res, 200, result);
       } catch (err) {
